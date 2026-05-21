@@ -200,6 +200,7 @@ time {
 
 .primary-button,
 .ghost-button,
+.danger-button,
 .text-button,
 .icon-button,
 .like-button,
@@ -226,6 +227,22 @@ time {
   background: white;
   border-color: var(--line);
   color: var(--aqua-dark);
+}
+
+.danger-button {
+  padding: 0 16px;
+  background: #fff1f0;
+  border-color: rgba(194, 57, 52, 0.35);
+  color: #a6332e;
+}
+
+.danger-button:hover {
+  background: #ffe4e1;
+}
+
+.danger-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
 }
 
 .text-button,
@@ -318,6 +335,11 @@ time {
   background: #fff7f4;
 }
 
+.metric-card.danger {
+  border-color: rgba(194, 57, 52, 0.52);
+  background: #fff1f0;
+}
+
 .content-grid {
   grid-template-columns: 1fr 1fr;
 }
@@ -408,8 +430,77 @@ time {
   align-items: start;
 }
 
+.tank-switcher {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 0.8fr);
+  gap: 18px;
+  margin-bottom: 16px;
+  padding: 20px;
+}
+
+.tank-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.tank-card {
+  min-height: 108px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-soft);
+  color: var(--ink);
+  text-align: left;
+}
+
+.tank-card:hover,
+.tank-card.is-active {
+  border-color: rgba(14, 143, 150, 0.55);
+  background: #e7f5f3;
+}
+
+.tank-card span,
+.tank-card small {
+  display: block;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.tank-card strong {
+  display: block;
+  margin: 6px 0;
+  font-size: 1rem;
+}
+
+.tank-form {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  align-content: start;
+}
+
+.tank-form button {
+  grid-column: 1 / -1;
+}
+
 .tank-profile {
   padding: 20px;
+}
+
+.profile-edit-form {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 18px;
+  padding-top: 18px;
+  border-top: 1px solid var(--line);
+}
+
+.profile-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
 }
 
 .aquarium-visual {
@@ -555,6 +646,15 @@ textarea {
   color: var(--muted);
 }
 
+.empty-state {
+  margin: 0;
+  padding: 18px;
+  border: 1px dashed var(--line);
+  border-radius: 8px;
+  background: var(--surface-soft);
+  color: var(--muted);
+}
+
 .post-grid {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
@@ -684,6 +784,20 @@ textarea {
   gap: 14px;
 }
 
+.toast {
+  position: fixed;
+  right: 18px;
+  bottom: 18px;
+  z-index: 30;
+  max-width: min(360px, calc(100vw - 36px));
+  padding: 12px 14px;
+  border-radius: 8px;
+  background: var(--ink);
+  color: white;
+  box-shadow: var(--shadow);
+  font-weight: 800;
+}
+
 @media (max-width: 1080px) {
   .app-shell {
     grid-template-columns: 1fr;
@@ -708,6 +822,7 @@ textarea {
   }
 
   .hero-band,
+  .tank-switcher,
   .manager-layout,
   .ai-layout {
     grid-template-columns: 1fr;
@@ -754,8 +869,16 @@ textarea {
   .mini-feed,
   .post-grid,
   .guide-grid,
+  .tank-list,
+  .tank-form,
+  .profile-edit-form,
   .log-form {
     grid-template-columns: 1fr;
+  }
+
+  .profile-actions {
+    align-items: stretch;
+    flex-direction: column;
   }
 
   .sidebar {
@@ -787,5 +910,10 @@ textarea {
     gap: 4px;
     font-size: 0.72rem;
     flex-direction: column;
+  }
+
+  .toast {
+    right: 12px;
+    bottom: 78px;
   }
 }

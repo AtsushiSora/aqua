@@ -65,7 +65,7 @@
           <div class="hero-band">
             <div class="hero-copy">
               <p class="eyebrow">Aquarium care social platform</p>
-              <h1 id="dashboard-title">水槽と池を、育てて、記録して、見せ合う。</h1>
+              <h1 id="dashboard-title">アクアリウム管理を、もっと楽しく安心に。</h1>
               <p>
                 管理記録、写真投稿、AIの異常チェック、飼育ガイドをひとつにまとめたアクアリウムアプリです。
               </p>
@@ -75,30 +75,30 @@
               </div>
             </div>
             <div class="hero-media">
-              <img src="assets/site-concept.png" alt="水槽管理SNSの画面イメージ">
+              <img src="assets/site-concept.png" alt="水草と流木が入った淡水アクアリウム">
             </div>
           </div>
 
           <div class="metric-grid" aria-label="今日の状態">
             <article class="metric-card">
               <span>水温</span>
-              <strong>24.8°C</strong>
-              <small>前日比 +0.4°C</small>
+              <strong id="metric-temp">24.8°C</strong>
+              <small id="metric-temp-note">最新ログから表示</small>
             </article>
             <article class="metric-card">
               <span>pH</span>
-              <strong>6.9</strong>
-              <small>手入力 2時間前</small>
+              <strong id="metric-ph">6.9</strong>
+              <small id="metric-ph-note">最新ログから表示</small>
             </article>
             <article class="metric-card">
               <span>水換え</span>
-              <strong>3日前</strong>
-              <small>次回は土曜日</small>
+              <strong id="metric-water-change">3日前</strong>
+              <small id="metric-water-change-note">次回目安を自動表示</small>
             </article>
-            <article class="metric-card alert">
+            <article class="metric-card alert" id="metric-ai-card">
               <span>AI状態</span>
-              <strong>注意</strong>
-              <small>コケ増加の兆候</small>
+              <strong id="metric-ai-status">注意</strong>
+              <small id="metric-ai-note">記録から簡易判定</small>
             </article>
           </div>
 
@@ -113,19 +113,19 @@
               </div>
               <div class="task-list">
                 <label class="task-row">
-                  <input type="checkbox" checked>
+                  <input type="checkbox" data-task="feedMorning" checked>
                   <span>朝の餌やり</span>
-                  <small>完了</small>
+                  <small data-task-status="feedMorning">完了</small>
                 </label>
                 <label class="task-row">
-                  <input type="checkbox">
+                  <input type="checkbox" data-task="checkTemp">
                   <span>水温チェック</span>
-                  <small>18:00</small>
+                  <small data-task-status="checkTemp">18:00</small>
                 </label>
                 <label class="task-row">
-                  <input type="checkbox">
+                  <input type="checkbox" data-task="checkAlgae">
                   <span>ガラス面のコケ確認</span>
-                  <small>夜</small>
+                  <small data-task-status="checkAlgae">夜</small>
                 </label>
               </div>
             </section>
@@ -167,6 +167,48 @@
             <button class="primary-button" type="button" data-add-log>記録を追加</button>
           </div>
 
+          <section class="panel tank-switcher" aria-label="水槽と池の切り替え">
+            <div>
+              <div class="section-head">
+                <div>
+                  <p class="eyebrow">My tanks</p>
+                  <h2>登録中の水槽・池</h2>
+                </div>
+              </div>
+              <div class="tank-list" id="tank-list"></div>
+            </div>
+
+            <form class="tank-form" id="tank-form">
+              <label>
+                <span>名前</span>
+                <input id="tank-name-input" type="text" placeholder="例: ベランダ睡蓮鉢" required>
+              </label>
+              <label>
+                <span>種類</span>
+                <select id="tank-kind-input">
+                  <option>水草水槽</option>
+                  <option>熱帯魚水槽</option>
+                  <option>メダカ鉢</option>
+                  <option>池</option>
+                  <option>海水水槽</option>
+                </select>
+              </label>
+              <label>
+                <span>サイズ</span>
+                <input id="tank-size-input" type="text" placeholder="例: 45cm">
+              </label>
+              <label>
+                <span>容量</span>
+                <input id="tank-volume-input" type="text" placeholder="例: 18L">
+              </label>
+              <label>
+                <span>生体・水草</span>
+                <input id="tank-residents-input" type="text" placeholder="例: メダカ、睡蓮、浮草">
+              </label>
+              <button class="ghost-button" type="submit">水槽を追加</button>
+            </form>
+          </section>
+
           <div class="manager-layout">
             <section class="tank-profile">
               <div class="aquarium-visual" aria-label="メイン水槽のイメージ">
@@ -175,16 +217,57 @@
                 <span class="plant plant-one"></span>
                 <span class="plant plant-two"></span>
               </div>
-              <h2>リビング水草水槽</h2>
-              <p>60cm / 57L / ネオンテトラ、ヤマトヌマエビ、アヌビアス</p>
-              <div class="chip-row">
+              <h2 id="tank-profile-name">リビング水草水槽</h2>
+              <p id="tank-profile-detail">60cm / 57L / ネオンテトラ、ヤマトヌマエビ、アヌビアス</p>
+              <div class="chip-row" id="tank-profile-tags">
                 <span class="chip">水草水槽</span>
                 <span class="chip">熱帯魚</span>
                 <span class="chip">CO2あり</span>
               </div>
+
+              <form class="profile-edit-form" id="tank-edit-form">
+                <label>
+                  <span>名前</span>
+                  <input id="edit-tank-name" type="text" required>
+                </label>
+                <label>
+                  <span>種類</span>
+                  <select id="edit-tank-kind">
+                    <option>水草水槽</option>
+                    <option>熱帯魚水槽</option>
+                    <option>メダカ鉢</option>
+                    <option>池</option>
+                    <option>海水水槽</option>
+                  </select>
+                </label>
+                <label>
+                  <span>サイズ</span>
+                  <input id="edit-tank-size" type="text">
+                </label>
+                <label>
+                  <span>容量</span>
+                  <input id="edit-tank-volume" type="text">
+                </label>
+                <label class="full-field">
+                  <span>生体・水草</span>
+                  <input id="edit-tank-residents" type="text">
+                </label>
+                <label class="full-field">
+                  <span>タグ</span>
+                  <input id="edit-tank-tags" type="text" placeholder="例: 水草水槽, 熱帯魚, CO2あり">
+                </label>
+                <div class="profile-actions full-field">
+                  <button class="primary-button" type="submit">プロフィール保存</button>
+                  <button class="danger-button" type="button" id="delete-tank-button">削除</button>
+                </div>
+              </form>
             </section>
 
             <form class="log-form" id="log-form">
+              <label class="full-field">
+                <span>日時</span>
+                <input id="log-date" type="datetime-local">
+              </label>
               <label>
                 <span>記録種別</span>
                 <select id="log-type">
@@ -216,6 +299,7 @@
                   <p class="eyebrow">Timeline</p>
                   <h2>最近の記録</h2>
                 </div>
+                <button class="text-button" type="button" data-reset-logs>サンプルに戻す</button>
               </div>
               <div class="timeline" id="timeline">
                 <article>
