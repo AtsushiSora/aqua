@@ -1,0 +1,10 @@
+{
+  "name": "AquaNote",
+  "short_name": "AquaNote",
+  "description": "水槽・池の管理、投稿、AI分析、飼育ガイドをまとめたアクアリウムアプリ",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#edf6f5",
+  "theme_color": "#0e8f96",
+  "icons": []
+}
