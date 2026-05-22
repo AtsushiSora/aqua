@@ -22,6 +22,7 @@ create table public.profiles (
 create table public.tanks (
   id uuid primary key default gen_random_uuid(),
   owner_id uuid not null references public.profiles(id) on delete cascade,
+  local_id text not null,
   name text not null,
   kind text not null,
   size_label text,
@@ -30,7 +31,8 @@ create table public.tanks (
   tags text[] not null default '{}',
   featured_post_id uuid,
   created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
+  updated_at timestamptz not null default now(),
+  unique (owner_id, local_id)
 );
 
 create table public.logs (

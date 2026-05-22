@@ -56,12 +56,13 @@
 - `localStorage` からSupabaseへ差し替えるための永続化レイヤー入口
 - Supabase Authのメールログイン/登録UI
 - ログイン中ユーザーのSupabaseプロフィール読み込み/同期
+- ローカル水槽プロフィールのSupabase `tanks` 同期
 - PWA用の `manifest.webmanifest` と `sw.js`
 
 ## 次に作るとよいもの
 
-- 水槽プロフィールのSupabase保存
-- 投稿/コメント/ログのDB保存
+- 管理ログのDB保存
+- 投稿/コメントのDB保存
 - 本物のAI画像分析
 - 通知機能
 - 実画像、動画アップロード

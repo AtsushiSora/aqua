@@ -397,7 +397,7 @@ accountForm.addEventListener("submit", async (event) => {
 
 mockSyncButton.addEventListener("click", async () => {
   if (authSession?.user) {
-    await syncProfileToSupabase();
+    await syncCloudState();
     return;
   }
 
@@ -787,7 +787,7 @@ function renderAccount() {
   syncStatusDot.className = account.syncStatus === "synced" ? "is-synced" : "";
   accountSyncChip.textContent = syncLabel;
   accountSyncChip.className = `account-sync-chip ${account.syncStatus === "synced" ? "is-synced" : ""}`;
-  mockSyncButton.textContent = hasRemoteSession ? "プロフィール同期" : "同期を記録";
+  mockSyncButton.textContent = hasRemoteSession ? "クラウド同期" : "同期を記録";
 
   document.querySelector("#account-name-input").value = account.name;
   document.querySelector("#account-handle-input").value = account.handle;
@@ -901,6 +901,42 @@ async function signOutSupabase() {
   showToast("ログアウトしました");
 }
 
+async function syncCloudState(options = {}) {
+  if (!supabaseClient || !authSession?.user) {
+    if (!options.silent) {
+      showToast("Supabaseにログインしてください");
+    }
+    return false;
+  }
+
+  const profileSynced = await syncProfileToSupabase({ silent: true });
+  if (!profileSynced) {
+    if (!options.silent) {
+      showToast("プロフィール同期に失敗しました");
+    }
+    return false;
+  }
+
+  const tanksSynced = await syncTanksToSupabase({ silent: true });
+  if (!tanksSynced) {
+    if (!options.silent) {
+      showToast("水槽同期に失敗しました");
+    }
+    return false;
+  }
+
+  state.account.syncStatus = "synced";
+  state.account.lastSyncedAt = new Date().toISOString();
+  saveState({ keepSyncStatus: true });
+  renderApp();
+
+  if (!options.silent) {
+    showToast("プロフィールと水槽をSupabaseに同期しました");
+  }
+
+  return true;
+}
+
 async function loadProfileFromSupabase() {
   if (!supabaseClient || !authSession?.user) {
     return null;
@@ -924,6 +960,110 @@ async function loadProfileFromSupabase() {
   applyRemoteProfile(data);
   saveState({ keepSyncStatus: true });
   return data;
+}
+
+async function loadTanksFromSupabase() {
+  if (!supabaseClient || !authSession?.user) {
+    return [];
+  }
+
+  const { data, error } = await supabaseClient
+    .from("tanks")
+    .select("id, local_id, name, kind, size_label, volume_label, residents, tags, featured_post_id, updated_at")
+    .eq("owner_id", authSession.user.id)
+    .order("created_at", { ascending: true });
+
+  if (error) {
+    showToast(error.message || "水槽を読み込めませんでした");
+    return [];
+  }
+
+  if (Array.isArray(data) && data.length) {
+    applyRemoteTanks(data);
+    saveState({ keepSyncStatus: true });
+  }
+
+  return data || [];
+}
+
+async function syncTanksToSupabase(options = {}) {
+  if (!supabaseClient || !authSession?.user) {
+    if (!options.silent) {
+      showToast("Supabaseにログインしてください");
+    }
+    return false;
+  }
+
+  const payloads = state.tanks.map((tank) => getTankPayload(tank, authSession.user));
+  const { data, error } = await supabaseClient
+    .from("tanks")
+    .upsert(payloads, { onConflict: "owner_id,local_id" })
+    .select("id, local_id, name, kind, size_label, volume_label, residents, tags, featured_post_id, updated_at");
+
+  if (error) {
+    state.account.syncStatus = "local";
+    saveState({ keepSyncStatus: true });
+    renderAccount();
+    if (!options.silent) {
+      showToast(error.message || "水槽同期に失敗しました");
+    }
+    return false;
+  }
+
+  applyRemoteTanks(data || []);
+  state.account.syncStatus = "synced";
+  state.account.lastSyncedAt = new Date().toISOString();
+  saveState({ keepSyncStatus: true });
+  renderApp();
+
+  if (!options.silent) {
+    showToast("水槽をSupabaseに同期しました");
+  }
+
+  return true;
+}
+
+function getTankPayload(tank, user) {
+  return {
+    owner_id: user.id,
+    local_id: tank.id,
+    name: tank.name || "名前未設定の水槽",
+    kind: tank.kind || "水槽",
+    size_label: tank.size || null,
+    volume_label: tank.volume || null,
+    residents: tank.residents || null,
+    tags: Array.isArray(tank.tags) ? tank.tags : [tank.kind || "水槽"],
+    featured_post_id: null,
+    updated_at: new Date().toISOString(),
+  };
+}
+
+function applyRemoteTanks(remoteTanks) {
+  remoteTanks.forEach((remoteTank) => {
+    const localId = remoteTank.local_id || `cloud-${remoteTank.id}`;
+    const existingTank = state.tanks.find((tank) => tank.cloudId === remoteTank.id || tank.id === localId);
+    const nextTank = existingTank || {
+      id: localId,
+      logs: [],
+      latestAi: null,
+      featuredPostId: null,
+      albumOrder: [],
+    };
+
+    nextTank.cloudId = remoteTank.id;
+    nextTank.name = remoteTank.name || nextTank.name || "名前未設定の水槽";
+    nextTank.kind = remoteTank.kind || nextTank.kind || "水槽";
+    nextTank.size = remoteTank.size_label || nextTank.size || "サイズ未設定";
+    nextTank.volume = remoteTank.volume_label || nextTank.volume || "容量未設定";
+    nextTank.residents = remoteTank.residents || nextTank.residents || "生体・水草未設定";
+    nextTank.tags = Array.isArray(remoteTank.tags) && remoteTank.tags.length ? remoteTank.tags : [nextTank.kind];
+
+    if (!existingTank) {
+      state.tanks.push(nextTank);
+    }
+  });
+
+  ensureActiveTank();
 }
 
 async function syncProfileToSupabase(options = {}) {
@@ -1022,6 +1162,7 @@ async function initSupabaseAuth() {
       state.account.email = session.user.email || state.account.email;
       saveState({ keepSyncStatus: true });
       await loadProfileFromSupabase();
+      await loadTanksFromSupabase();
     }
     renderAccount();
   });
@@ -1031,6 +1172,7 @@ async function initSupabaseAuth() {
     state.account.email = authSession.user.email || state.account.email;
     saveState({ keepSyncStatus: true });
     await loadProfileFromSupabase();
+    await loadTanksFromSupabase();
   }
 
   renderAccount();
@@ -2689,6 +2831,7 @@ function normalizeState(saved) {
     latestAi: tank.latestAi || null,
     featuredPostId: tank.featuredPostId || null,
     albumOrder: Array.isArray(tank.albumOrder) ? tank.albumOrder : [],
+    cloudId: tank.cloudId || null,
   }));
   normalized.posts = normalized.posts.map((post, index) => {
     const fallbackTank = normalized.tanks[index % normalized.tanks.length] || normalized.tanks[0];

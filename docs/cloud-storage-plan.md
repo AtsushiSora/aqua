@@ -39,7 +39,7 @@ Reason:
 2. Create a private `aquanote-media` storage bucket.
 3. Add environment config for the project URL and publishable key.
 4. Connect Supabase Auth and sync `profiles`. Done in the prototype.
-5. Replace tank persistence.
+5. Sync local tanks to the `tanks` table. Done in the prototype.
 6. Move logs and reminders.
 7. Move posts, comments, likes, and media uploads.
 8. Keep JSON export/import as a fallback during beta.
@@ -67,9 +67,10 @@ Reason:
 
 ## Next implementation slice
 
-Sync local tanks to the `tanks` table after sign-in:
+Sync local logs to the `logs` table after tank sync:
 
-- Add a `cloudId` or deterministic UUID mapping for local tank IDs.
-- Upsert `name`, `kind`, `size_label`, `volume_label`, `residents`, `tags`, and `featured_post_id`.
-- Read back the signed-in user's tanks and merge them into local state.
+- Add a `cloudId` mapping to each local log.
+- Require `tank.cloudId` before attempting a log upload.
+- Upsert `log_type`, `temp_c`, `ph`, `note`, and `recorded_at`.
+- Read back logs per signed-in user and merge them into each local tank.
 - Keep JSON export/import as a recovery path while the sync model is being tested.
