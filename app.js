@@ -937,13 +937,21 @@ async function syncCloudState(options = {}) {
     return false;
   }
 
+  const remindersSynced = await syncRemindersToSupabase({ silent: true });
+  if (!remindersSynced) {
+    if (!options.silent) {
+      showToast("リマインダー同期に失敗しました");
+    }
+    return false;
+  }
+
   state.account.syncStatus = "synced";
   state.account.lastSyncedAt = new Date().toISOString();
   saveState({ keepSyncStatus: true });
   renderApp();
 
   if (!options.silent) {
-    showToast("プロフィール、水槽、管理ログをSupabaseに同期しました");
+    showToast("プロフィール、水槽、管理ログ、リマインダーをSupabaseに同期しました");
   }
 
   return true;
@@ -1022,6 +1030,29 @@ async function loadLogsFromSupabase() {
 
   if (Array.isArray(data) && data.length) {
     applyRemoteLogs(data);
+    saveState({ keepSyncStatus: true });
+  }
+
+  return data || [];
+}
+
+async function loadRemindersFromSupabase() {
+  if (!supabaseClient || !authSession?.user) {
+    return [];
+  }
+
+  const { data, error } = await supabaseClient
+    .from("reminders")
+    .select("task_key, label, enabled, schedule, weekdays, interval_days, start_date, notify_time, last_notified_on")
+    .eq("owner_id", authSession.user.id);
+
+  if (error) {
+    showToast(error.message || "リマインダーを読み込めませんでした");
+    return [];
+  }
+
+  if (Array.isArray(data) && data.length) {
+    applyRemoteReminders(data);
     saveState({ keepSyncStatus: true });
   }
 
@@ -1113,6 +1144,45 @@ async function syncLogsToSupabase(options = {}) {
   return true;
 }
 
+async function syncRemindersToSupabase(options = {}) {
+  if (!supabaseClient || !authSession?.user) {
+    if (!options.silent) {
+      showToast("Supabaseにログインしてください");
+    }
+    return false;
+  }
+
+  const payloads = Object.entries(taskLabels).map(([taskId, label]) =>
+    getReminderPayload(taskId, label, state.reminders[taskId] || defaultReminders[taskId], authSession.user),
+  );
+  const { data, error } = await supabaseClient
+    .from("reminders")
+    .upsert(payloads, { onConflict: "owner_id,task_key" })
+    .select("task_key, label, enabled, schedule, weekdays, interval_days, start_date, notify_time, last_notified_on");
+
+  if (error) {
+    state.account.syncStatus = "local";
+    saveState({ keepSyncStatus: true });
+    renderAccount();
+    if (!options.silent) {
+      showToast(error.message || "リマインダー同期に失敗しました");
+    }
+    return false;
+  }
+
+  applyRemoteReminders(data || []);
+  state.account.syncStatus = "synced";
+  state.account.lastSyncedAt = new Date().toISOString();
+  saveState({ keepSyncStatus: true });
+  renderApp();
+
+  if (!options.silent) {
+    showToast("リマインダーをSupabaseに同期しました");
+  }
+
+  return true;
+}
+
 function getTankPayload(tank, user) {
   return {
     owner_id: user.id,
@@ -1138,6 +1208,22 @@ function getLogPayload(log, tank, user) {
     ph: parseOptionalNumber(log.ph),
     note: log.note || "",
     recorded_at: log.createdAt || new Date().toISOString(),
+  };
+}
+
+function getReminderPayload(taskId, label, reminder, user) {
+  return {
+    owner_id: user.id,
+    task_key: taskId,
+    label,
+    enabled: Boolean(reminder.enabled),
+    schedule: getAllowedValue(reminder.schedule, ["daily", "weekly", "interval"], "daily"),
+    weekdays: Array.isArray(reminder.weekdays) && reminder.weekdays.length ? reminder.weekdays : defaultReminders[taskId].weekdays,
+    interval_days: clampNumber(reminder.intervalDays, 1, 30, defaultReminders[taskId].intervalDays),
+    start_date: isValidDateKey(reminder.startDate) ? reminder.startDate : defaultReminders[taskId].startDate,
+    notify_time: isValidTimeValue(reminder.time) ? reminder.time : defaultReminders[taskId].time,
+    last_notified_on: reminder.lastNotifiedOn || null,
+    updated_at: new Date().toISOString(),
   };
 }
 
@@ -1196,6 +1282,26 @@ function applyRemoteLogs(remoteLogs) {
     tank.logs = tank.logs
       .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))
       .slice(0, 30);
+  });
+}
+
+function applyRemoteReminders(remoteReminders) {
+  remoteReminders.forEach((remoteReminder) => {
+    const taskId = remoteReminder.task_key;
+    if (!taskLabels[taskId]) {
+      return;
+    }
+
+    state.reminders[taskId] = normalizeReminder({
+      ...state.reminders[taskId],
+      enabled: remoteReminder.enabled,
+      schedule: remoteReminder.schedule,
+      weekdays: remoteReminder.weekdays,
+      intervalDays: remoteReminder.interval_days,
+      startDate: remoteReminder.start_date,
+      time: remoteReminder.notify_time,
+      lastNotifiedOn: remoteReminder.last_notified_on,
+    }, defaultReminders[taskId]);
   });
 }
 
@@ -1297,6 +1403,7 @@ async function initSupabaseAuth() {
       await loadProfileFromSupabase();
       await loadTanksFromSupabase();
       await loadLogsFromSupabase();
+      await loadRemindersFromSupabase();
     }
     renderAccount();
   });
@@ -1308,6 +1415,7 @@ async function initSupabaseAuth() {
     await loadProfileFromSupabase();
     await loadTanksFromSupabase();
     await loadLogsFromSupabase();
+    await loadRemindersFromSupabase();
   }
 
   renderAccount();
@@ -2359,9 +2467,7 @@ function renderReminders() {
     input.addEventListener("change", () => {
       const taskId = input.dataset.reminderEnabled;
       state.reminders[taskId].enabled = input.checked;
-      saveState();
-      renderTasks();
-      renderReminders();
+      saveReminderSettings();
     });
   });
 
@@ -2370,9 +2476,7 @@ function renderReminders() {
       const taskId = input.dataset.reminderTime;
       state.reminders[taskId].time = input.value || defaultReminders[taskId].time;
       state.reminders[taskId].lastNotifiedOn = null;
-      saveState();
-      renderTasks();
-      renderReminders();
+      saveReminderSettings();
     });
   });
 
@@ -2381,9 +2485,7 @@ function renderReminders() {
       const taskId = select.dataset.reminderSchedule;
       state.reminders[taskId].schedule = select.value;
       state.reminders[taskId].lastNotifiedOn = null;
-      saveState();
-      renderTasks();
-      renderReminders();
+      saveReminderSettings();
     });
   });
 
@@ -2402,9 +2504,7 @@ function renderReminders() {
 
       reminder.weekdays = weekdays.size ? [...weekdays].sort((a, b) => a - b) : [new Date().getDay()];
       reminder.lastNotifiedOn = null;
-      saveState();
-      renderTasks();
-      renderReminders();
+      saveReminderSettings();
     });
   });
 
@@ -2413,9 +2513,7 @@ function renderReminders() {
       const taskId = input.dataset.reminderInterval;
       state.reminders[taskId].intervalDays = clampNumber(input.value, 1, 30, defaultReminders[taskId].intervalDays);
       state.reminders[taskId].lastNotifiedOn = null;
-      saveState();
-      renderTasks();
-      renderReminders();
+      saveReminderSettings();
     });
   });
 
@@ -2424,14 +2522,22 @@ function renderReminders() {
       const taskId = input.dataset.reminderStart;
       state.reminders[taskId].startDate = isValidDateKey(input.value) ? input.value : getDateKey(new Date());
       state.reminders[taskId].lastNotifiedOn = null;
-      saveState();
-      renderTasks();
-      renderReminders();
+      saveReminderSettings();
     });
   });
 
   renderNextReminder();
   renderNotificationButtons();
+}
+
+async function saveReminderSettings() {
+  saveState();
+  renderTasks();
+  renderReminders();
+
+  if (authSession?.user) {
+    await syncRemindersToSupabase({ silent: true });
+  }
 }
 
 function renderReminderScheduleControls(taskId, reminder) {
@@ -3234,28 +3340,28 @@ function normalizeReminders(reminders = {}) {
 
   return Object.fromEntries(
     Object.entries(defaultReminders).map(([taskId, defaults]) => {
-      const saved = savedReminders[taskId] || {};
-      const schedule = ["daily", "weekly", "interval"].includes(saved.schedule) ? saved.schedule : defaults.schedule;
-      const weekdays = Array.isArray(saved.weekdays)
-        ? saved.weekdays.map(Number).filter((day) => Number.isInteger(day) && day >= 0 && day <= 6)
-        : defaults.weekdays;
-
-      return [
-        taskId,
-        {
-          ...defaults,
-          ...saved,
-          schedule,
-          weekdays: weekdays.length ? [...new Set(weekdays)].sort((a, b) => a - b) : defaults.weekdays,
-          intervalDays: clampNumber(saved.intervalDays, 1, 30, defaults.intervalDays),
-          startDate: isValidDateKey(saved.startDate) ? saved.startDate : defaults.startDate,
-          time: isValidTimeValue(saved.time) ? saved.time : defaults.time,
-          enabled: Boolean(saved.enabled ?? defaults.enabled),
-          lastNotifiedOn: saved.lastNotifiedOn || null,
-        },
-      ];
+      return [taskId, normalizeReminder(savedReminders[taskId] || {}, defaults)];
     }),
   );
+}
+
+function normalizeReminder(saved, defaults) {
+  const schedule = ["daily", "weekly", "interval"].includes(saved.schedule) ? saved.schedule : defaults.schedule;
+  const weekdays = Array.isArray(saved.weekdays)
+    ? saved.weekdays.map(Number).filter((day) => Number.isInteger(day) && day >= 0 && day <= 6)
+    : defaults.weekdays;
+
+  return {
+    ...defaults,
+    ...saved,
+    schedule,
+    weekdays: weekdays.length ? [...new Set(weekdays)].sort((a, b) => a - b) : defaults.weekdays,
+    intervalDays: clampNumber(saved.intervalDays, 1, 30, defaults.intervalDays),
+    startDate: isValidDateKey(saved.startDate) ? saved.startDate : defaults.startDate,
+    time: isValidTimeValue(saved.time) ? saved.time : defaults.time,
+    enabled: Boolean(saved.enabled ?? defaults.enabled),
+    lastNotifiedOn: saved.lastNotifiedOn || null,
+  };
 }
 
 function getEmptyTasks() {

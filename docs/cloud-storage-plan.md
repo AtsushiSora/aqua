@@ -41,7 +41,7 @@ Reason:
 4. Connect Supabase Auth and sync `profiles`. Done in the prototype.
 5. Sync local tanks to the `tanks` table. Done in the prototype.
 6. Sync local logs to the `logs` table. Done in the prototype.
-7. Move reminders.
+7. Sync reminders to the `reminders` table. Done in the prototype.
 8. Move posts, comments, likes, and media uploads.
 9. Keep JSON export/import as a fallback during beta.
 
@@ -68,9 +68,10 @@ Reason:
 
 ## Next implementation slice
 
-Sync local reminders to the `reminders` table after log sync:
+Sync community data after reminder sync:
 
-- Upsert each task by `owner_id` and `task_key`.
-- Store `enabled`, `schedule`, `weekdays`, `interval_days`, `start_date`, `notify_time`, and `last_notified_on`.
-- Read back reminders on sign-in and merge them into local state.
+- Upsert local posts by `owner_id` and a local post key.
+- Store post text first; keep image/video data in local state until Storage upload is added.
+- Upsert comments by `author_id`, `post_id`, and a local comment key.
+- Read back public posts and comments for the community view.
 - Keep JSON export/import as a recovery path while the sync model is being tested.
