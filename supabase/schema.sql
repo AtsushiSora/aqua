@@ -39,12 +39,14 @@ create table public.logs (
   id uuid primary key default gen_random_uuid(),
   tank_id uuid not null references public.tanks(id) on delete cascade,
   owner_id uuid not null references public.profiles(id) on delete cascade,
+  local_id text not null,
   log_type text not null,
   temp_c numeric(4, 1),
   ph numeric(3, 1),
   note text,
   recorded_at timestamptz not null default now(),
-  created_at timestamptz not null default now()
+  created_at timestamptz not null default now(),
+  unique (owner_id, tank_id, local_id)
 );
 
 create table public.posts (

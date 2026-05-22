@@ -594,7 +594,7 @@ document.querySelector("#delete-tank-button").addEventListener("click", () => {
   showToast("水槽を削除しました");
 });
 
-logForm.addEventListener("submit", (event) => {
+logForm.addEventListener("submit", async (event) => {
   event.preventDefault();
 
   const tank = getActiveTank();
@@ -614,6 +614,10 @@ logForm.addEventListener("submit", (event) => {
   document.querySelector("#log-note").value = "";
   setDefaultLogDate();
   showToast(`${tank.name} の管理ログを保存しました`);
+
+  if (authSession?.user) {
+    await syncCloudState({ silent: true });
+  }
 });
 
 document.querySelectorAll("[data-add-log]").forEach((button) => {
@@ -925,13 +929,21 @@ async function syncCloudState(options = {}) {
     return false;
   }
 
+  const logsSynced = await syncLogsToSupabase({ silent: true });
+  if (!logsSynced) {
+    if (!options.silent) {
+      showToast("管理ログ同期に失敗しました");
+    }
+    return false;
+  }
+
   state.account.syncStatus = "synced";
   state.account.lastSyncedAt = new Date().toISOString();
   saveState({ keepSyncStatus: true });
   renderApp();
 
   if (!options.silent) {
-    showToast("プロフィールと水槽をSupabaseに同期しました");
+    showToast("プロフィール、水槽、管理ログをSupabaseに同期しました");
   }
 
   return true;
@@ -986,6 +998,36 @@ async function loadTanksFromSupabase() {
   return data || [];
 }
 
+async function loadLogsFromSupabase() {
+  if (!supabaseClient || !authSession?.user) {
+    return [];
+  }
+
+  const tankIds = state.tanks.map((tank) => tank.cloudId).filter(Boolean);
+  if (!tankIds.length) {
+    return [];
+  }
+
+  const { data, error } = await supabaseClient
+    .from("logs")
+    .select("id, tank_id, local_id, log_type, temp_c, ph, note, recorded_at, created_at")
+    .eq("owner_id", authSession.user.id)
+    .in("tank_id", tankIds)
+    .order("recorded_at", { ascending: false });
+
+  if (error) {
+    showToast(error.message || "管理ログを読み込めませんでした");
+    return [];
+  }
+
+  if (Array.isArray(data) && data.length) {
+    applyRemoteLogs(data);
+    saveState({ keepSyncStatus: true });
+  }
+
+  return data || [];
+}
+
 async function syncTanksToSupabase(options = {}) {
   if (!supabaseClient || !authSession?.user) {
     if (!options.silent) {
@@ -1023,6 +1065,54 @@ async function syncTanksToSupabase(options = {}) {
   return true;
 }
 
+async function syncLogsToSupabase(options = {}) {
+  if (!supabaseClient || !authSession?.user) {
+    if (!options.silent) {
+      showToast("Supabaseにログインしてください");
+    }
+    return false;
+  }
+
+  const payloads = state.tanks.flatMap((tank) => {
+    if (!tank.cloudId) {
+      return [];
+    }
+
+    return tank.logs.map((log) => getLogPayload(log, tank, authSession.user));
+  });
+
+  if (!payloads.length) {
+    return true;
+  }
+
+  const { data, error } = await supabaseClient
+    .from("logs")
+    .upsert(payloads, { onConflict: "owner_id,tank_id,local_id" })
+    .select("id, tank_id, local_id, log_type, temp_c, ph, note, recorded_at, created_at");
+
+  if (error) {
+    state.account.syncStatus = "local";
+    saveState({ keepSyncStatus: true });
+    renderAccount();
+    if (!options.silent) {
+      showToast(error.message || "管理ログ同期に失敗しました");
+    }
+    return false;
+  }
+
+  applyRemoteLogs(data || []);
+  state.account.syncStatus = "synced";
+  state.account.lastSyncedAt = new Date().toISOString();
+  saveState({ keepSyncStatus: true });
+  renderApp();
+
+  if (!options.silent) {
+    showToast("管理ログをSupabaseに同期しました");
+  }
+
+  return true;
+}
+
 function getTankPayload(tank, user) {
   return {
     owner_id: user.id,
@@ -1035,6 +1125,19 @@ function getTankPayload(tank, user) {
     tags: Array.isArray(tank.tags) ? tank.tags : [tank.kind || "水槽"],
     featured_post_id: null,
     updated_at: new Date().toISOString(),
+  };
+}
+
+function getLogPayload(log, tank, user) {
+  return {
+    owner_id: user.id,
+    tank_id: tank.cloudId,
+    local_id: log.id,
+    log_type: log.type || "記録",
+    temp_c: parseOptionalNumber(log.temp),
+    ph: parseOptionalNumber(log.ph),
+    note: log.note || "",
+    recorded_at: log.createdAt || new Date().toISOString(),
   };
 }
 
@@ -1064,6 +1167,36 @@ function applyRemoteTanks(remoteTanks) {
   });
 
   ensureActiveTank();
+}
+
+function applyRemoteLogs(remoteLogs) {
+  remoteLogs.forEach((remoteLog) => {
+    const tank = state.tanks.find((item) => item.cloudId === remoteLog.tank_id);
+    if (!tank) {
+      return;
+    }
+
+    const localId = remoteLog.local_id || `cloud-log-${remoteLog.id}`;
+    const existingLog = tank.logs.find((log) => log.cloudId === remoteLog.id || log.id === localId);
+    const nextLog = existingLog || {
+      id: localId,
+    };
+
+    nextLog.cloudId = remoteLog.id;
+    nextLog.type = remoteLog.log_type || nextLog.type || "記録";
+    nextLog.temp = remoteLog.temp_c === null || remoteLog.temp_c === undefined ? "" : String(remoteLog.temp_c);
+    nextLog.ph = remoteLog.ph === null || remoteLog.ph === undefined ? "" : String(remoteLog.ph);
+    nextLog.note = remoteLog.note || "";
+    nextLog.createdAt = remoteLog.recorded_at || remoteLog.created_at || new Date().toISOString();
+
+    if (!existingLog) {
+      tank.logs.push(nextLog);
+    }
+
+    tank.logs = tank.logs
+      .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))
+      .slice(0, 30);
+  });
 }
 
 async function syncProfileToSupabase(options = {}) {
@@ -1163,6 +1296,7 @@ async function initSupabaseAuth() {
       saveState({ keepSyncStatus: true });
       await loadProfileFromSupabase();
       await loadTanksFromSupabase();
+      await loadLogsFromSupabase();
     }
     renderAccount();
   });
@@ -1173,6 +1307,7 @@ async function initSupabaseAuth() {
     saveState({ keepSyncStatus: true });
     await loadProfileFromSupabase();
     await loadTanksFromSupabase();
+    await loadLogsFromSupabase();
   }
 
   renderAccount();
@@ -2827,7 +2962,7 @@ function normalizeState(saved) {
     ...tank,
     volume: tank.volume || "容量未設定",
     tags: Array.isArray(tank.tags) ? tank.tags : [tank.kind || "水槽"],
-    logs: Array.isArray(tank.logs) ? tank.logs : [],
+    logs: Array.isArray(tank.logs) ? tank.logs.map(normalizeLog) : [],
     latestAi: tank.latestAi || null,
     featuredPostId: tank.featuredPostId || null,
     albumOrder: Array.isArray(tank.albumOrder) ? tank.albumOrder : [],
@@ -2853,6 +2988,18 @@ function normalizeState(saved) {
   });
 
   return normalized;
+}
+
+function normalizeLog(log) {
+  return {
+    id: log.id || createId("log"),
+    type: log.type || "記録",
+    temp: log.temp ?? "",
+    ph: log.ph ?? "",
+    note: log.note || "",
+    createdAt: log.createdAt || new Date().toISOString(),
+    cloudId: log.cloudId || null,
+  };
 }
 
 function getTankName(tankId) {
@@ -2994,6 +3141,15 @@ function cloneState(value) {
 
 function normalizeSearchTerm(value) {
   return String(value).trim().toLowerCase();
+}
+
+function parseOptionalNumber(value) {
+  if (value === "" || value === null || value === undefined) {
+    return null;
+  }
+
+  const number = Number(value);
+  return Number.isFinite(number) ? number : null;
 }
 
 function normalizeHandle(value) {

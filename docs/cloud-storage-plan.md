@@ -40,9 +40,10 @@ Reason:
 3. Add environment config for the project URL and publishable key.
 4. Connect Supabase Auth and sync `profiles`. Done in the prototype.
 5. Sync local tanks to the `tanks` table. Done in the prototype.
-6. Move logs and reminders.
-7. Move posts, comments, likes, and media uploads.
-8. Keep JSON export/import as a fallback during beta.
+6. Sync local logs to the `logs` table. Done in the prototype.
+7. Move reminders.
+8. Move posts, comments, likes, and media uploads.
+9. Keep JSON export/import as a fallback during beta.
 
 ## Auth and permission rules
 
@@ -67,10 +68,9 @@ Reason:
 
 ## Next implementation slice
 
-Sync local logs to the `logs` table after tank sync:
+Sync local reminders to the `reminders` table after log sync:
 
-- Add a `cloudId` mapping to each local log.
-- Require `tank.cloudId` before attempting a log upload.
-- Upsert `log_type`, `temp_c`, `ph`, `note`, and `recorded_at`.
-- Read back logs per signed-in user and merge them into each local tank.
+- Upsert each task by `owner_id` and `task_key`.
+- Store `enabled`, `schedule`, `weekdays`, `interval_days`, `start_date`, `notify_time`, and `last_notified_on`.
+- Read back reminders on sign-in and merge them into local state.
 - Keep JSON export/import as a recovery path while the sync model is being tested.
