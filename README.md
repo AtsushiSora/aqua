@@ -6,6 +6,12 @@
 
 `index.html` をブラウザで開くと動きます。
 
+## 本番保存の設計メモ
+
+- [docs/cloud-storage-plan.md](docs/cloud-storage-plan.md) にクラウド保存の方針と移行順をまとめています。
+- [supabase/schema.sql](supabase/schema.sql) に Supabase / Postgres 用のテーブルとRLSポリシー草案を置いています。
+- `.env.example` に将来のSupabase接続で使う環境変数名を置いています。
+
 ## 入っている機能
 
 - 水槽・池の管理ダッシュボード
@@ -45,12 +51,14 @@
 - 同期ステータス表示
 - AquaNoteデータのJSON書き出し/読み込み
 - 本番クラウド保存向けのデータ分割メモ
+- Supabase向けのDBスキーマ草案
+- `localStorage` からSupabaseへ差し替えるための永続化レイヤー入口
 - PWA用の `manifest.webmanifest` と `sw.js`
 
 ## 次に作るとよいもの
 
+- Supabase接続設定とAuth画面
 - 本番ログインとユーザーアカウント
-- データベース保存
 - 本物のAI画像分析
 - 通知機能
 - 実画像、動画アップロード

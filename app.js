@@ -235,7 +235,12 @@ const defaultState = {
   reminders: cloneState(defaultReminders),
 };
 
-let state = loadState();
+const persistenceAdapter = {
+  load: loadLocalState,
+  save: saveLocalState,
+};
+
+let state = loadAppState();
 let pendingPostImageDataUrl = null;
 let pendingPostVideoDataUrl = null;
 let pendingPostVideoThumbnailDataUrl = null;
@@ -2379,7 +2384,19 @@ function setDefaultLogDate() {
   logDateInput.value = toDatetimeLocalValue(new Date());
 }
 
-function loadState() {
+function loadAppState() {
+  return persistenceAdapter.load();
+}
+
+function saveAppState(options = {}) {
+  if (!options.keepSyncStatus && state.account?.signedIn) {
+    state.account.syncStatus = "local";
+  }
+
+  persistenceAdapter.save(state);
+}
+
+function loadLocalState() {
   try {
     const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
     if (saved && Array.isArray(saved.tanks) && Array.isArray(saved.posts)) {
@@ -2452,12 +2469,12 @@ function getTankName(tankId) {
   return state.tanks.find((tank) => tank.id === tankId)?.name || "未設定の水槽";
 }
 
-function saveState(options = {}) {
-  if (!options.keepSyncStatus && state.account?.signedIn) {
-    state.account.syncStatus = "local";
-  }
+function saveLocalState(nextState) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(nextState));
+}
 
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+function saveState(options = {}) {
+  saveAppState(options);
 }
 
 function showToast(message) {
