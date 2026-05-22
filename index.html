@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="theme-color" content="#0e8f96">
     <title>AquaNote | 水槽・池の管理SNS</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;500;700;800;900&family=Nunito:wght@500;700;800;900&display=swap" rel="stylesheet">
     <link rel="manifest" href="manifest.webmanifest">
     <link rel="stylesheet" href="styles.css">
   </head>
@@ -18,6 +21,15 @@
             <small>管理と共有</small>
           </span>
         </a>
+
+        <div class="account-card">
+          <div class="account-avatar" aria-hidden="true"></div>
+          <div>
+            <strong>アクア太郎</strong>
+            <span>@aquataro</span>
+            <small>アクアリスト Lv.28</small>
+          </div>
+        </div>
 
         <nav class="nav-list">
           <a class="nav-link is-active" href="#dashboard" data-view-link>
@@ -62,99 +74,200 @@
         </header>
 
         <section class="view is-visible" id="dashboard" aria-labelledby="dashboard-title">
-          <div class="hero-band">
-            <div class="hero-copy">
-              <p class="eyebrow">Aquarium care social platform</p>
-              <h1 id="dashboard-title">アクアリウム管理を、もっと楽しく安心に。</h1>
-              <p>
-                管理記録、写真投稿、AIの異常チェック、飼育ガイドをひとつにまとめたアクアリウムアプリです。
-              </p>
-              <div class="hero-actions">
-                <button class="primary-button" type="button" data-view-target="tanks">水槽を管理</button>
-                <button class="ghost-button" type="button" data-view-target="ai">AIで確認</button>
-              </div>
+          <div class="app-home-top">
+            <div>
+              <p class="eyebrow">AquaNote Home</p>
+              <h1 id="dashboard-title">今日のアクアノート</h1>
             </div>
-            <div class="hero-media">
-              <img src="assets/site-concept.png" alt="水草と流木が入った淡水アクアリウム">
+            <div class="app-status-pill" aria-label="選択中の水槽">
+              <span id="app-active-tank">リビング水草水槽</span>
+              <strong id="app-health-chip">良好</strong>
             </div>
           </div>
 
-          <div class="metric-grid" aria-label="今日の状態">
-            <article class="metric-card">
-              <span>水温</span>
-              <strong id="metric-temp">24.8°C</strong>
-              <small id="metric-temp-note">最新ログから表示</small>
-            </article>
-            <article class="metric-card">
-              <span>pH</span>
-              <strong id="metric-ph">6.9</strong>
-              <small id="metric-ph-note">最新ログから表示</small>
-            </article>
-            <article class="metric-card">
-              <span>水換え</span>
-              <strong id="metric-water-change">3日前</strong>
-              <small id="metric-water-change-note">次回目安を自動表示</small>
-            </article>
-            <article class="metric-card alert" id="metric-ai-card">
-              <span>AI状態</span>
-              <strong id="metric-ai-status">注意</strong>
-              <small id="metric-ai-note">記録から簡易判定</small>
-            </article>
-          </div>
-
-          <div class="content-grid">
-            <section class="panel">
-              <div class="section-head">
-                <div>
-                  <p class="eyebrow">Care log</p>
-                  <h2>今日の管理</h2>
-                </div>
-                <button class="text-button" type="button" data-view-target="tanks">記録する</button>
-              </div>
-              <div class="task-list">
-                <label class="task-row">
-                  <input type="checkbox" data-task="feedMorning" checked>
-                  <span>朝の餌やり</span>
-                  <small data-task-status="feedMorning">完了</small>
-                </label>
-                <label class="task-row">
-                  <input type="checkbox" data-task="checkTemp">
-                  <span>水温チェック</span>
-                  <small data-task-status="checkTemp">18:00</small>
-                </label>
-                <label class="task-row">
-                  <input type="checkbox" data-task="checkAlgae">
-                  <span>ガラス面のコケ確認</span>
-                  <small data-task-status="checkAlgae">夜</small>
-                </label>
-              </div>
-            </section>
-
-            <section class="panel">
-              <div class="section-head">
-                <div>
-                  <p class="eyebrow">Community</p>
-                  <h2>今週の自慢投稿</h2>
-                </div>
-                <button class="text-button" type="button" data-view-target="community">見る</button>
-              </div>
-              <div class="mini-feed">
-                <article class="feed-tile">
-                  <div class="tile-art pond"></div>
-                  <div>
-                    <strong>睡蓮鉢の春仕上げ</strong>
-                    <span>いいね 248</span>
+          <div class="dashboard-layout">
+            <div class="dashboard-main">
+              <div class="hero-band">
+                <div class="hero-copy">
+                  <p class="eyebrow">Aqua life community</p>
+                  <h2>つながる。学べる。育てる喜びを、みんなで。</h2>
+                  <p>
+                    アクアリウム・錦鯉・メダカのある暮らしを、記録して共有して楽しむアプリです。
+                  </p>
+                  <div class="hero-actions">
+                    <button class="primary-button" type="button" data-view-target="community">コミュニティを見る</button>
+                    <button class="ghost-button" type="button" data-view-target="tanks">水槽を記録</button>
+                    <button class="photo-button" type="button" id="hero-photo-button">写真を変更</button>
+                    <input id="hero-photo-input" type="file" accept="image/*" hidden>
                   </div>
+                </div>
+                <div class="hero-media">
+                  <img id="hero-photo" src="assets/site-concept.png" alt="水草と流木が入った淡水アクアリウム">
+                  <div class="hero-photo-card">
+                    <span>Sample photo</span>
+                    <strong>リビング水草水槽</strong>
+                    <small>あとで自分の水槽や魚の写真に変更できます</small>
+                  </div>
+                </div>
+              </div>
+
+              <div class="quick-dock" aria-label="クイック操作">
+                <button type="button" data-add-log>
+                  <span aria-hidden="true">＋</span>
+                  <strong>記録</strong>
+                  <small>水温・pH</small>
+                </button>
+                <button type="button" data-open-post>
+                  <span aria-hidden="true">◎</span>
+                  <strong>投稿</strong>
+                  <small>写真を共有</small>
+                </button>
+                <button type="button" data-view-target="ai">
+                  <span aria-hidden="true">✦</span>
+                  <strong>AI</strong>
+                  <small>状態チェック</small>
+                </button>
+                <button type="button" data-view-target="guide">
+                  <span aria-hidden="true">?</span>
+                  <strong>ガイド</strong>
+                  <small>飼育のヒント</small>
+                </button>
+              </div>
+
+              <div class="metric-grid" aria-label="今日の状態">
+                <article class="metric-card">
+                  <span>水温</span>
+                  <strong id="metric-temp">24.8°C</strong>
+                  <small id="metric-temp-note">最新ログから表示</small>
                 </article>
-                <article class="feed-tile">
-                  <div class="tile-art planted"></div>
-                  <div>
-                    <strong>水草水槽 90日目</strong>
-                    <span>いいね 192</span>
-                  </div>
+                <article class="metric-card">
+                  <span>pH</span>
+                  <strong id="metric-ph">6.9</strong>
+                  <small id="metric-ph-note">最新ログから表示</small>
+                </article>
+                <article class="metric-card">
+                  <span>水換え</span>
+                  <strong id="metric-water-change">3日前</strong>
+                  <small id="metric-water-change-note">次回目安を自動表示</small>
+                </article>
+                <article class="metric-card alert" id="metric-ai-card">
+                  <span>AI状態</span>
+                  <strong id="metric-ai-status">注意</strong>
+                  <small id="metric-ai-note">記録から簡易判定</small>
                 </article>
               </div>
-            </section>
+
+              <div class="content-grid">
+                <section class="panel">
+                  <div class="section-head">
+                    <div>
+                      <p class="eyebrow">Care log</p>
+                      <h2>今日の管理</h2>
+                    </div>
+                    <button class="text-button" type="button" data-view-target="tanks">記録する</button>
+                  </div>
+                  <div class="task-list">
+                    <label class="task-row">
+                      <input type="checkbox" data-task="feedMorning" checked>
+                      <span>朝の餌やり</span>
+                      <small data-task-status="feedMorning">完了</small>
+                    </label>
+                    <label class="task-row">
+                      <input type="checkbox" data-task="checkTemp">
+                      <span>水温チェック</span>
+                      <small data-task-status="checkTemp">18:00</small>
+                    </label>
+                    <label class="task-row">
+                      <input type="checkbox" data-task="checkAlgae">
+                      <span>ガラス面のコケ確認</span>
+                      <small data-task-status="checkAlgae">夜</small>
+                    </label>
+                  </div>
+                </section>
+
+                <section class="panel">
+                  <div class="section-head">
+                    <div>
+                      <p class="eyebrow">Community</p>
+                      <h2>今週の自慢投稿</h2>
+                    </div>
+                    <button class="text-button" type="button" data-view-target="community">見る</button>
+                  </div>
+                  <div class="mini-feed">
+                    <article class="feed-tile">
+                      <div class="tile-art pond"></div>
+                      <div>
+                        <strong>睡蓮鉢の春仕上げ</strong>
+                        <span>いいね 248</span>
+                      </div>
+                    </article>
+                    <article class="feed-tile">
+                      <div class="tile-art planted"></div>
+                      <div>
+                        <strong>水草水槽 90日目</strong>
+                        <span>いいね 192</span>
+                      </div>
+                    </article>
+                  </div>
+                </section>
+              </div>
+            </div>
+
+            <aside class="insight-rail" aria-label="AI水質分析">
+              <section class="rail-card rail-alert">
+                <div class="rail-head">
+                  <div>
+                    <p class="eyebrow">AI water analysis</p>
+                    <h2>AI水質分析</h2>
+                  </div>
+                  <span>6/2 10:30</span>
+                </div>
+                <div class="risk-panel">
+                  <div>
+                    <strong id="rail-ai-title">要注意</strong>
+                    <p id="rail-ai-copy">pHがやや低く、コケの発生リスクが高まっています。</p>
+                  </div>
+                  <div class="risk-ring">
+                    <span id="rail-ai-score">72</span>
+                    <small>/100</small>
+                  </div>
+                </div>
+                <button class="rail-button" type="button" data-view-target="ai">詳しい分析を見る</button>
+              </section>
+
+              <section class="rail-card">
+                <div class="rail-head">
+                  <h2>主な指標</h2>
+                  <span>すべて正常</span>
+                </div>
+                <div class="water-grid">
+                  <div>
+                    <span>pH</span>
+                    <strong id="rail-ph">6.8</strong>
+                    <small>弱酸性</small>
+                  </div>
+                  <div>
+                    <span>アンモニア</span>
+                    <strong>0.25</strong>
+                    <small>正常</small>
+                  </div>
+                  <div>
+                    <span>亜硝酸塩</span>
+                    <strong>0.02</strong>
+                    <small>正常</small>
+                  </div>
+                </div>
+              </section>
+
+              <section class="rail-card rail-advice">
+                <h2>AIからのアドバイス</h2>
+                <ul>
+                  <li>pHを7.0前後に調整しましょう</li>
+                  <li>照明時間を少し短くするのがおすすめです</li>
+                  <li>フィルターの流量を確認しましょう</li>
+                </ul>
+              </section>
+            </aside>
           </div>
         </section>
 
@@ -223,6 +336,27 @@
                 <span class="chip">水草水槽</span>
                 <span class="chip">熱帯魚</span>
                 <span class="chip">CO2あり</span>
+              </div>
+
+              <div class="tank-posts-panel">
+                <div class="section-head">
+                  <div>
+                    <p class="eyebrow">Linked posts</p>
+                    <h3>この水槽の投稿</h3>
+                  </div>
+                  <button class="text-button" type="button" data-open-post>投稿する</button>
+                </div>
+                <div class="linked-post-list" id="tank-post-list"></div>
+              </div>
+
+              <div class="tank-album-panel">
+                <div class="section-head">
+                  <div>
+                    <p class="eyebrow">Album</p>
+                    <h3>水槽アルバム</h3>
+                  </div>
+                </div>
+                <div class="tank-album-grid" id="tank-album-grid"></div>
               </div>
 
               <form class="profile-edit-form" id="tank-edit-form">
@@ -324,6 +458,15 @@
               <h1 id="community-title">みんなの水槽・池</h1>
             </div>
             <button class="primary-button" type="button" data-open-post>写真を投稿</button>
+          </div>
+
+          <div class="community-tools">
+            <label>
+              <span>表示する水槽</span>
+              <select id="post-tank-filter">
+                <option value="all">すべての水槽・池</option>
+              </select>
+            </label>
           </div>
 
           <div class="post-grid" id="post-grid">
@@ -466,6 +609,17 @@
           <button class="icon-button" type="button" title="閉じる" aria-label="閉じる" data-close-modal>×</button>
         </div>
         <form id="post-form" class="post-form">
+          <div class="post-preview" id="post-image-preview">
+            <span>写真プレビュー</span>
+          </div>
+          <label>
+            <span>写真</span>
+            <input id="post-image-input" type="file" accept="image/*">
+          </label>
+          <label>
+            <span>ひも付ける水槽・池</span>
+            <select id="post-tank-select"></select>
+          </label>
           <label>
             <span>タイトル</span>
             <input id="post-title" type="text" value="今日の水槽">
@@ -482,6 +636,7 @@
         </form>
       </section>
     </div>
+    <input id="replace-post-image-input" type="file" accept="image/*" hidden>
 
     <script src="app.js"></script>
   </body>
