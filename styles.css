@@ -435,6 +435,7 @@ time {
 
 .topbar-actions {
   justify-content: flex-end;
+  flex-wrap: wrap;
 }
 
 .primary-button,
@@ -463,6 +464,36 @@ time {
 
 .primary-button:hover {
   background: #084e52;
+}
+
+.sync-status-button {
+  min-height: 42px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  border: 1px solid var(--glass-border);
+  border-radius: 8px;
+  background: var(--glass-strong);
+  color: var(--muted);
+  font-family: var(--font-jp);
+  font-weight: 900;
+}
+
+.sync-status-button span {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--amber);
+}
+
+.sync-status-button span.is-synced,
+.sync-status-button.is-synced span {
+  background: var(--aqua);
+}
+
+.sync-status-button.is-synced {
+  color: var(--aqua-dark);
 }
 
 .ghost-button,
@@ -1926,6 +1957,90 @@ textarea {
     var(--waterline);
 }
 
+.account-layout {
+  display: grid;
+  grid-template-columns: minmax(280px, 0.85fr) minmax(280px, 1fr);
+  gap: 14px;
+}
+
+.account-form {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.account-sync-panel {
+  display: grid;
+  align-content: start;
+}
+
+.account-sync-chip {
+  min-height: 30px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: rgba(255, 247, 232, 0.9);
+  color: var(--amber);
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
+.account-sync-chip.is-synced {
+  background: rgba(231, 247, 243, 0.92);
+  color: var(--aqua-dark);
+}
+
+.sync-summary {
+  display: grid;
+  gap: 10px;
+}
+
+.sync-summary article,
+.schema-grid article {
+  padding: 12px;
+  border: 1px solid var(--glass-border);
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.36), transparent),
+    var(--waterline),
+    rgba(248, 250, 248, 0.74);
+}
+
+.sync-summary span,
+.sync-summary small,
+.schema-grid span {
+  display: block;
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+
+.sync-summary strong,
+.schema-grid strong {
+  display: block;
+  margin: 4px 0;
+  font-family: var(--font-jp);
+  font-size: 1.02rem;
+}
+
+.data-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.cloud-plan-panel {
+  grid-column: 1 / -1;
+}
+
+.schema-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
 .ai-photo-preview {
   position: relative;
   width: 100%;
@@ -2186,6 +2301,7 @@ textarea {
   .dashboard-layout,
   .tank-switcher,
   .manager-layout,
+  .account-layout,
   .media-detail-grid,
   .ai-layout {
     grid-template-columns: 1fr;
@@ -2207,6 +2323,7 @@ textarea {
   .content-grid,
   .manager-layout,
   .community-tools,
+  .schema-grid,
   .post-grid,
   .guide-grid,
   .ranking-list {
@@ -2292,6 +2409,8 @@ textarea {
   .content-grid,
   .mini-feed,
   .community-tools,
+  .account-form,
+  .schema-grid,
   .post-grid,
   .ranking-list,
   .guide-grid,

@@ -25,9 +25,9 @@
         <div class="account-card">
           <div class="account-avatar" aria-hidden="true"></div>
           <div>
-            <strong>アクア太郎</strong>
-            <span>@aquataro</span>
-            <small>アクアリスト Lv.28</small>
+            <strong id="sidebar-account-name">アクア太郎</strong>
+            <span id="sidebar-account-handle">@aquataro</span>
+            <small id="sidebar-account-plan">アクアリスト Lv.28</small>
           </div>
         </div>
 
@@ -52,6 +52,10 @@
             <span aria-hidden="true">?</span>
             <span>飼育ガイド</span>
           </a>
+          <a class="nav-link" href="#account" data-view-link>
+            <span aria-hidden="true">◇</span>
+            <span>アカウント</span>
+          </a>
         </nav>
 
         <div class="sidebar-panel">
@@ -69,6 +73,10 @@
             <div class="search-results" id="search-results" hidden></div>
           </label>
           <div class="topbar-actions">
+            <button class="sync-status-button" id="sync-status-button" type="button" data-view-target="account">
+              <span id="sync-status-dot" aria-hidden="true"></span>
+              <strong id="sync-status-label">ローカル保存</strong>
+            </button>
             <button class="icon-button" id="notification-button" type="button" title="通知" aria-label="通知">
               <span class="notification-dot" aria-hidden="true"></span>
             </button>
@@ -648,6 +656,109 @@
               <h2>白濁した時の確認順</h2>
               <p>餌、ろ過、バクテリア、水換え頻度を落ち着いて確認。</p>
             </article>
+          </div>
+        </section>
+
+        <section class="view" id="account" aria-labelledby="account-title">
+          <div class="section-head page-head">
+            <div>
+              <p class="eyebrow">Account and sync</p>
+              <h1 id="account-title">アカウントと保存</h1>
+            </div>
+            <button class="primary-button" id="mock-sync-button" type="button">同期を記録</button>
+          </div>
+
+          <div class="account-layout">
+            <section class="panel account-sync-panel">
+              <div class="section-head">
+                <div>
+                  <p class="eyebrow">Profile</p>
+                  <h2>ユーザープロフィール</h2>
+                </div>
+                <span class="account-sync-chip" id="account-sync-chip">ローカル保存</span>
+              </div>
+              <form class="account-form" id="account-form">
+                <label>
+                  <span>表示名</span>
+                  <input id="account-name-input" type="text" autocomplete="name">
+                </label>
+                <label>
+                  <span>ユーザーID</span>
+                  <input id="account-handle-input" type="text" autocomplete="username">
+                </label>
+                <label class="full-field">
+                  <span>メール</span>
+                  <input id="account-email-input" type="email" autocomplete="email">
+                </label>
+                <label>
+                  <span>公開範囲</span>
+                  <select id="account-visibility-input">
+                    <option value="public">公開</option>
+                    <option value="friends">フォロー中のみ</option>
+                    <option value="private">非公開</option>
+                  </select>
+                </label>
+                <label>
+                  <span>プラン</span>
+                  <select id="account-plan-input">
+                    <option value="free">Free</option>
+                    <option value="plus">Plus</option>
+                    <option value="pro">Pro</option>
+                  </select>
+                </label>
+                <button class="primary-button full-field" type="submit">プロフィール保存</button>
+              </form>
+            </section>
+
+            <section class="panel account-sync-panel">
+              <div class="section-head">
+                <div>
+                  <p class="eyebrow">Data portability</p>
+                  <h2>データ移行の準備</h2>
+                </div>
+              </div>
+              <div class="sync-summary" id="sync-summary"></div>
+              <div class="data-actions">
+                <button class="ghost-button" id="export-data-button" type="button">データを書き出す</button>
+                <button class="ghost-button" id="import-data-button" type="button">データを読み込む</button>
+                <input id="import-data-input" type="file" accept="application/json,.json" hidden>
+              </div>
+            </section>
+
+            <section class="panel cloud-plan-panel">
+              <div class="section-head">
+                <div>
+                  <p class="eyebrow">Cloud schema</p>
+                  <h2>本番保存で分けるデータ</h2>
+                </div>
+              </div>
+              <div class="schema-grid">
+                <article>
+                  <strong>profiles</strong>
+                  <span>表示名、ID、公開範囲、プラン</span>
+                </article>
+                <article>
+                  <strong>tanks</strong>
+                  <span>水槽プロフィール、タグ、表紙、アルバム順</span>
+                </article>
+                <article>
+                  <strong>logs</strong>
+                  <span>水温、pH、記録種別、メモ、日時</span>
+                </article>
+                <article>
+                  <strong>posts</strong>
+                  <span>投稿本文、タグ、いいね、コメント、メディア参照</span>
+                </article>
+                <article>
+                  <strong>reminders</strong>
+                  <span>曜日指定、間隔、時刻、通知履歴</span>
+                </article>
+                <article>
+                  <strong>media</strong>
+                  <span>写真、動画、サムネイル、保存先URL</span>
+                </article>
+              </div>
+            </section>
           </div>
         </section>
       </main>

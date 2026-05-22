@@ -1,6 +1,7 @@
 const STORAGE_KEY = "aquanote-state-v3";
 const LEGACY_STORAGE_KEY = "aquanote-state-v2";
 const VIDEO_UPLOAD_LIMIT_BYTES = 4 * 1024 * 1024;
+const EXPORT_VERSION = 1;
 
 const viewLinks = document.querySelectorAll("[data-view-link]");
 const directViewButtons = document.querySelectorAll("[data-view-target]");
@@ -42,6 +43,19 @@ const sidebarNextTime = document.querySelector("#sidebar-next-time");
 const sidebarNextTask = document.querySelector("#sidebar-next-task");
 const globalSearchInput = document.querySelector("#global-search");
 const searchResults = document.querySelector("#search-results");
+const sidebarAccountName = document.querySelector("#sidebar-account-name");
+const sidebarAccountHandle = document.querySelector("#sidebar-account-handle");
+const sidebarAccountPlan = document.querySelector("#sidebar-account-plan");
+const syncStatusButton = document.querySelector("#sync-status-button");
+const syncStatusDot = document.querySelector("#sync-status-dot");
+const syncStatusLabel = document.querySelector("#sync-status-label");
+const accountForm = document.querySelector("#account-form");
+const mockSyncButton = document.querySelector("#mock-sync-button");
+const accountSyncChip = document.querySelector("#account-sync-chip");
+const syncSummary = document.querySelector("#sync-summary");
+const exportDataButton = document.querySelector("#export-data-button");
+const importDataButton = document.querySelector("#import-data-button");
+const importDataInput = document.querySelector("#import-data-input");
 
 const taskLabels = {
   feedMorning: "朝の餌やり",
@@ -103,6 +117,16 @@ const sampleLogs = [
 const defaultState = {
   activeTankId: "tank-main",
   heroPhotoDataUrl: null,
+  account: {
+    signedIn: false,
+    name: "アクア太郎",
+    handle: "aquataro",
+    email: "aquataro@example.com",
+    visibility: "public",
+    plan: "free",
+    syncStatus: "local",
+    lastSyncedAt: null,
+  },
   tanks: [
     {
       id: "tank-main",
@@ -333,6 +357,36 @@ albumSortSelect.addEventListener("change", () => {
 document.querySelectorAll("[data-close-media-detail]").forEach((button) => {
   button.addEventListener("click", closeMediaDetailModal);
 });
+
+accountForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+
+  state.account = {
+    ...state.account,
+    signedIn: true,
+    name: document.querySelector("#account-name-input").value.trim() || defaultState.account.name,
+    handle: normalizeHandle(document.querySelector("#account-handle-input").value),
+    email: document.querySelector("#account-email-input").value.trim() || defaultState.account.email,
+    visibility: document.querySelector("#account-visibility-input").value,
+    plan: document.querySelector("#account-plan-input").value,
+  };
+  saveState();
+  renderAccount();
+  showToast("プロフィールを保存しました");
+});
+
+mockSyncButton.addEventListener("click", () => {
+  state.account.signedIn = true;
+  state.account.syncStatus = "synced";
+  state.account.lastSyncedAt = new Date().toISOString();
+  saveState({ keepSyncStatus: true });
+  renderAccount();
+  showToast("同期状態を記録しました");
+});
+
+exportDataButton.addEventListener("click", exportAppData);
+importDataButton.addEventListener("click", () => importDataInput.click());
+importDataInput.addEventListener("change", importAppData);
 
 postImageInput.addEventListener("change", async () => {
   const file = postImageInput.files[0];
@@ -663,6 +717,7 @@ function renderApp() {
   renderTasks();
   renderReminders();
   renderDashboard();
+  renderAccount();
 }
 
 function renderPostControls() {
@@ -683,6 +738,96 @@ function renderPostControls() {
 
 function renderHeroPhoto() {
   heroPhoto.src = state.heroPhotoDataUrl || "assets/site-concept.png";
+}
+
+function renderAccount() {
+  const account = state.account;
+  const syncLabel = getSyncStatusLabel(account);
+  const planLabel = getPlanLabel(account.plan);
+
+  sidebarAccountName.textContent = account.name;
+  sidebarAccountHandle.textContent = `@${account.handle}`;
+  sidebarAccountPlan.textContent = `${planLabel} / ${getVisibilityLabel(account.visibility)}`;
+  syncStatusLabel.textContent = syncLabel;
+  syncStatusButton.className = `sync-status-button ${account.syncStatus === "synced" ? "is-synced" : ""}`;
+  syncStatusDot.className = account.syncStatus === "synced" ? "is-synced" : "";
+  accountSyncChip.textContent = syncLabel;
+  accountSyncChip.className = `account-sync-chip ${account.syncStatus === "synced" ? "is-synced" : ""}`;
+
+  document.querySelector("#account-name-input").value = account.name;
+  document.querySelector("#account-handle-input").value = account.handle;
+  document.querySelector("#account-email-input").value = account.email;
+  document.querySelector("#account-visibility-input").value = account.visibility;
+  document.querySelector("#account-plan-input").value = account.plan;
+
+  const mediaCount = state.posts.filter((post) => hasPostMedia(post)).length;
+  const commentCount = state.posts.reduce((total, post) => total + post.comments.length, 0);
+  const logCount = state.tanks.reduce((total, tank) => total + tank.logs.length, 0);
+  const exportedSize = Math.ceil(JSON.stringify(state).length / 1024);
+
+  syncSummary.innerHTML = `
+    <article>
+      <span>保存状態</span>
+      <strong>${escapeHtml(syncLabel)}</strong>
+      <small>${account.lastSyncedAt ? `${formatFullDate(account.lastSyncedAt)} に同期` : "まだ同期記録はありません"}</small>
+    </article>
+    <article>
+      <span>データ量</span>
+      <strong>${state.tanks.length}水槽 / ${state.posts.length}投稿</strong>
+      <small>ログ ${logCount}件、コメント ${commentCount}件、メディア ${mediaCount}件</small>
+    </article>
+    <article>
+      <span>移行ファイル</span>
+      <strong>約 ${exportedSize}KB</strong>
+      <small>JSONで書き出して、次のDB設計に使えます</small>
+    </article>
+  `;
+}
+
+function exportAppData() {
+  const payload = {
+    app: "AquaNote",
+    version: EXPORT_VERSION,
+    exportedAt: new Date().toISOString(),
+    state,
+  };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `aquanote-backup-${getDateKey(new Date())}.json`;
+  document.body.append(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+  showToast("データを書き出しました");
+}
+
+async function importAppData() {
+  const file = importDataInput.files[0];
+  if (!file) {
+    return;
+  }
+
+  try {
+    const text = await readFileAsText(file);
+    const parsed = JSON.parse(text);
+    const importedState = parsed.state || parsed;
+
+    if (!Array.isArray(importedState.tanks) || !Array.isArray(importedState.posts)) {
+      throw new Error("Invalid AquaNote data.");
+    }
+
+    state = normalizeState(importedState);
+    state.account.syncStatus = "local";
+    saveState({ keepSyncStatus: true });
+    renderApp();
+    showToast("データを読み込みました");
+  } catch {
+    showToast("読み込めるAquaNoteデータではありません");
+  } finally {
+    importDataInput.value = "";
+  }
 }
 
 function renderSearchResults() {
@@ -2262,6 +2407,7 @@ function normalizeState(saved) {
   const normalized = {
     ...cloneState(defaultState),
     ...saved,
+    account: normalizeAccount(saved.account),
     tasks: { ...defaultState.tasks, ...saved.tasks },
     taskDate: saved.taskDate || getDateKey(new Date()),
     reminders: normalizeReminders(saved.reminders),
@@ -2306,7 +2452,11 @@ function getTankName(tankId) {
   return state.tanks.find((tank) => tank.id === tankId)?.name || "未設定の水槽";
 }
 
-function saveState() {
+function saveState(options = {}) {
+  if (!options.keepSyncStatus && state.account?.signedIn) {
+    state.account.syncStatus = "local";
+  }
+
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
 }
 
@@ -2349,6 +2499,15 @@ function readFileAsDataUrl(file) {
     reader.onerror = reject;
     reader.onload = () => resolve(reader.result);
     reader.readAsDataURL(file);
+  });
+}
+
+function readFileAsText(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = reject;
+    reader.onload = () => resolve(reader.result);
+    reader.readAsText(file);
   });
 }
 
@@ -2428,6 +2587,69 @@ function cloneState(value) {
 
 function normalizeSearchTerm(value) {
   return String(value).trim().toLowerCase();
+}
+
+function normalizeHandle(value) {
+  const handle = String(value || "")
+    .trim()
+    .replace(/^@/, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9_]/g, "");
+
+  return handle || defaultState.account.handle;
+}
+
+function normalizeAccount(account = {}) {
+  const visibility = ["public", "friends", "private"].includes(account.visibility)
+    ? account.visibility
+    : defaultState.account.visibility;
+  const plan = ["free", "plus", "pro"].includes(account.plan) ? account.plan : defaultState.account.plan;
+  const syncStatus = account.syncStatus === "synced" ? "synced" : "local";
+
+  return {
+    ...defaultState.account,
+    ...account,
+    name: String(account.name || defaultState.account.name).trim(),
+    handle: normalizeHandle(account.handle),
+    email: String(account.email || defaultState.account.email).trim(),
+    visibility,
+    plan,
+    syncStatus,
+    signedIn: Boolean(account.signedIn),
+    lastSyncedAt: account.lastSyncedAt || null,
+  };
+}
+
+function getSyncStatusLabel(account) {
+  if (!account.signedIn) {
+    return "未ログイン";
+  }
+
+  return account.syncStatus === "synced" ? "同期済み" : "ローカル変更あり";
+}
+
+function getPlanLabel(plan) {
+  if (plan === "pro") {
+    return "Pro";
+  }
+
+  if (plan === "plus") {
+    return "Plus";
+  }
+
+  return "Free";
+}
+
+function getVisibilityLabel(visibility) {
+  if (visibility === "private") {
+    return "非公開";
+  }
+
+  if (visibility === "friends") {
+    return "フォロー中のみ";
+  }
+
+  return "公開";
 }
 
 function clampNumber(value, min, max, fallback) {
