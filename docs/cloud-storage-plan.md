@@ -43,8 +43,9 @@ Reason:
 6. Sync local logs to the `logs` table. Done in the prototype.
 7. Sync reminders to the `reminders` table. Done in the prototype.
 8. Sync posts and comments to the `posts` and `comments` tables. Done in the prototype.
-9. Move likes, ranking stats, and media uploads.
-10. Keep JSON export/import as a fallback during beta.
+9. Sync likes and ranking stats through `post_likes` and `post_stats`. Done in the prototype.
+10. Move image/video uploads to Storage.
+11. Keep JSON export/import as a fallback during beta.
 
 ## Auth and permission rules
 
@@ -67,11 +68,20 @@ Reason:
 | `post.videoThumbnailDataUrl` | upload to Storage, then `media.thumbnail_path` |
 | `state.reminders` | `reminders` |
 
+## Current implementation slice
+
+Community reactions now sync after post/comment sync:
+
+- Store likes in `post_likes` using `(post_id, user_id)`. Done in the prototype.
+- Read `post_stats` for likes, comments, and ranking score. Done in the prototype.
+- Use the cloud stats for popular sorting, ranking, post cards, tank posts, and album likes sorting.
+
 ## Next implementation slice
 
-Sync community reactions after post/comment sync:
+Move media objects out of local JSON:
 
-- Store likes in `post_likes` using `(post_id, user_id)`.
-- Read `post_stats` for likes, comments, and ranking score.
+- Upload images, videos, and generated thumbnails to the private `aquanote-media` bucket.
+- Store object paths and metadata in `media`.
+- Replace large local data URLs with signed or transformed media URLs.
 - Keep image/video data local until Storage upload is implemented.
 - Keep JSON export/import as a recovery path while the sync model is being tested.

@@ -806,7 +806,7 @@ function renderAccount() {
   document.querySelector("#account-plan-input").value = account.plan;
 
   const mediaCount = state.posts.filter((post) => hasPostMedia(post)).length;
-  const commentCount = state.posts.reduce((total, post) => total + post.comments.length, 0);
+  const commentCount = state.posts.reduce((total, post) => total + getDisplayCommentCount(post), 0);
   const logCount = state.tanks.reduce((total, tank) => total + tank.logs.length, 0);
   const exportedSize = Math.ceil(JSON.stringify(state).length / 1024);
 
@@ -906,6 +906,7 @@ async function signOutSupabase() {
   authSession = null;
   state.account.signedIn = false;
   state.account.syncStatus = "local";
+  clearCurrentUserLikes();
   saveState({ keepSyncStatus: true });
   renderAccount();
   showToast("ログアウトしました");
@@ -1092,6 +1093,8 @@ async function loadCommunityFromSupabase() {
   if (Array.isArray(remotePosts) && remotePosts.length) {
     applyRemotePosts(remotePosts);
     await loadCommentsFromSupabase(remotePosts.map((post) => post.id));
+    await loadPostStatsFromSupabase(remotePosts.map((post) => post.id));
+    await loadPostLikesFromSupabase(remotePosts.map((post) => post.id));
     saveState({ keepSyncStatus: true });
   }
 
@@ -1116,6 +1119,51 @@ async function loadCommentsFromSupabase(postCloudIds) {
   }
 
   applyRemoteComments(data || []);
+  return data || [];
+}
+
+function getPostCloudIds(posts = state.posts) {
+  return posts.map((post) => post.cloudId).filter(Boolean);
+}
+
+async function loadPostStatsFromSupabase(postCloudIds = getPostCloudIds()) {
+  const ids = [...new Set(postCloudIds.filter(Boolean))];
+  if (!supabaseClient || !ids.length) {
+    return [];
+  }
+
+  const { data, error } = await supabaseClient
+    .from("post_stats")
+    .select("post_id, likes_count, comments_count, ranking_score")
+    .in("post_id", ids);
+
+  if (error) {
+    showToast(error.message || "投稿ランキングを読み込めませんでした");
+    return [];
+  }
+
+  applyRemotePostStats(data || []);
+  return data || [];
+}
+
+async function loadPostLikesFromSupabase(postCloudIds = getPostCloudIds()) {
+  const ids = [...new Set(postCloudIds.filter(Boolean))];
+  if (!supabaseClient || !authSession?.user || !ids.length) {
+    return [];
+  }
+
+  const { data, error } = await supabaseClient
+    .from("post_likes")
+    .select("post_id")
+    .eq("user_id", authSession.user.id)
+    .in("post_id", ids);
+
+  if (error) {
+    showToast(error.message || "いいね状態を読み込めませんでした");
+    return [];
+  }
+
+  applyRemotePostLikes(ids, data || []);
   return data || [];
 }
 
@@ -1266,6 +1314,10 @@ async function syncCommunityToSupabase(options = {}) {
     }
     return false;
   }
+
+  const postCloudIds = getPostCloudIds();
+  await loadPostStatsFromSupabase(postCloudIds);
+  await loadPostLikesFromSupabase(postCloudIds);
 
   state.account.syncStatus = "synced";
   state.account.lastSyncedAt = new Date().toISOString();
@@ -1498,6 +1550,10 @@ function applyRemotePosts(remotePosts) {
       videoDuration: null,
       mediaType: null,
       likes: 0,
+      cloudLikes: null,
+      cloudCommentsCount: null,
+      rankingScore: null,
+      likedByCurrentUser: false,
       comments: [],
     };
 
@@ -1522,6 +1578,30 @@ function applyRemotePosts(remotePosts) {
   });
 
   state.posts.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+}
+
+function applyRemotePostStats(remoteStats) {
+  remoteStats.forEach((stat) => {
+    const post = state.posts.find((item) => item.cloudId === stat.post_id);
+    if (!post) {
+      return;
+    }
+
+    post.cloudLikes = Math.max(0, Number(stat.likes_count || 0));
+    post.cloudCommentsCount = Math.max(0, Number(stat.comments_count || 0));
+    post.rankingScore = Math.max(0, Number(stat.ranking_score || 0));
+  });
+}
+
+function applyRemotePostLikes(scopedPostCloudIds, remoteLikes) {
+  const scopedIds = new Set(scopedPostCloudIds);
+  const likedIds = new Set(remoteLikes.map((like) => like.post_id).filter(Boolean));
+
+  state.posts.forEach((post) => {
+    if (post.cloudId && scopedIds.has(post.cloudId)) {
+      post.likedByCurrentUser = likedIds.has(post.cloudId);
+    }
+  });
 }
 
 function applyRemoteComments(remoteComments) {
@@ -1650,6 +1730,10 @@ async function initSupabaseAuth() {
       await loadLogsFromSupabase();
       await loadRemindersFromSupabase();
       await loadCommunityFromSupabase();
+    } else {
+      state.account.signedIn = false;
+      clearCurrentUserLikes();
+      saveState({ keepSyncStatus: true });
     }
     renderAccount();
   });
@@ -1663,6 +1747,10 @@ async function initSupabaseAuth() {
     await loadLogsFromSupabase();
     await loadRemindersFromSupabase();
     await loadCommunityFromSupabase();
+  } else {
+    state.account.signedIn = false;
+    clearCurrentUserLikes();
+    saveState({ keepSyncStatus: true });
   }
 
   renderAccount();
@@ -2017,7 +2105,11 @@ function renderPosts() {
 
   postGrid.innerHTML = posts
     .map(
-      (post) => `
+      (post) => {
+        const likeLabel = post.likedByCurrentUser ? "いいね済み" : "いいね";
+        const likedClass = post.likedByCurrentUser ? " is-liked" : "";
+
+        return `
         <article class="post-card" ${highlightedSearchResult?.type === "post" && highlightedSearchResult.id === post.id ? "data-search-highlight" : ""}>
           ${renderPostImage(post)}
           <div class="post-body">
@@ -2029,8 +2121,8 @@ function renderPosts() {
             <p>${escapeHtml(post.text)}</p>
             ${renderPostComments(post)}
             <div class="post-actions">
-              <button class="like-button" type="button" data-like-id="${escapeHtml(post.id)}">いいね <span>${post.likes}</span></button>
-              <span class="comment-count">${post.comments.length}件のコメント</span>
+              <button class="like-button${likedClass}" type="button" data-like-id="${escapeHtml(post.id)}">${likeLabel} <span>${getDisplayLikes(post)}</span></button>
+              <span class="comment-count">${getDisplayCommentCount(post)}件のコメント</span>
               <button class="text-button" type="button" data-analyze-post="${escapeHtml(post.id)}">AI分析へ</button>
               <button class="text-button" type="button" data-view-media="${escapeHtml(post.id)}">詳細</button>
               <button class="text-button" type="button" data-edit-post="${escapeHtml(post.id)}">編集</button>
@@ -2040,7 +2132,8 @@ function renderPosts() {
             </div>
           </div>
         </article>
-      `,
+      `;
+      },
     )
     .join("");
 
@@ -2077,7 +2170,7 @@ function sortCommunityPosts(posts, sort) {
     }
 
     if (sort === "comments") {
-      const commentOrder = b.comments.length - a.comments.length;
+      const commentOrder = getDisplayCommentCount(b) - getDisplayCommentCount(a);
       if (commentOrder !== 0) {
         return commentOrder;
       }
@@ -2162,7 +2255,7 @@ function renderCommunityRanking() {
         <button type="button" data-ranking-post="${escapeHtml(post.id)}">
           <span>${index + 1}</span>
           <strong>${escapeHtml(post.title)}</strong>
-          <small>${escapeHtml(post.tag)} / いいね ${post.likes} / コメント ${post.comments.length}</small>
+          <small>${escapeHtml(post.tag)} / いいね ${getDisplayLikes(post)} / コメント ${getDisplayCommentCount(post)}</small>
         </button>
       `,
     )
@@ -2187,24 +2280,125 @@ function renderCommunityRanking() {
 }
 
 function getPostRankingScore(post) {
-  return Number(post.likes || 0) + post.comments.length * 3;
+  const remoteScore = Number(post.rankingScore);
+  if (hasStoredNumber(post.rankingScore) && Number.isFinite(remoteScore)) {
+    return remoteScore;
+  }
+
+  return getDisplayLikes(post) + getDisplayCommentCount(post) * 3;
+}
+
+function getDisplayLikes(post) {
+  const remoteLikes = Number(post.cloudLikes);
+  if (hasStoredNumber(post.cloudLikes) && Number.isFinite(remoteLikes)) {
+    return remoteLikes;
+  }
+
+  return Math.max(0, Number(post.likes || 0));
+}
+
+function getDisplayCommentCount(post) {
+  const remoteCount = Number(post.cloudCommentsCount);
+  if (hasStoredNumber(post.cloudCommentsCount) && Number.isFinite(remoteCount)) {
+    return remoteCount;
+  }
+
+  return Array.isArray(post.comments) ? post.comments.length : 0;
+}
+
+function hasStoredNumber(value) {
+  return value !== null && value !== undefined && value !== "";
+}
+
+async function handlePostLike(postId) {
+  let post = state.posts.find((item) => item.id === postId);
+  if (!post) {
+    return;
+  }
+
+  if (!supabaseClient || !authSession?.user) {
+    incrementLocalPostLike(post);
+    return;
+  }
+
+  if (!post.cloudId) {
+    const synced = await syncCloudState({ silent: true });
+    post = state.posts.find((item) => item.id === postId);
+    if (!synced || !post?.cloudId) {
+      incrementLocalPostLike(post);
+      showToast("ローカルでいいねを記録しました");
+      return;
+    }
+  }
+
+  const profileSynced = await syncProfileToSupabase({ silent: true });
+  if (!profileSynced) {
+    showToast("プロフィール同期後にもう一度お試しください");
+    return;
+  }
+
+  const wasLiked = Boolean(post.likedByCurrentUser);
+  const request = wasLiked
+    ? supabaseClient
+        .from("post_likes")
+        .delete()
+        .eq("post_id", post.cloudId)
+        .eq("user_id", authSession.user.id)
+    : supabaseClient.from("post_likes").upsert(
+        {
+          post_id: post.cloudId,
+          user_id: authSession.user.id,
+        },
+        { onConflict: "post_id,user_id" },
+      );
+
+  const { error } = await request;
+  if (error) {
+    showToast(error.message || "いいねを同期できませんでした");
+    return;
+  }
+
+  post.likedByCurrentUser = !wasLiked;
+  post.cloudLikes = Math.max(0, getDisplayLikes(post) + (wasLiked ? -1 : 1));
+  post.rankingScore = post.cloudLikes + getDisplayCommentCount(post) * 3;
+
+  await loadPostStatsFromSupabase([post.cloudId]);
+  await loadPostLikesFromSupabase([post.cloudId]);
+  saveState({ keepSyncStatus: true });
+  renderPosts();
+  renderCommunityRanking();
+  renderTankPosts();
+  renderTankAlbum();
+  showToast(wasLiked ? "いいねを取り消しました" : "いいねしました");
+}
+
+function incrementLocalPostLike(post) {
+  if (!post) {
+    return;
+  }
+
+  const nextLikes = getDisplayLikes(post) + 1;
+  post.likes = nextLikes;
+  if (hasStoredNumber(post.cloudLikes) && Number.isFinite(Number(post.cloudLikes))) {
+    post.cloudLikes = nextLikes;
+    post.rankingScore = nextLikes + getDisplayCommentCount(post) * 3;
+  }
+  saveState();
+  renderPosts();
+  renderCommunityRanking();
+  renderTankPosts();
+  renderTankAlbum();
+}
+
+function clearCurrentUserLikes() {
+  state.posts.forEach((post) => {
+    post.likedByCurrentUser = false;
+  });
 }
 
 function bindPostActions(root) {
   root.querySelectorAll("[data-like-id]").forEach((button) => {
-    button.addEventListener("click", () => {
-      const post = state.posts.find((item) => item.id === button.dataset.likeId);
-      if (!post) {
-        return;
-      }
-
-      post.likes += 1;
-      saveState();
-      renderPosts();
-      renderCommunityRanking();
-      renderTankPosts();
-      renderTankAlbum();
-    });
+    button.addEventListener("click", () => handlePostLike(button.dataset.likeId));
   });
 
   root.querySelectorAll("[data-comment-form]").forEach((form) => {
@@ -2263,7 +2457,7 @@ function renderTankPosts() {
           <div>
             <span>${escapeHtml(post.tag)}</span>
             <strong>${escapeHtml(post.title)}</strong>
-            <small>いいね ${post.likes} / コメント ${post.comments.length} / ${getPostMediaLabel(post)}</small>
+            <small>いいね ${getDisplayLikes(post)} / コメント ${getDisplayCommentCount(post)} / ${getPostMediaLabel(post)}</small>
             <div class="linked-actions">
               <button class="text-button" type="button" data-analyze-post="${escapeHtml(post.id)}">AI分析へ</button>
               <button class="text-button" type="button" data-view-media="${escapeHtml(post.id)}">詳細</button>
@@ -2419,7 +2613,7 @@ function sortAlbumPosts(posts, tank) {
     }
 
     if (activeAlbumSort === "likes") {
-      const likeOrder = Number(b.likes || 0) - Number(a.likes || 0);
+      const likeOrder = getDisplayLikes(b) - getDisplayLikes(a);
       if (likeOrder !== 0) {
         return likeOrder;
       }
@@ -2519,7 +2713,7 @@ function openMediaDetail(postId) {
           </div>
           <div>
             <dt>反応</dt>
-            <dd>いいね ${Number(post.likes || 0)} / コメント ${post.comments.length}</dd>
+            <dd>いいね ${getDisplayLikes(post)} / コメント ${getDisplayCommentCount(post)}</dd>
           </div>
           <div>
             <dt>メディア</dt>
@@ -3342,6 +3536,17 @@ function normalizeState(saved) {
       mediaType: post.mediaType || (post.videoDataUrl ? "video" : post.imageDataUrl ? "image" : null),
       createdAt: post.createdAt || post.updatedAt || daysAgoIso(index),
       cloudId: post.cloudId || null,
+      cloudLikes:
+        hasStoredNumber(post.cloudLikes) && Number.isFinite(Number(post.cloudLikes)) ? Math.max(0, Number(post.cloudLikes)) : null,
+      cloudCommentsCount:
+        hasStoredNumber(post.cloudCommentsCount) && Number.isFinite(Number(post.cloudCommentsCount))
+          ? Math.max(0, Number(post.cloudCommentsCount))
+          : null,
+      rankingScore:
+        hasStoredNumber(post.rankingScore) && Number.isFinite(Number(post.rankingScore))
+          ? Math.max(0, Number(post.rankingScore))
+          : null,
+      likedByCurrentUser: Boolean(post.likedByCurrentUser),
     };
   });
 

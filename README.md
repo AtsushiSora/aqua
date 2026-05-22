@@ -60,11 +60,11 @@
 - 管理ログのSupabase `logs` 同期
 - リマインダー設定のSupabase `reminders` 同期
 - 投稿とコメントのSupabase `posts` / `comments` 同期
+- いいねとランキングのSupabase `post_likes` / `post_stats` 同期
 - PWA用の `manifest.webmanifest` と `sw.js`
 
 ## 次に作るとよいもの
 
-- いいね/ランキングのDB保存
 - 写真・動画のStorageアップロード
 - 本物のAI画像分析
 - 通知機能

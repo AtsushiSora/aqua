@@ -1939,6 +1939,14 @@ textarea {
   border: 0;
 }
 
+.like-button.is-liked {
+  color: #0a6c72;
+}
+
+.like-button.is-liked span {
+  color: var(--aqua-dark);
+}
+
 .ai-layout {
   display: grid;
   grid-template-columns: minmax(280px, 380px) minmax(0, 1fr);

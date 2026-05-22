@@ -127,7 +127,8 @@ create table public.ai_results (
   checked_at timestamptz not null default now()
 );
 
-create view public.post_stats as
+create view public.post_stats
+with (security_invoker = true) as
 select
   posts.id as post_id,
   count(distinct post_likes.user_id) as likes_count,
