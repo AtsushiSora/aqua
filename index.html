@@ -68,7 +68,9 @@
             <input type="search" placeholder="水槽、投稿、ガイドを検索">
           </label>
           <div class="topbar-actions">
-            <button class="icon-button" id="notification-button" type="button" title="通知" aria-label="通知">●</button>
+            <button class="icon-button" id="notification-button" type="button" title="通知" aria-label="通知">
+              <span class="notification-dot" aria-hidden="true"></span>
+            </button>
             <button class="primary-button" type="button" data-open-post>投稿</button>
           </div>
         </header>
@@ -89,14 +91,14 @@
             <div class="dashboard-main">
               <div class="hero-band">
                 <div class="hero-copy">
-                  <p class="eyebrow">Aqua life community</p>
-                  <h2>つながる。学べる。育てる喜びを、みんなで。</h2>
+                  <p class="eyebrow">Daily aquarium care</p>
+                  <h2>水槽管理を、きれいに続ける。</h2>
                   <p>
-                    アクアリウム・錦鯉・メダカのある暮らしを、記録して共有して楽しむアプリです。
+                    水温、pH、写真、気づいた変化をひとつにまとめて、毎日の管理を軽くします。
                   </p>
                   <div class="hero-actions">
-                    <button class="primary-button" type="button" data-view-target="community">コミュニティを見る</button>
-                    <button class="ghost-button" type="button" data-view-target="tanks">水槽を記録</button>
+                    <button class="primary-button" type="button" data-view-target="tanks">記録する</button>
+                    <button class="ghost-button" type="button" data-view-target="community">投稿を見る</button>
                     <button class="photo-button" type="button" id="hero-photo-button">写真を変更</button>
                     <input id="hero-photo-input" type="file" accept="image/*" hidden>
                   </div>
