@@ -56,6 +56,13 @@ const syncSummary = document.querySelector("#sync-summary");
 const exportDataButton = document.querySelector("#export-data-button");
 const importDataButton = document.querySelector("#import-data-button");
 const importDataInput = document.querySelector("#import-data-input");
+const authForm = document.querySelector("#auth-form");
+const authStatusChip = document.querySelector("#auth-status-chip");
+const authEmailInput = document.querySelector("#auth-email-input");
+const authPasswordInput = document.querySelector("#auth-password-input");
+const authSignOutButton = document.querySelector("#auth-sign-out-button");
+const authNote = document.querySelector("#auth-note");
+const supabaseConfig = window.AQUANOTE_SUPABASE_CONFIG || {};
 
 const taskLabels = {
   feedMorning: "朝の餌やり",
@@ -251,6 +258,8 @@ let editingPostId = null;
 let activeAlbumMonth = "all";
 let activeAlbumSort = "featured";
 let highlightedSearchResult = null;
+let supabaseClient = createSupabaseClient();
+let authSession = null;
 
 function showView(id) {
   views.forEach((view) => {
@@ -392,6 +401,14 @@ mockSyncButton.addEventListener("click", () => {
 exportDataButton.addEventListener("click", exportAppData);
 importDataButton.addEventListener("click", () => importDataInput.click());
 importDataInput.addEventListener("change", importAppData);
+
+authForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const action = event.submitter?.value || "sign-in";
+  await handleAuthSubmit(action);
+});
+
+authSignOutButton.addEventListener("click", signOutSupabase);
 
 postImageInput.addEventListener("change", async () => {
   const file = postImageInput.files[0];
@@ -787,6 +804,121 @@ function renderAccount() {
       <small>JSONで書き出して、次のDB設計に使えます</small>
     </article>
   `;
+
+  renderAuthPanel();
+}
+
+function renderAuthPanel() {
+  const configured = Boolean(supabaseClient);
+  const signedIn = Boolean(authSession?.user);
+
+  authEmailInput.value = authEmailInput.value || state.account.email;
+  authStatusChip.textContent = signedIn ? "ログイン中" : configured ? "接続準備済み" : "未設定";
+  authStatusChip.className = `auth-status-chip ${signedIn ? "is-signed-in" : configured ? "is-ready" : ""}`;
+  authSignOutButton.disabled = !signedIn;
+
+  if (!configured) {
+    authNote.textContent = "supabase-config.js を追加すると、ログインと新規登録を試せます。未設定でもローカル保存は使えます。";
+    return;
+  }
+
+  authNote.textContent = signedIn
+    ? `${authSession.user.email || state.account.email} でログインしています。`
+    : "Supabase Authへメールとパスワードで接続します。";
+}
+
+async function handleAuthSubmit(action) {
+  if (!supabaseClient) {
+    showToast("Supabase設定がまだありません");
+    renderAuthPanel();
+    return;
+  }
+
+  const email = authEmailInput.value.trim();
+  const password = authPasswordInput.value;
+
+  if (!email || password.length < 8) {
+    showToast("メールと8文字以上のパスワードを入力してください");
+    return;
+  }
+
+  const method = action === "sign-up" ? "signUp" : "signInWithPassword";
+  const { data, error } = await supabaseClient.auth[method]({ email, password });
+
+  if (error) {
+    showToast(error.message || "認証に失敗しました");
+    return;
+  }
+
+  authSession = data.session || authSession;
+  state.account = {
+    ...state.account,
+    signedIn: true,
+    email,
+    syncStatus: "local",
+  };
+  saveState({ keepSyncStatus: true });
+  renderAccount();
+  showToast(action === "sign-up" ? "登録メールを確認してください" : "ログインしました");
+}
+
+async function signOutSupabase() {
+  if (!supabaseClient) {
+    showToast("Supabase設定がまだありません");
+    return;
+  }
+
+  const { error } = await supabaseClient.auth.signOut();
+  if (error) {
+    showToast(error.message || "ログアウトに失敗しました");
+    return;
+  }
+
+  authSession = null;
+  state.account.signedIn = false;
+  state.account.syncStatus = "local";
+  saveState({ keepSyncStatus: true });
+  renderAccount();
+  showToast("ログアウトしました");
+}
+
+function createSupabaseClient() {
+  const url = supabaseConfig.url || supabaseConfig.supabaseUrl;
+  const key = supabaseConfig.publishableKey || supabaseConfig.anonKey;
+
+  if (!url || !key || !window.supabase?.createClient) {
+    return null;
+  }
+
+  return window.supabase.createClient(url, key);
+}
+
+async function initSupabaseAuth() {
+  if (!supabaseClient) {
+    renderAuthPanel();
+    return;
+  }
+
+  const { data } = await supabaseClient.auth.getSession();
+  authSession = data.session || null;
+
+  supabaseClient.auth.onAuthStateChange((_event, session) => {
+    authSession = session;
+    if (session?.user) {
+      state.account.signedIn = true;
+      state.account.email = session.user.email || state.account.email;
+      saveState({ keepSyncStatus: true });
+    }
+    renderAccount();
+  });
+
+  if (authSession?.user) {
+    state.account.signedIn = true;
+    state.account.email = authSession.user.email || state.account.email;
+    saveState({ keepSyncStatus: true });
+  }
+
+  renderAccount();
 }
 
 function exportAppData() {
@@ -2919,6 +3051,7 @@ function escapeCssIdentifier(value) {
 setDefaultLogDate();
 renderPostImagePreview();
 renderApp();
+initSupabaseAuth();
 checkDueReminders();
 window.setInterval(checkDueReminders, 60000);
 

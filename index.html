@@ -725,6 +725,32 @@
               </div>
             </section>
 
+            <section class="panel auth-panel">
+              <div class="section-head">
+                <div>
+                  <p class="eyebrow">Supabase Auth</p>
+                  <h2>ログイン接続</h2>
+                </div>
+                <span class="auth-status-chip" id="auth-status-chip">未設定</span>
+              </div>
+              <form class="auth-form" id="auth-form">
+                <label>
+                  <span>メール</span>
+                  <input id="auth-email-input" type="email" autocomplete="email" placeholder="you@example.com">
+                </label>
+                <label>
+                  <span>パスワード</span>
+                  <input id="auth-password-input" type="password" autocomplete="current-password" placeholder="8文字以上">
+                </label>
+                <div class="auth-actions full-field">
+                  <button class="primary-button" type="submit" name="auth-action" value="sign-in">ログイン</button>
+                  <button class="ghost-button" type="submit" name="auth-action" value="sign-up">新規登録</button>
+                  <button class="text-button" id="auth-sign-out-button" type="button">ログアウト</button>
+                </div>
+              </form>
+              <p class="auth-note" id="auth-note">Supabase設定を追加すると、ここからログインを試せます。</p>
+            </section>
+
             <section class="panel cloud-plan-panel">
               <div class="section-head">
                 <div>
@@ -818,6 +844,8 @@
       </section>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase-config.js"></script>
     <script src="app.js"></script>
   </body>
 </html>
