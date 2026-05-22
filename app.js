@@ -49,20 +49,34 @@ const taskLabels = {
   checkAlgae: "ガラス面のコケ確認",
 };
 
+const weekdayLabels = ["日", "月", "火", "水", "木", "金", "土"];
+
 const defaultReminders = {
   feedMorning: {
     time: "08:00",
     enabled: true,
+    schedule: "daily",
+    weekdays: [0, 1, 2, 3, 4, 5, 6],
+    intervalDays: 1,
+    startDate: getDateKey(new Date()),
     lastNotifiedOn: null,
   },
   checkTemp: {
     time: "18:00",
     enabled: true,
+    schedule: "daily",
+    weekdays: [0, 1, 2, 3, 4, 5, 6],
+    intervalDays: 1,
+    startDate: getDateKey(new Date()),
     lastNotifiedOn: null,
   },
   checkAlgae: {
     time: "20:00",
     enabled: false,
+    schedule: "weekly",
+    weekdays: [0],
+    intervalDays: 7,
+    startDate: getDateKey(new Date()),
     lastNotifiedOn: null,
   },
 };
@@ -101,6 +115,7 @@ const defaultState = {
       logs: sampleLogs,
       latestAi: null,
       featuredPostId: "sample-reef",
+      albumOrder: ["sample-reef"],
     },
     {
       id: "tank-pond",
@@ -122,6 +137,7 @@ const defaultState = {
       ],
       latestAi: null,
       featuredPostId: "sample-medaka",
+      albumOrder: ["sample-medaka", "sample-koi"],
     },
   ],
   posts: [
@@ -376,6 +392,7 @@ replacePostImageInput.addEventListener("change", async () => {
   try {
     const media = await preparePostMedia(file);
     applyPostMedia(post, media);
+    addPostToTankAlbumOrder(post);
     saveState();
     renderApp();
     showToast("投稿メディアを差し替えました");
@@ -434,6 +451,7 @@ tankForm.addEventListener("submit", (event) => {
     logs: [],
     latestAi: null,
     featuredPostId: null,
+    albumOrder: [],
   };
 
   state.tanks.unshift(tank);
@@ -568,6 +586,7 @@ postForm.addEventListener("submit", (event) => {
         videoThumbnailDataUrl: pendingPostVideoThumbnailDataUrl,
         videoDuration: pendingPostVideoDuration,
       });
+      addPostToTankAlbumOrder(existingPost);
     }
     existingPost.updatedAt = new Date().toISOString();
 
@@ -576,6 +595,8 @@ postForm.addEventListener("submit", (event) => {
       if (previousTank?.featuredPostId === existingPost.id) {
         previousTank.featuredPostId = null;
       }
+      removePostFromTankAlbumOrder(previousTankId, existingPost.id);
+      addPostToTankAlbumOrder(existingPost);
     }
 
     saveState();
@@ -604,6 +625,7 @@ postForm.addEventListener("submit", (event) => {
   };
 
   state.posts.unshift(post);
+  addPostToTankAlbumOrder(post);
   saveState();
   renderApp();
   resetPostForm();
@@ -1167,6 +1189,10 @@ function bindPostActions(root) {
     button.addEventListener("click", () => openMediaDetail(button.dataset.viewMedia));
   });
 
+  root.querySelectorAll("[data-album-move]").forEach((button) => {
+    button.addEventListener("click", () => moveAlbumPost(button.dataset.albumMove, Number(button.dataset.albumDirection)));
+  });
+
   root.querySelectorAll("[data-feature-post]").forEach((button) => {
     button.addEventListener("click", () => featurePost(button.dataset.featurePost));
   });
@@ -1225,6 +1251,7 @@ function renderTankPosts() {
 function renderTankAlbum() {
   const tank = getActiveTank();
   const tankMediaPosts = state.posts.filter((post) => post.tankId === tank.id && hasPostMedia(post));
+  ensureTankAlbumOrder(tank, tankMediaPosts);
   const monthOptions = getAlbumMonthOptions(tankMediaPosts);
   const allPosts = sortAlbumPosts(tankMediaPosts, tank);
 
@@ -1257,13 +1284,25 @@ function renderTankAlbum() {
     .map(
       (post) => {
         const albumImage = post.imageDataUrl || post.videoThumbnailDataUrl;
+        const manualControls =
+          activeAlbumSort === "manual"
+            ? `
+              <div class="album-manual-controls" aria-label="${escapeHtml(post.title)}の並び替え">
+                <button type="button" data-album-move="${escapeHtml(post.id)}" data-album-direction="-1">上へ</button>
+                <button type="button" data-album-move="${escapeHtml(post.id)}" data-album-direction="1">下へ</button>
+              </div>
+            `
+            : "";
         return `
-        <button class="album-tile ${post.videoDataUrl ? "has-video" : ""} ${post.id === tank.featuredPostId ? "is-featured" : ""}" type="button" data-view-media="${escapeHtml(post.id)}" ${albumImage ? `style="background-image: url('${escapeAttribute(albumImage)}')"` : ""}>
-          ${post.id === tank.featuredPostId ? "<small>表紙</small>" : ""}
-          ${post.videoDataUrl ? `<b class="media-badge">${formatVideoDuration(post.videoDuration)}</b>` : ""}
-          <span>${escapeHtml(post.title)}</span>
-          <time>${formatAlbumDate(post.createdAt)}</time>
-        </button>
+        <article class="album-tile-shell">
+          <button class="album-tile ${post.videoDataUrl ? "has-video" : ""} ${post.id === tank.featuredPostId ? "is-featured" : ""}" type="button" data-view-media="${escapeHtml(post.id)}" ${albumImage ? `style="background-image: url('${escapeAttribute(albumImage)}')"` : ""}>
+            ${post.id === tank.featuredPostId ? "<small>表紙</small>" : ""}
+            ${post.videoDataUrl ? `<b class="media-badge">${formatVideoDuration(post.videoDuration)}</b>` : ""}
+            <span>${escapeHtml(post.title)}</span>
+            <time>${formatAlbumDate(post.createdAt)}</time>
+          </button>
+          ${manualControls}
+        </article>
       `;
       },
     )
@@ -1326,6 +1365,15 @@ function getAlbumMonthOptions(posts) {
 
 function sortAlbumPosts(posts, tank) {
   return [...posts].sort((a, b) => {
+    if (activeAlbumSort === "manual") {
+      const order = Array.isArray(tank.albumOrder) ? tank.albumOrder : [];
+      const aIndex = order.indexOf(a.id);
+      const bIndex = order.indexOf(b.id);
+      if (aIndex !== -1 || bIndex !== -1) {
+        return (aIndex === -1 ? Number.MAX_SAFE_INTEGER : aIndex) - (bIndex === -1 ? Number.MAX_SAFE_INTEGER : bIndex);
+      }
+    }
+
     if (activeAlbumSort === "featured") {
       const featuredOrder = Number(b.id === tank.featuredPostId) - Number(a.id === tank.featuredPostId);
       if (featuredOrder !== 0) {
@@ -1346,6 +1394,60 @@ function sortAlbumPosts(posts, tank) {
 
     return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
   });
+}
+
+function ensureTankAlbumOrder(tank, posts = state.posts.filter((post) => post.tankId === tank.id && hasPostMedia(post))) {
+  const postIds = posts.map((post) => post.id);
+  const existingOrder = Array.isArray(tank.albumOrder) ? tank.albumOrder : [];
+  const orderedIds = existingOrder.filter((id) => postIds.includes(id));
+  const missingIds = posts
+    .filter((post) => !orderedIds.includes(post.id))
+    .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))
+    .map((post) => post.id);
+
+  tank.albumOrder = [...orderedIds, ...missingIds];
+}
+
+function addPostToTankAlbumOrder(post) {
+  if (!hasPostMedia(post)) {
+    return;
+  }
+
+  const tank = state.tanks.find((item) => item.id === post.tankId);
+  if (!tank) {
+    return;
+  }
+
+  ensureTankAlbumOrder(tank);
+  tank.albumOrder = [post.id, ...tank.albumOrder.filter((id) => id !== post.id)];
+}
+
+function removePostFromTankAlbumOrder(tankId, postId) {
+  const tank = state.tanks.find((item) => item.id === tankId);
+  if (!tank || !Array.isArray(tank.albumOrder)) {
+    return;
+  }
+
+  tank.albumOrder = tank.albumOrder.filter((id) => id !== postId);
+}
+
+function moveAlbumPost(postId, direction) {
+  const tank = getActiveTank();
+  const posts = state.posts.filter((post) => post.tankId === tank.id && hasPostMedia(post));
+  ensureTankAlbumOrder(tank, posts);
+
+  const index = tank.albumOrder.indexOf(postId);
+  const nextIndex = index + direction;
+  if (index === -1 || nextIndex < 0 || nextIndex >= tank.albumOrder.length) {
+    return;
+  }
+
+  const [item] = tank.albumOrder.splice(index, 1);
+  tank.albumOrder.splice(nextIndex, 0, item);
+  activeAlbumSort = "manual";
+  saveState();
+  renderTankAlbum();
+  showToast("アルバムの並びを更新しました");
 }
 
 function openMediaDetail(postId) {
@@ -1463,6 +1565,7 @@ function deletePost(postId) {
     if (tank.featuredPostId === postId) {
       tank.featuredPostId = null;
     }
+    removePostFromTankAlbumOrder(tank.id, postId);
   });
   saveState();
   renderApp();
@@ -1555,17 +1658,25 @@ function renderReminders() {
       const reminder = state.reminders[taskId] || defaultReminders[taskId];
       const checked = reminder.enabled ? "checked" : "";
       const rowClass = reminder.enabled ? "" : "is-off";
-      const status = state.tasks[taskId] ? "今日のタスクは完了" : reminder.enabled ? "通知対象" : "通知オフ";
+      const status = getReminderStatusText(taskId, reminder);
 
       return `
-        <label class="reminder-row ${rowClass}">
+        <div class="reminder-row ${rowClass}">
           <input type="checkbox" data-reminder-enabled="${escapeHtml(taskId)}" ${checked}>
-          <span>
+          <div class="reminder-summary">
             <strong>${escapeHtml(label)}</strong>
             <small>${status}</small>
-          </span>
-          <input type="time" value="${escapeAttribute(reminder.time)}" data-reminder-time="${escapeHtml(taskId)}" aria-label="${escapeHtml(label)}の通知時刻">
-        </label>
+          </div>
+          <div class="reminder-controls">
+            <select data-reminder-schedule="${escapeHtml(taskId)}" aria-label="${escapeHtml(label)}の繰り返し">
+              <option value="daily" ${reminder.schedule === "daily" ? "selected" : ""}>毎日</option>
+              <option value="weekly" ${reminder.schedule === "weekly" ? "selected" : ""}>曜日指定</option>
+              <option value="interval" ${reminder.schedule === "interval" ? "selected" : ""}>何日ごと</option>
+            </select>
+            <input type="time" value="${escapeAttribute(reminder.time)}" data-reminder-time="${escapeHtml(taskId)}" aria-label="${escapeHtml(label)}の通知時刻">
+            ${renderReminderScheduleControls(taskId, reminder)}
+          </div>
+        </div>
       `;
     })
     .join("");
@@ -1591,8 +1702,98 @@ function renderReminders() {
     });
   });
 
+  reminderList.querySelectorAll("[data-reminder-schedule]").forEach((select) => {
+    select.addEventListener("change", () => {
+      const taskId = select.dataset.reminderSchedule;
+      state.reminders[taskId].schedule = select.value;
+      state.reminders[taskId].lastNotifiedOn = null;
+      saveState();
+      renderTasks();
+      renderReminders();
+    });
+  });
+
+  reminderList.querySelectorAll("[data-reminder-weekday]").forEach((input) => {
+    input.addEventListener("change", () => {
+      const taskId = input.dataset.reminderWeekday;
+      const weekday = Number(input.value);
+      const reminder = state.reminders[taskId];
+      const weekdays = new Set(reminder.weekdays);
+
+      if (input.checked) {
+        weekdays.add(weekday);
+      } else {
+        weekdays.delete(weekday);
+      }
+
+      reminder.weekdays = weekdays.size ? [...weekdays].sort((a, b) => a - b) : [new Date().getDay()];
+      reminder.lastNotifiedOn = null;
+      saveState();
+      renderTasks();
+      renderReminders();
+    });
+  });
+
+  reminderList.querySelectorAll("[data-reminder-interval]").forEach((input) => {
+    input.addEventListener("change", () => {
+      const taskId = input.dataset.reminderInterval;
+      state.reminders[taskId].intervalDays = clampNumber(input.value, 1, 30, defaultReminders[taskId].intervalDays);
+      state.reminders[taskId].lastNotifiedOn = null;
+      saveState();
+      renderTasks();
+      renderReminders();
+    });
+  });
+
+  reminderList.querySelectorAll("[data-reminder-start]").forEach((input) => {
+    input.addEventListener("change", () => {
+      const taskId = input.dataset.reminderStart;
+      state.reminders[taskId].startDate = isValidDateKey(input.value) ? input.value : getDateKey(new Date());
+      state.reminders[taskId].lastNotifiedOn = null;
+      saveState();
+      renderTasks();
+      renderReminders();
+    });
+  });
+
   renderNextReminder();
   renderNotificationButtons();
+}
+
+function renderReminderScheduleControls(taskId, reminder) {
+  if (reminder.schedule === "weekly") {
+    return `
+      <div class="weekday-picker" aria-label="${escapeHtml(taskLabels[taskId])}の曜日">
+        ${weekdayLabels
+          .map(
+            (label, index) => `
+              <label>
+                <input type="checkbox" value="${index}" data-reminder-weekday="${escapeHtml(taskId)}" ${reminder.weekdays.includes(index) ? "checked" : ""}>
+                <span>${label}</span>
+              </label>
+            `,
+          )
+          .join("")}
+      </div>
+    `;
+  }
+
+  if (reminder.schedule === "interval") {
+    return `
+      <div class="interval-controls">
+        <label>
+          <span>間隔</span>
+          <input type="number" min="1" max="30" value="${escapeAttribute(reminder.intervalDays)}" data-reminder-interval="${escapeHtml(taskId)}">
+        </label>
+        <label>
+          <span>開始日</span>
+          <input type="date" value="${escapeAttribute(reminder.startDate)}" data-reminder-start="${escapeHtml(taskId)}">
+        </label>
+      </div>
+    `;
+  }
+
+  return "";
 }
 
 function renderNextReminder() {
@@ -1621,7 +1822,25 @@ function getReminderStatus(taskId) {
     return "OFF";
   }
 
-  return reminder.time || defaultReminders[taskId].time;
+  return getReminderStatusText(taskId, reminder);
+}
+
+function getReminderStatusText(taskId, reminder = state.reminders[taskId]) {
+  if (!reminder?.enabled) {
+    return "通知オフ";
+  }
+
+  const nextReminder = getNextReminderForTask(taskId, reminder, new Date());
+  const todayKey = getDateKey(new Date());
+  if (state.tasks[taskId] && nextReminder && getDateKey(nextReminder.date) !== todayKey) {
+    return `今日のタスクは完了 / 次回 ${formatReminderDate(nextReminder.date)}`;
+  }
+
+  if (!nextReminder) {
+    return "通知予定なし";
+  }
+
+  return `${getScheduleLabel(reminder)} / 次回 ${formatReminderDate(nextReminder.date)}`;
 }
 
 function getNextReminder() {
@@ -1629,19 +1848,41 @@ function getNextReminder() {
   return Object.entries(taskLabels)
     .map(([taskId, label]) => {
       const reminder = state.reminders[taskId] || defaultReminders[taskId];
-      if (!reminder.enabled) {
-        return null;
-      }
-
-      let date = getReminderDate(reminder.time, now);
-      if (date <= now || state.tasks[taskId]) {
-        date.setDate(date.getDate() + 1);
-      }
-
-      return { taskId, label, date };
+      const nextReminder = getNextReminderForTask(taskId, reminder, now);
+      return nextReminder ? { taskId, label, date: nextReminder.date } : null;
     })
     .filter(Boolean)
     .sort((a, b) => a.date - b.date)[0];
+}
+
+function getNextReminderForTask(taskId, reminder, now = new Date()) {
+  if (!reminder?.enabled) {
+    return null;
+  }
+
+  const todayKey = getDateKey(now);
+  for (let offset = 0; offset <= 370; offset += 1) {
+    const candidate = new Date(now);
+    candidate.setDate(now.getDate() + offset);
+    const dateKey = getDateKey(candidate);
+
+    if (!doesReminderMatchDate(reminder, candidate)) {
+      continue;
+    }
+
+    const date = getReminderDate(reminder.time, candidate);
+    if (date <= now) {
+      continue;
+    }
+
+    if (dateKey === todayKey && state.tasks[taskId]) {
+      continue;
+    }
+
+    return { date };
+  }
+
+  return null;
 }
 
 function checkDueReminders() {
@@ -1654,6 +1895,10 @@ function checkDueReminders() {
   Object.entries(taskLabels).forEach(([taskId, label]) => {
     const reminder = state.reminders[taskId];
     if (!reminder?.enabled || state.tasks[taskId] || reminder.lastNotifiedOn === todayKey) {
+      return;
+    }
+
+    if (!doesReminderMatchDate(reminder, now)) {
       return;
     }
 
@@ -2033,6 +2278,7 @@ function normalizeState(saved) {
     logs: Array.isArray(tank.logs) ? tank.logs : [],
     latestAi: tank.latestAi || null,
     featuredPostId: tank.featuredPostId || null,
+    albumOrder: Array.isArray(tank.albumOrder) ? tank.albumOrder : [],
   }));
   normalized.posts = normalized.posts.map((post, index) => {
     const fallbackTank = normalized.tanks[index % normalized.tanks.length] || normalized.tanks[0];
@@ -2184,20 +2430,41 @@ function normalizeSearchTerm(value) {
   return String(value).trim().toLowerCase();
 }
 
+function clampNumber(value, min, max, fallback) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) {
+    return fallback;
+  }
+
+  return Math.min(max, Math.max(min, Math.round(number)));
+}
+
 function normalizeReminders(reminders = {}) {
   const savedReminders = reminders && typeof reminders === "object" ? reminders : {};
 
   return Object.fromEntries(
-    Object.entries(defaultReminders).map(([taskId, defaults]) => [
-      taskId,
-      {
-        ...defaults,
-        ...(savedReminders[taskId] || {}),
-        time: isValidTimeValue(savedReminders[taskId]?.time) ? savedReminders[taskId].time : defaults.time,
-        enabled: Boolean(savedReminders[taskId]?.enabled ?? defaults.enabled),
-        lastNotifiedOn: savedReminders[taskId]?.lastNotifiedOn || null,
-      },
-    ]),
+    Object.entries(defaultReminders).map(([taskId, defaults]) => {
+      const saved = savedReminders[taskId] || {};
+      const schedule = ["daily", "weekly", "interval"].includes(saved.schedule) ? saved.schedule : defaults.schedule;
+      const weekdays = Array.isArray(saved.weekdays)
+        ? saved.weekdays.map(Number).filter((day) => Number.isInteger(day) && day >= 0 && day <= 6)
+        : defaults.weekdays;
+
+      return [
+        taskId,
+        {
+          ...defaults,
+          ...saved,
+          schedule,
+          weekdays: weekdays.length ? [...new Set(weekdays)].sort((a, b) => a - b) : defaults.weekdays,
+          intervalDays: clampNumber(saved.intervalDays, 1, 30, defaults.intervalDays),
+          startDate: isValidDateKey(saved.startDate) ? saved.startDate : defaults.startDate,
+          time: isValidTimeValue(saved.time) ? saved.time : defaults.time,
+          enabled: Boolean(saved.enabled ?? defaults.enabled),
+          lastNotifiedOn: saved.lastNotifiedOn || null,
+        },
+      ];
+    }),
   );
 }
 
@@ -2226,8 +2493,59 @@ function getReminderDate(time, baseDate = new Date()) {
   return date;
 }
 
+function doesReminderMatchDate(reminder, date) {
+  if (reminder.schedule === "weekly") {
+    return reminder.weekdays.includes(date.getDay());
+  }
+
+  if (reminder.schedule === "interval") {
+    const start = parseDateKey(reminder.startDate);
+    if (!start) {
+      return true;
+    }
+
+    const diff = diffCalendarDays(start, date);
+    return diff >= 0 && diff % reminder.intervalDays === 0;
+  }
+
+  return true;
+}
+
+function getScheduleLabel(reminder) {
+  if (reminder.schedule === "weekly") {
+    return reminder.weekdays.map((day) => weekdayLabels[day]).join("・");
+  }
+
+  if (reminder.schedule === "interval") {
+    return `${reminder.intervalDays}日ごと`;
+  }
+
+  return "毎日";
+}
+
+function parseDateKey(value) {
+  if (!isValidDateKey(value)) {
+    return null;
+  }
+
+  const [year, month, day] = value.split("-").map(Number);
+  return new Date(year, month - 1, day);
+}
+
+function diffCalendarDays(start, end) {
+  const startDate = new Date(start);
+  const endDate = new Date(end);
+  startDate.setHours(0, 0, 0, 0);
+  endDate.setHours(0, 0, 0, 0);
+  return Math.round((endDate - startDate) / 86400000);
+}
+
 function isValidTimeValue(value) {
   return typeof value === "string" && /^([01]\d|2[0-3]):[0-5]\d$/.test(value);
+}
+
+function isValidDateKey(value) {
+  return typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value) && !Number.isNaN(new Date(value).getTime());
 }
 
 function diffDays(value) {
