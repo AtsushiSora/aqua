@@ -34,6 +34,8 @@ const enableNotificationsButton = document.querySelector("#enable-notifications-
 const reminderList = document.querySelector("#reminder-list");
 const sidebarNextTime = document.querySelector("#sidebar-next-time");
 const sidebarNextTask = document.querySelector("#sidebar-next-task");
+const globalSearchInput = document.querySelector("#global-search");
+const searchResults = document.querySelector("#search-results");
 
 const taskLabels = {
   feedMorning: "朝の餌やり",
@@ -187,6 +189,29 @@ viewLinks.forEach((link) => {
 
 directViewButtons.forEach((button) => {
   button.addEventListener("click", () => showView(button.dataset.viewTarget));
+});
+
+globalSearchInput.addEventListener("input", renderSearchResults);
+globalSearchInput.addEventListener("focus", renderSearchResults);
+globalSearchInput.addEventListener("keydown", (event) => {
+  if (event.key === "Escape") {
+    clearSearchResults();
+  }
+});
+
+searchResults.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-search-type]");
+  if (!button) {
+    return;
+  }
+
+  openSearchResult(button.dataset.searchType, button.dataset.searchId);
+});
+
+document.addEventListener("click", (event) => {
+  if (!event.target.closest(".search-box")) {
+    clearSearchResults();
+  }
 });
 
 window.addEventListener("hashchange", () => {
@@ -579,6 +604,111 @@ function renderPostControls() {
 
 function renderHeroPhoto() {
   heroPhoto.src = state.heroPhotoDataUrl || "assets/site-concept.png";
+}
+
+function renderSearchResults() {
+  const query = normalizeSearchTerm(globalSearchInput.value);
+  if (!query) {
+    clearSearchResults();
+    return;
+  }
+
+  const results = getSearchResults(query).slice(0, 8);
+  searchResults.hidden = false;
+
+  if (!results.length) {
+    searchResults.innerHTML = '<p class="empty-search">該当する水槽、投稿、ガイドはありません</p>';
+    return;
+  }
+
+  searchResults.innerHTML = results
+    .map(
+      (result) => `
+        <button type="button" data-search-type="${escapeHtml(result.type)}" data-search-id="${escapeHtml(result.id)}">
+          <span>${escapeHtml(result.label)}</span>
+          <strong>${escapeHtml(result.title)}</strong>
+          <small>${escapeHtml(result.description)}</small>
+        </button>
+      `,
+    )
+    .join("");
+}
+
+function getSearchResults(query) {
+  const tankResults = state.tanks.map((tank) => ({
+    type: "tank",
+    id: tank.id,
+    label: "水槽",
+    title: tank.name,
+    description: `${tank.kind} / ${tank.size} / ${tank.residents}`,
+    text: [tank.name, tank.kind, tank.size, tank.volume, tank.residents, ...tank.tags].join(" "),
+  }));
+
+  const postResults = state.posts.map((post) => ({
+    type: "post",
+    id: post.id,
+    label: "投稿",
+    title: post.title,
+    description: `${post.tag} / ${getTankName(post.tankId)}`,
+    text: [post.title, post.tag, post.text, getTankName(post.tankId)].join(" "),
+  }));
+
+  const guideResults = getGuideSearchItems();
+
+  return [...tankResults, ...postResults, ...guideResults].filter((result) =>
+    normalizeSearchTerm(result.text).includes(query),
+  );
+}
+
+function getGuideSearchItems() {
+  return [...document.querySelectorAll("[data-guide-kind]")].map((card, index) => {
+    const title = card.querySelector("h2")?.textContent || "ガイド";
+    const tag = card.querySelector(".chip")?.textContent || "ガイド";
+    const text = card.querySelector("p")?.textContent || "";
+
+    return {
+      type: "guide",
+      id: `${card.dataset.guideKind}-${index}`,
+      label: tag,
+      title,
+      description: text,
+      text: [title, tag, text].join(" "),
+    };
+  });
+}
+
+function openSearchResult(type, id) {
+  if (type === "tank") {
+    state.activeTankId = id;
+    activeAlbumMonth = "all";
+    saveState();
+    renderApp();
+    showView("tanks");
+  }
+
+  if (type === "post") {
+    const post = state.posts.find((item) => item.id === id);
+    if (post) {
+      state.activeTankId = post.tankId || state.activeTankId;
+      postTankFilter.value = "all";
+      saveState();
+      renderApp();
+      showView("community");
+    }
+  }
+
+  if (type === "guide") {
+    document.querySelector('[data-guide-filter="all"]')?.click();
+    showView("guide");
+  }
+
+  globalSearchInput.value = "";
+  clearSearchResults();
+}
+
+function clearSearchResults() {
+  searchResults.hidden = true;
+  searchResults.innerHTML = "";
 }
 
 async function setPendingPostMedia(file) {
@@ -1646,6 +1776,10 @@ function createId(prefix) {
 
 function cloneState(value) {
   return JSON.parse(JSON.stringify(value));
+}
+
+function normalizeSearchTerm(value) {
+  return String(value).trim().toLowerCase();
 }
 
 function normalizeReminders(reminders = {}) {

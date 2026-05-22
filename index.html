@@ -65,7 +65,8 @@
         <header class="topbar">
           <label class="search-box">
             <span aria-hidden="true">⌕</span>
-            <input type="search" placeholder="水槽、投稿、ガイドを検索">
+            <input id="global-search" type="search" placeholder="水槽、投稿、ガイドを検索" autocomplete="off">
+            <div class="search-results" id="search-results" hidden></div>
           </label>
           <div class="topbar-actions">
             <button class="icon-button" id="notification-button" type="button" title="通知" aria-label="通知">
