@@ -370,11 +370,20 @@
                     <h3>水槽アルバム</h3>
                   </div>
                   <div class="album-controls">
-                    <span id="album-count-label">0枚</span>
+                    <span id="album-count-label">0件</span>
                     <label>
                       <span>表示</span>
                       <select id="album-month-filter">
                         <option value="all">すべて</option>
+                      </select>
+                    </label>
+                    <label>
+                      <span>並び</span>
+                      <select id="album-sort-select">
+                        <option value="featured">表紙優先</option>
+                        <option value="newest">新しい順</option>
+                        <option value="oldest">古い順</option>
+                        <option value="likes">いいね順</option>
                       </select>
                     </label>
                   </div>
@@ -660,6 +669,20 @@
       </section>
     </div>
     <input id="replace-post-image-input" type="file" accept="image/*,video/*" hidden>
+
+    <div class="modal media-detail-modal" id="media-detail-modal" aria-hidden="true">
+      <div class="modal-backdrop" data-close-media-detail></div>
+      <section class="modal-panel media-detail-panel" role="dialog" aria-modal="true" aria-labelledby="media-detail-title">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Album detail</p>
+            <h2 id="media-detail-title">アルバム詳細</h2>
+          </div>
+          <button class="icon-button" type="button" title="閉じる" aria-label="閉じる" data-close-media-detail>×</button>
+        </div>
+        <div class="media-detail-body" id="media-detail-body"></div>
+      </section>
+    </div>
 
     <script src="app.js"></script>
   </body>
