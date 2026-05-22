@@ -55,11 +55,12 @@
 - Supabase向けのDBスキーマ草案
 - `localStorage` からSupabaseへ差し替えるための永続化レイヤー入口
 - Supabase Authのメールログイン/登録UI
+- ログイン中ユーザーのSupabaseプロフィール読み込み/同期
 - PWA用の `manifest.webmanifest` と `sw.js`
 
 ## 次に作るとよいもの
 
-- Supabaseのprofile同期
+- 水槽プロフィールのSupabase保存
 - 投稿/コメント/ログのDB保存
 - 本物のAI画像分析
 - 通知機能

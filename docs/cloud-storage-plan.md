@@ -38,10 +38,11 @@ Reason:
 1. Create Supabase project and run `supabase/schema.sql`.
 2. Create a private `aquanote-media` storage bucket.
 3. Add environment config for the project URL and publishable key.
-4. Replace profile and tank persistence first.
-5. Move logs and reminders.
-6. Move posts, comments, likes, and media uploads.
-7. Keep JSON export/import as a fallback during beta.
+4. Connect Supabase Auth and sync `profiles`. Done in the prototype.
+5. Replace tank persistence.
+6. Move logs and reminders.
+7. Move posts, comments, likes, and media uploads.
+8. Keep JSON export/import as a fallback during beta.
 
 ## Auth and permission rules
 
@@ -66,13 +67,9 @@ Reason:
 
 ## Next implementation slice
 
-Create a small persistence layer in `app.js` before adding the Supabase client:
+Sync local tanks to the `tanks` table after sign-in:
 
-- `loadAppState()`
-- `saveAppState()`
-- `saveTank()`
-- `savePost()`
-- `saveComment()`
-- `saveReminder()`
-
-That keeps the UI mostly unchanged when `localStorage` is replaced.
+- Add a `cloudId` or deterministic UUID mapping for local tank IDs.
+- Upsert `name`, `kind`, `size_label`, `volume_label`, `residents`, `tags`, and `featured_post_id`.
+- Read back the signed-in user's tanks and merge them into local state.
+- Keep JSON export/import as a recovery path while the sync model is being tested.

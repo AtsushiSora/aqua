@@ -372,7 +372,7 @@ document.querySelectorAll("[data-close-media-detail]").forEach((button) => {
   button.addEventListener("click", closeMediaDetailModal);
 });
 
-accountForm.addEventListener("submit", (event) => {
+accountForm.addEventListener("submit", async (event) => {
   event.preventDefault();
 
   state.account = {
@@ -385,11 +385,22 @@ accountForm.addEventListener("submit", (event) => {
     plan: document.querySelector("#account-plan-input").value,
   };
   saveState();
+
+  if (authSession?.user) {
+    await syncProfileToSupabase();
+    return;
+  }
+
   renderAccount();
   showToast("プロフィールを保存しました");
 });
 
-mockSyncButton.addEventListener("click", () => {
+mockSyncButton.addEventListener("click", async () => {
+  if (authSession?.user) {
+    await syncProfileToSupabase();
+    return;
+  }
+
   state.account.signedIn = true;
   state.account.syncStatus = "synced";
   state.account.lastSyncedAt = new Date().toISOString();
@@ -766,6 +777,7 @@ function renderAccount() {
   const account = state.account;
   const syncLabel = getSyncStatusLabel(account);
   const planLabel = getPlanLabel(account.plan);
+  const hasRemoteSession = Boolean(authSession?.user);
 
   sidebarAccountName.textContent = account.name;
   sidebarAccountHandle.textContent = `@${account.handle}`;
@@ -775,6 +787,7 @@ function renderAccount() {
   syncStatusDot.className = account.syncStatus === "synced" ? "is-synced" : "";
   accountSyncChip.textContent = syncLabel;
   accountSyncChip.className = `account-sync-chip ${account.syncStatus === "synced" ? "is-synced" : ""}`;
+  mockSyncButton.textContent = hasRemoteSession ? "プロフィール同期" : "同期を記録";
 
   document.querySelector("#account-name-input").value = account.name;
   document.querySelector("#account-handle-input").value = account.handle;
@@ -853,11 +866,17 @@ async function handleAuthSubmit(action) {
   authSession = data.session || authSession;
   state.account = {
     ...state.account,
-    signedIn: true,
+    signedIn: Boolean(authSession?.user),
     email,
     syncStatus: "local",
   };
   saveState({ keepSyncStatus: true });
+
+  if (authSession?.user) {
+    await loadProfileFromSupabase();
+    await syncProfileToSupabase({ silent: true });
+  }
+
   renderAccount();
   showToast(action === "sign-up" ? "登録メールを確認してください" : "ログインしました");
 }
@@ -882,6 +901,100 @@ async function signOutSupabase() {
   showToast("ログアウトしました");
 }
 
+async function loadProfileFromSupabase() {
+  if (!supabaseClient || !authSession?.user) {
+    return null;
+  }
+
+  const { data, error } = await supabaseClient
+    .from("profiles")
+    .select("display_name, handle, email, visibility, plan, updated_at")
+    .eq("id", authSession.user.id)
+    .maybeSingle();
+
+  if (error) {
+    showToast(error.message || "プロフィールを読み込めませんでした");
+    return null;
+  }
+
+  if (!data) {
+    return null;
+  }
+
+  applyRemoteProfile(data);
+  saveState({ keepSyncStatus: true });
+  return data;
+}
+
+async function syncProfileToSupabase(options = {}) {
+  if (!supabaseClient || !authSession?.user) {
+    if (!options.silent) {
+      showToast("Supabaseにログインしてください");
+    }
+    return false;
+  }
+
+  const { data, error } = await supabaseClient
+    .from("profiles")
+    .upsert(getProfilePayload(authSession.user), { onConflict: "id" })
+    .select("display_name, handle, email, visibility, plan, updated_at")
+    .maybeSingle();
+
+  if (error) {
+    state.account.syncStatus = "local";
+    saveState({ keepSyncStatus: true });
+    renderAccount();
+    if (!options.silent) {
+      showToast(error.message || "プロフィール同期に失敗しました");
+    }
+    return false;
+  }
+
+  if (data) {
+    applyRemoteProfile(data);
+  }
+
+  state.account.signedIn = true;
+  state.account.syncStatus = "synced";
+  state.account.lastSyncedAt = new Date().toISOString();
+  saveState({ keepSyncStatus: true });
+  renderAccount();
+
+  if (!options.silent) {
+    showToast("プロフィールをSupabaseに同期しました");
+  }
+
+  return true;
+}
+
+function getProfilePayload(user) {
+  const handle = normalizeHandle(state.account.handle);
+
+  return {
+    id: user.id,
+    handle: handle === defaultState.account.handle ? `${handle}_${user.id.slice(0, 6)}` : handle,
+    display_name: state.account.name || defaultState.account.name,
+    email: state.account.email || user.email || "",
+    visibility: getAllowedValue(state.account.visibility, ["public", "friends", "private"], "public"),
+    plan: getAllowedValue(state.account.plan, ["free", "plus", "pro"], "free"),
+    updated_at: new Date().toISOString(),
+  };
+}
+
+function applyRemoteProfile(profile) {
+  state.account = {
+    ...state.account,
+    signedIn: true,
+    name: profile.display_name || state.account.name,
+    handle: normalizeHandle(profile.handle || state.account.handle),
+    email: profile.email || state.account.email,
+    visibility: getAllowedValue(profile.visibility, ["public", "friends", "private"], state.account.visibility),
+    plan: getAllowedValue(profile.plan, ["free", "plus", "pro"], state.account.plan),
+    syncStatus: "synced",
+    lastSyncedAt: profile.updated_at || new Date().toISOString(),
+  };
+}
+
 function createSupabaseClient() {
   const url = supabaseConfig.url || supabaseConfig.supabaseUrl;
   const key = supabaseConfig.publishableKey || supabaseConfig.anonKey;
@@ -902,12 +1015,13 @@ async function initSupabaseAuth() {
   const { data } = await supabaseClient.auth.getSession();
   authSession = data.session || null;
 
-  supabaseClient.auth.onAuthStateChange((_event, session) => {
+  supabaseClient.auth.onAuthStateChange(async (_event, session) => {
     authSession = session;
     if (session?.user) {
       state.account.signedIn = true;
       state.account.email = session.user.email || state.account.email;
       saveState({ keepSyncStatus: true });
+      await loadProfileFromSupabase();
     }
     renderAccount();
   });
@@ -916,6 +1030,7 @@ async function initSupabaseAuth() {
     state.account.signedIn = true;
     state.account.email = authSession.user.email || state.account.email;
     saveState({ keepSyncStatus: true });
+    await loadProfileFromSupabase();
   }
 
   renderAccount();
@@ -2743,9 +2858,14 @@ function normalizeHandle(value) {
     .trim()
     .replace(/^@/, "")
     .toLowerCase()
-    .replace(/[^a-z0-9_]/g, "");
+    .replace(/[^a-z0-9_]/g, "")
+    .slice(0, 24);
 
-  return handle || defaultState.account.handle;
+  return handle.length >= 3 ? handle : defaultState.account.handle;
+}
+
+function getAllowedValue(value, allowedValues, fallback) {
+  return allowedValues.includes(value) ? value : fallback;
 }
 
 function normalizeAccount(account = {}) {
