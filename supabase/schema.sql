@@ -53,12 +53,14 @@ create table public.posts (
   id uuid primary key default gen_random_uuid(),
   tank_id uuid references public.tanks(id) on delete set null,
   owner_id uuid not null references public.profiles(id) on delete cascade,
+  local_id text not null,
   title text not null,
   tag text not null,
   body text not null,
   album_position integer not null default 0,
   created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
+  updated_at timestamptz not null default now(),
+  unique (owner_id, local_id)
 );
 
 alter table public.tanks
@@ -82,9 +84,11 @@ create table public.comments (
   id uuid primary key default gen_random_uuid(),
   post_id uuid not null references public.posts(id) on delete cascade,
   author_id uuid not null references public.profiles(id) on delete cascade,
+  local_id text not null,
   body text not null check (char_length(body) <= 240),
   created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
+  updated_at timestamptz not null default now(),
+  unique (author_id, post_id, local_id)
 );
 
 create table public.post_likes (

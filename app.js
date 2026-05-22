@@ -659,7 +659,7 @@ aiForm.addEventListener("submit", (event) => {
   renderDashboard();
 });
 
-postForm.addEventListener("submit", (event) => {
+postForm.addEventListener("submit", async (event) => {
   event.preventDefault();
 
   const existingPost = state.posts.find((item) => item.id === editingPostId);
@@ -695,6 +695,9 @@ postForm.addEventListener("submit", (event) => {
     closePostModal();
     showView("community");
     showToast("投稿を更新しました");
+    if (authSession?.user) {
+      await syncCloudState({ silent: true });
+    }
     return;
   }
 
@@ -723,6 +726,9 @@ postForm.addEventListener("submit", (event) => {
   closePostModal();
   showView("community");
   showToast("投稿を追加しました");
+  if (authSession?.user) {
+    await syncCloudState({ silent: true });
+  }
 });
 
 document.querySelectorAll("[data-guide-filter]").forEach((button) => {
@@ -945,13 +951,21 @@ async function syncCloudState(options = {}) {
     return false;
   }
 
+  const communitySynced = await syncCommunityToSupabase({ silent: true });
+  if (!communitySynced) {
+    if (!options.silent) {
+      showToast("投稿とコメントの同期に失敗しました");
+    }
+    return false;
+  }
+
   state.account.syncStatus = "synced";
   state.account.lastSyncedAt = new Date().toISOString();
   saveState({ keepSyncStatus: true });
   renderApp();
 
   if (!options.silent) {
-    showToast("プロフィール、水槽、管理ログ、リマインダーをSupabaseに同期しました");
+    showToast("AquaNoteデータをSupabaseに同期しました");
   }
 
   return true;
@@ -1056,6 +1070,52 @@ async function loadRemindersFromSupabase() {
     saveState({ keepSyncStatus: true });
   }
 
+  return data || [];
+}
+
+async function loadCommunityFromSupabase() {
+  if (!supabaseClient || !authSession?.user) {
+    return [];
+  }
+
+  const { data: remotePosts, error: postError } = await supabaseClient
+    .from("posts")
+    .select("id, tank_id, owner_id, local_id, title, tag, body, album_position, created_at, updated_at")
+    .eq("owner_id", authSession.user.id)
+    .order("created_at", { ascending: false });
+
+  if (postError) {
+    showToast(postError.message || "投稿を読み込めませんでした");
+    return [];
+  }
+
+  if (Array.isArray(remotePosts) && remotePosts.length) {
+    applyRemotePosts(remotePosts);
+    await loadCommentsFromSupabase(remotePosts.map((post) => post.id));
+    saveState({ keepSyncStatus: true });
+  }
+
+  return remotePosts || [];
+}
+
+async function loadCommentsFromSupabase(postCloudIds) {
+  const ids = postCloudIds.filter(Boolean);
+  if (!supabaseClient || !authSession?.user || !ids.length) {
+    return [];
+  }
+
+  const { data, error } = await supabaseClient
+    .from("comments")
+    .select("id, post_id, author_id, local_id, body, created_at, updated_at")
+    .in("post_id", ids)
+    .order("created_at", { ascending: true });
+
+  if (error) {
+    showToast(error.message || "コメントを読み込めませんでした");
+    return [];
+  }
+
+  applyRemoteComments(data || []);
   return data || [];
 }
 
@@ -1183,6 +1243,99 @@ async function syncRemindersToSupabase(options = {}) {
   return true;
 }
 
+async function syncCommunityToSupabase(options = {}) {
+  if (!supabaseClient || !authSession?.user) {
+    if (!options.silent) {
+      showToast("Supabaseにログインしてください");
+    }
+    return false;
+  }
+
+  const postsSynced = await syncPostsToSupabase({ silent: true });
+  if (!postsSynced) {
+    if (!options.silent) {
+      showToast("投稿同期に失敗しました");
+    }
+    return false;
+  }
+
+  const commentsSynced = await syncCommentsToSupabase({ silent: true });
+  if (!commentsSynced) {
+    if (!options.silent) {
+      showToast("コメント同期に失敗しました");
+    }
+    return false;
+  }
+
+  state.account.syncStatus = "synced";
+  state.account.lastSyncedAt = new Date().toISOString();
+  saveState({ keepSyncStatus: true });
+  renderApp();
+
+  if (!options.silent) {
+    showToast("投稿とコメントをSupabaseに同期しました");
+  }
+
+  return true;
+}
+
+async function syncPostsToSupabase(options = {}) {
+  const payloads = state.posts.map((post) => getPostPayload(post, authSession.user));
+  if (!payloads.length) {
+    return true;
+  }
+
+  const { data, error } = await supabaseClient
+    .from("posts")
+    .upsert(payloads, { onConflict: "owner_id,local_id" })
+    .select("id, tank_id, owner_id, local_id, title, tag, body, album_position, created_at, updated_at");
+
+  if (error) {
+    state.account.syncStatus = "local";
+    saveState({ keepSyncStatus: true });
+    renderAccount();
+    if (!options.silent) {
+      showToast(error.message || "投稿同期に失敗しました");
+    }
+    return false;
+  }
+
+  applyRemotePosts(data || []);
+  return true;
+}
+
+async function syncCommentsToSupabase(options = {}) {
+  const payloads = state.posts.flatMap((post) => {
+    if (!post.cloudId) {
+      return [];
+    }
+
+    return post.comments.map((comment) => getCommentPayload(comment, post, authSession.user));
+  });
+
+  if (!payloads.length) {
+    return true;
+  }
+
+  const { data, error } = await supabaseClient
+    .from("comments")
+    .upsert(payloads, { onConflict: "author_id,post_id,local_id" })
+    .select("id, post_id, author_id, local_id, body, created_at, updated_at");
+
+  if (error) {
+    state.account.syncStatus = "local";
+    saveState({ keepSyncStatus: true });
+    renderAccount();
+    if (!options.silent) {
+      showToast(error.message || "コメント同期に失敗しました");
+    }
+    return false;
+  }
+
+  applyRemoteComments(data || []);
+  return true;
+}
+
 function getTankPayload(tank, user) {
   return {
     owner_id: user.id,
@@ -1223,6 +1376,32 @@ function getReminderPayload(taskId, label, reminder, user) {
     start_date: isValidDateKey(reminder.startDate) ? reminder.startDate : defaultReminders[taskId].startDate,
     notify_time: isValidTimeValue(reminder.time) ? reminder.time : defaultReminders[taskId].time,
     last_notified_on: reminder.lastNotifiedOn || null,
+    updated_at: new Date().toISOString(),
+  };
+}
+
+function getPostPayload(post, user) {
+  const tank = state.tanks.find((item) => item.id === post.tankId);
+  const albumPosition = tank?.albumOrder?.indexOf(post.id);
+
+  return {
+    owner_id: user.id,
+    tank_id: tank?.cloudId || null,
+    local_id: post.id,
+    title: post.title || "新しい投稿",
+    tag: post.tag || "水槽",
+    body: post.text || "",
+    album_position: albumPosition >= 0 ? albumPosition : 0,
+    updated_at: new Date().toISOString(),
+  };
+}
+
+function getCommentPayload(comment, post, user) {
+  return {
+    post_id: post.cloudId,
+    author_id: user.id,
+    local_id: comment.id,
+    body: String(comment.text || "").slice(0, 240),
     updated_at: new Date().toISOString(),
   };
 }
@@ -1302,6 +1481,72 @@ function applyRemoteReminders(remoteReminders) {
       time: remoteReminder.notify_time,
       lastNotifiedOn: remoteReminder.last_notified_on,
     }, defaultReminders[taskId]);
+  });
+}
+
+function applyRemotePosts(remotePosts) {
+  remotePosts.forEach((remotePost) => {
+    const localId = remotePost.local_id || `cloud-post-${remotePost.id}`;
+    const existingPost = state.posts.find((post) => post.cloudId === remotePost.id || post.id === localId);
+    const tank = state.tanks.find((item) => item.cloudId === remotePost.tank_id);
+    const nextPost = existingPost || {
+      id: localId,
+      imageClass: "reef",
+      imageDataUrl: null,
+      videoDataUrl: null,
+      videoThumbnailDataUrl: null,
+      videoDuration: null,
+      mediaType: null,
+      likes: 0,
+      comments: [],
+    };
+
+    nextPost.cloudId = remotePost.id;
+    nextPost.tankId = tank?.id || nextPost.tankId || state.activeTankId;
+    nextPost.title = remotePost.title || nextPost.title || "新しい投稿";
+    nextPost.tag = remotePost.tag || nextPost.tag || "水槽";
+    nextPost.text = remotePost.body ?? nextPost.text ?? "";
+    nextPost.createdAt = remotePost.created_at || nextPost.createdAt || new Date().toISOString();
+    nextPost.updatedAt = remotePost.updated_at || nextPost.updatedAt || null;
+
+    if (!existingPost) {
+      state.posts.push(nextPost);
+    }
+
+    if (tank && Number.isInteger(remotePost.album_position)) {
+      ensureTankAlbumOrder(tank);
+      if (!tank.albumOrder.includes(nextPost.id)) {
+        tank.albumOrder.splice(remotePost.album_position, 0, nextPost.id);
+      }
+    }
+  });
+
+  state.posts.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+}
+
+function applyRemoteComments(remoteComments) {
+  remoteComments.forEach((remoteComment) => {
+    const post = state.posts.find((item) => item.cloudId === remoteComment.post_id);
+    if (!post) {
+      return;
+    }
+
+    const localId = remoteComment.local_id || `cloud-comment-${remoteComment.id}`;
+    const existingComment = post.comments.find((comment) => comment.cloudId === remoteComment.id || comment.id === localId);
+    const nextComment = existingComment || {
+      id: localId,
+    };
+
+    nextComment.cloudId = remoteComment.id;
+    nextComment.author = existingComment?.author || (remoteComment.author_id === authSession?.user?.id ? state.account.name : "アクアリスト");
+    nextComment.text = remoteComment.body ?? "";
+    nextComment.createdAt = remoteComment.created_at || new Date().toISOString();
+
+    if (!existingComment) {
+      post.comments.push(nextComment);
+    }
+
+    post.comments.sort((a, b) => new Date(a.createdAt || 0) - new Date(b.createdAt || 0));
   });
 }
 
@@ -1404,6 +1649,7 @@ async function initSupabaseAuth() {
       await loadTanksFromSupabase();
       await loadLogsFromSupabase();
       await loadRemindersFromSupabase();
+      await loadCommunityFromSupabase();
     }
     renderAccount();
   });
@@ -1416,6 +1662,7 @@ async function initSupabaseAuth() {
     await loadTanksFromSupabase();
     await loadLogsFromSupabase();
     await loadRemindersFromSupabase();
+    await loadCommunityFromSupabase();
   }
 
   renderAccount();
@@ -1877,7 +2124,7 @@ function addPostComment(postId, text) {
 
   post.comments.push({
     id: createId("comment"),
-    author: "アクア太郎",
+    author: state.account.name || "アクア太郎",
     text: commentText.slice(0, 120),
     createdAt: new Date().toISOString(),
   });
@@ -1886,6 +2133,10 @@ function addPostComment(postId, text) {
   renderCommunityRanking();
   renderTankPosts();
   showToast("コメントを追加しました");
+
+  if (authSession?.user) {
+    syncCommunityToSupabase({ silent: true });
+  }
 }
 
 function renderCommunityRanking() {
@@ -3087,9 +3338,10 @@ function normalizeState(saved) {
       createdAt: daysAgoIso(index),
       ...post,
       tankId,
-      comments: Array.isArray(post.comments) ? post.comments : [],
+      comments: Array.isArray(post.comments) ? post.comments.map(normalizeComment) : [],
       mediaType: post.mediaType || (post.videoDataUrl ? "video" : post.imageDataUrl ? "image" : null),
       createdAt: post.createdAt || post.updatedAt || daysAgoIso(index),
+      cloudId: post.cloudId || null,
     };
   });
 
@@ -3105,6 +3357,16 @@ function normalizeLog(log) {
     note: log.note || "",
     createdAt: log.createdAt || new Date().toISOString(),
     cloudId: log.cloudId || null,
+  };
+}
+
+function normalizeComment(comment) {
+  return {
+    id: comment.id || createId("comment"),
+    author: comment.author || "アクアリスト",
+    text: comment.text || "",
+    createdAt: comment.createdAt || new Date().toISOString(),
+    cloudId: comment.cloudId || null,
   };
 }
 

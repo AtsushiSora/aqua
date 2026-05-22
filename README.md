@@ -59,12 +59,13 @@
 - ローカル水槽プロフィールのSupabase `tanks` 同期
 - 管理ログのSupabase `logs` 同期
 - リマインダー設定のSupabase `reminders` 同期
+- 投稿とコメントのSupabase `posts` / `comments` 同期
 - PWA用の `manifest.webmanifest` と `sw.js`
 
 ## 次に作るとよいもの
 
-- 投稿/コメントのDB保存
 - いいね/ランキングのDB保存
+- 写真・動画のStorageアップロード
 - 本物のAI画像分析
 - 通知機能
 - 実画像、動画アップロード

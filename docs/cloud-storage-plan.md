@@ -42,8 +42,9 @@ Reason:
 5. Sync local tanks to the `tanks` table. Done in the prototype.
 6. Sync local logs to the `logs` table. Done in the prototype.
 7. Sync reminders to the `reminders` table. Done in the prototype.
-8. Move posts, comments, likes, and media uploads.
-9. Keep JSON export/import as a fallback during beta.
+8. Sync posts and comments to the `posts` and `comments` tables. Done in the prototype.
+9. Move likes, ranking stats, and media uploads.
+10. Keep JSON export/import as a fallback during beta.
 
 ## Auth and permission rules
 
@@ -68,10 +69,9 @@ Reason:
 
 ## Next implementation slice
 
-Sync community data after reminder sync:
+Sync community reactions after post/comment sync:
 
-- Upsert local posts by `owner_id` and a local post key.
-- Store post text first; keep image/video data in local state until Storage upload is added.
-- Upsert comments by `author_id`, `post_id`, and a local comment key.
-- Read back public posts and comments for the community view.
+- Store likes in `post_likes` using `(post_id, user_id)`.
+- Read `post_stats` for likes, comments, and ranking score.
+- Keep image/video data local until Storage upload is implemented.
 - Keep JSON export/import as a recovery path while the sync model is being tested.
