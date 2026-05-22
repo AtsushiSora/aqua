@@ -355,6 +355,15 @@
                     <p class="eyebrow">Album</p>
                     <h3>水槽アルバム</h3>
                   </div>
+                  <div class="album-controls">
+                    <span id="album-count-label">0枚</span>
+                    <label>
+                      <span>表示</span>
+                      <select id="album-month-filter">
+                        <option value="all">すべて</option>
+                      </select>
+                    </label>
+                  </div>
                 </div>
                 <div class="tank-album-grid" id="tank-album-grid"></div>
               </div>
@@ -613,8 +622,8 @@
             <span>写真プレビュー</span>
           </div>
           <label>
-            <span>写真</span>
-            <input id="post-image-input" type="file" accept="image/*">
+            <span>写真・動画</span>
+            <input id="post-image-input" type="file" accept="image/*,video/*">
           </label>
           <label>
             <span>ひも付ける水槽・池</span>
@@ -632,11 +641,11 @@
             <span>コメント</span>
             <textarea id="post-text" rows="4">水草が伸びてきたので記録します。</textarea>
           </label>
-          <button class="primary-button" type="submit">投稿する</button>
+          <button class="primary-button" id="post-submit-button" type="submit">投稿する</button>
         </form>
       </section>
     </div>
-    <input id="replace-post-image-input" type="file" accept="image/*" hidden>
+    <input id="replace-post-image-input" type="file" accept="image/*,video/*" hidden>
 
     <script src="app.js"></script>
   </body>

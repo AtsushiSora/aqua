@@ -1,5 +1,6 @@
 const STORAGE_KEY = "aquanote-state-v3";
 const LEGACY_STORAGE_KEY = "aquanote-state-v2";
+const VIDEO_UPLOAD_LIMIT_BYTES = 4 * 1024 * 1024;
 
 const viewLinks = document.querySelectorAll("[data-view-link]");
 const directViewButtons = document.querySelectorAll("[data-view-target]");
@@ -10,6 +11,8 @@ const postGrid = document.querySelector("#post-grid");
 const tankList = document.querySelector("#tank-list");
 const tankPostList = document.querySelector("#tank-post-list");
 const tankAlbumGrid = document.querySelector("#tank-album-grid");
+const albumMonthFilter = document.querySelector("#album-month-filter");
+const albumCountLabel = document.querySelector("#album-count-label");
 const logForm = document.querySelector("#log-form");
 const tankForm = document.querySelector("#tank-form");
 const tankEditForm = document.querySelector("#tank-edit-form");
@@ -18,6 +21,8 @@ const postTankSelect = document.querySelector("#post-tank-select");
 const postTankFilter = document.querySelector("#post-tank-filter");
 const postImageInput = document.querySelector("#post-image-input");
 const postImagePreview = document.querySelector("#post-image-preview");
+const postModalTitle = document.querySelector("#post-modal-title");
+const postSubmitButton = document.querySelector("#post-submit-button");
 const replacePostImageInput = document.querySelector("#replace-post-image-input");
 const aiForm = document.querySelector("#ai-form");
 const logDateInput = document.querySelector("#log-date");
@@ -120,7 +125,12 @@ const defaultState = {
 
 let state = loadState();
 let pendingPostImageDataUrl = null;
+let pendingPostVideoDataUrl = null;
+let pendingPostVideoDuration = null;
+let pendingPostMediaType = null;
 let replacingPostId = null;
+let editingPostId = null;
+let activeAlbumMonth = "all";
 
 function showView(id) {
   views.forEach((view) => {
@@ -157,8 +167,7 @@ window.addEventListener("hashchange", () => {
 
 document.querySelectorAll("[data-open-post]").forEach((button) => {
   button.addEventListener("click", () => {
-    modal.classList.add("is-open");
-    modal.setAttribute("aria-hidden", "false");
+    openPostModal();
   });
 });
 
@@ -176,26 +185,39 @@ document.querySelectorAll("[data-task]").forEach((checkbox) => {
 
 postTankFilter.addEventListener("change", renderPosts);
 
+albumMonthFilter.addEventListener("change", () => {
+  activeAlbumMonth = albumMonthFilter.value;
+  renderTankAlbum();
+});
+
 postImageInput.addEventListener("change", async () => {
   const file = postImageInput.files[0];
   if (!file) {
-    pendingPostImageDataUrl = null;
-    renderPostImagePreview();
+    clearPendingPostMedia();
     return;
   }
 
-  if (!file.type.startsWith("image/")) {
-    showToast("画像ファイルを選んでください");
+  if (!isSupportedPostMedia(file)) {
+    showToast("画像または動画ファイルを選んでください");
     postImageInput.value = "";
+    clearPendingPostMedia();
+    return;
+  }
+
+  if (file.type.startsWith("video/") && file.size > VIDEO_UPLOAD_LIMIT_BYTES) {
+    showToast("動画は4MBまでにしてください");
+    postImageInput.value = "";
+    clearPendingPostMedia();
     return;
   }
 
   try {
-    pendingPostImageDataUrl = await resizeImageFile(file, 1200, 0.82);
+    await setPendingPostMedia(file);
     renderPostImagePreview();
   } catch {
-    showToast("投稿画像を読み込めませんでした");
+    showToast("投稿メディアを読み込めませんでした");
     postImageInput.value = "";
+    clearPendingPostMedia();
   }
 });
 
@@ -209,20 +231,28 @@ replacePostImageInput.addEventListener("change", async () => {
     return;
   }
 
-  if (!file.type.startsWith("image/")) {
-    showToast("画像ファイルを選んでください");
+  if (!isSupportedPostMedia(file)) {
+    showToast("画像または動画ファイルを選んでください");
+    replacePostImageInput.value = "";
+    replacingPostId = null;
+    return;
+  }
+
+  if (file.type.startsWith("video/") && file.size > VIDEO_UPLOAD_LIMIT_BYTES) {
+    showToast("動画は4MBまでにしてください");
     replacePostImageInput.value = "";
     replacingPostId = null;
     return;
   }
 
   try {
-    post.imageDataUrl = await resizeImageFile(file, 1200, 0.82);
+    const media = await preparePostMedia(file);
+    applyPostMedia(post, media);
     saveState();
     renderApp();
-    showToast("投稿画像を差し替えました");
+    showToast("投稿メディアを差し替えました");
   } catch {
-    showToast("画像を読み込めませんでした");
+    showToast("メディアを読み込めませんでした");
   } finally {
     replacePostImageInput.value = "";
     replacingPostId = null;
@@ -395,15 +425,51 @@ aiForm.addEventListener("submit", (event) => {
 postForm.addEventListener("submit", (event) => {
   event.preventDefault();
 
+  const existingPost = state.posts.find((item) => item.id === editingPostId);
+  if (existingPost) {
+    const previousTankId = existingPost.tankId;
+    existingPost.tankId = postTankSelect.value || state.activeTankId;
+    existingPost.title = document.querySelector("#post-title").value.trim() || "新しい投稿";
+    existingPost.tag = document.querySelector("#post-tag").value.trim() || "水槽";
+    existingPost.text = document.querySelector("#post-text").value.trim() || "水槽の様子を投稿しました。";
+    if (pendingPostMediaType) {
+      applyPostMedia(existingPost, {
+        type: pendingPostMediaType,
+        imageDataUrl: pendingPostImageDataUrl,
+        videoDataUrl: pendingPostVideoDataUrl,
+        videoDuration: pendingPostVideoDuration,
+      });
+    }
+    existingPost.updatedAt = new Date().toISOString();
+
+    if (previousTankId !== existingPost.tankId) {
+      const previousTank = state.tanks.find((tank) => tank.id === previousTankId);
+      if (previousTank?.featuredPostId === existingPost.id) {
+        previousTank.featuredPostId = null;
+      }
+    }
+
+    saveState();
+    renderApp();
+    closePostModal();
+    showView("community");
+    showToast("投稿を更新しました");
+    return;
+  }
+
   const post = {
     id: createId("post"),
     tankId: postTankSelect.value || state.activeTankId,
-    title: document.querySelector("#post-title").value || "新しい投稿",
-    tag: document.querySelector("#post-tag").value || "水槽",
-    text: document.querySelector("#post-text").value || "水槽の様子を投稿しました。",
+    title: document.querySelector("#post-title").value.trim() || "新しい投稿",
+    tag: document.querySelector("#post-tag").value.trim() || "水槽",
+    text: document.querySelector("#post-text").value.trim() || "水槽の様子を投稿しました。",
     imageClass: "reef",
     imageDataUrl: pendingPostImageDataUrl,
+    videoDataUrl: pendingPostVideoDataUrl,
+    videoDuration: pendingPostVideoDuration,
+    mediaType: pendingPostMediaType || (pendingPostImageDataUrl ? "image" : null),
     likes: 0,
+    createdAt: new Date().toISOString(),
   };
 
   state.posts.unshift(post);
@@ -463,17 +529,83 @@ function renderHeroPhoto() {
   heroPhoto.src = state.heroPhotoDataUrl || "assets/site-concept.png";
 }
 
+async function setPendingPostMedia(file) {
+  const media = await preparePostMedia(file);
+  pendingPostMediaType = media.type;
+  pendingPostImageDataUrl = media.imageDataUrl;
+  pendingPostVideoDataUrl = media.videoDataUrl;
+  pendingPostVideoDuration = media.videoDuration || null;
+}
+
+function clearPendingPostMedia() {
+  pendingPostMediaType = null;
+  pendingPostImageDataUrl = null;
+  pendingPostVideoDataUrl = null;
+  pendingPostVideoDuration = null;
+  renderPostImagePreview();
+}
+
+async function preparePostMedia(file) {
+  if (file.type.startsWith("image/")) {
+    return {
+      type: "image",
+      imageDataUrl: await resizeImageFile(file, 1200, 0.82),
+      videoDataUrl: null,
+      videoDuration: null,
+    };
+  }
+
+  if (file.size > VIDEO_UPLOAD_LIMIT_BYTES) {
+    throw new Error("Video file is too large for local prototype storage.");
+  }
+
+  const videoDataUrl = await readFileAsDataUrl(file);
+
+  return {
+    type: "video",
+    imageDataUrl: null,
+    videoDataUrl,
+    videoDuration: await getVideoDuration(videoDataUrl),
+  };
+}
+
+function applyPostMedia(post, media) {
+  post.mediaType = media.type;
+  post.imageDataUrl = media.imageDataUrl || null;
+  post.videoDataUrl = media.videoDataUrl || null;
+  post.videoDuration = media.videoDuration || null;
+}
+
+function isSupportedPostMedia(file) {
+  return file.type.startsWith("image/") || file.type.startsWith("video/");
+}
+
 function renderPostImagePreview() {
-  if (!pendingPostImageDataUrl) {
+  const editingPost = state.posts.find((post) => post.id === editingPostId);
+  const previewVideo = pendingPostVideoDataUrl || editingPost?.videoDataUrl;
+  const previewImage = pendingPostImageDataUrl || editingPost?.imageDataUrl;
+
+  if (previewVideo) {
     postImagePreview.removeAttribute("style");
-    postImagePreview.innerHTML = "<span>写真プレビュー</span>";
-    postImagePreview.classList.remove("has-image");
+    postImagePreview.innerHTML = `
+      <video src="${escapeAttribute(previewVideo)}" muted playsinline controls></video>
+      <b class="media-badge preview-badge">${formatVideoDuration(pendingPostVideoDuration || editingPost?.videoDuration)}</b>
+    `;
+    postImagePreview.classList.add("has-image", "has-video");
     return;
   }
 
-  postImagePreview.style.backgroundImage = `url("${pendingPostImageDataUrl}")`;
+  if (!previewImage) {
+    postImagePreview.removeAttribute("style");
+    postImagePreview.innerHTML = `<span>${editingPost ? "写真・動画を選ぶと差し替え" : "写真・動画プレビュー"}</span>`;
+    postImagePreview.classList.remove("has-image", "has-video");
+    return;
+  }
+
+  postImagePreview.style.backgroundImage = `url("${previewImage}")`;
   postImagePreview.innerHTML = "";
   postImagePreview.classList.add("has-image");
+  postImagePreview.classList.remove("has-video");
 }
 
 function renderTankList() {
@@ -494,6 +626,7 @@ function renderTankList() {
   document.querySelectorAll("[data-tank-id]").forEach((button) => {
     button.addEventListener("click", () => {
       state.activeTankId = button.dataset.tankId;
+      activeAlbumMonth = "all";
       saveState();
       renderApp();
     });
@@ -560,15 +693,16 @@ function renderPosts() {
           <div class="post-body">
             <div class="post-meta-row">
               <span class="chip">${escapeHtml(post.tag)}</span>
-              <small>${escapeHtml(getTankName(post.tankId))}</small>
+              <small>${escapeHtml(getTankName(post.tankId))} / ${getPostMediaLabel(post)}</small>
             </div>
             <h2>${escapeHtml(post.title)}</h2>
             <p>${escapeHtml(post.text)}</p>
             <div class="post-actions">
               <button class="like-button" type="button" data-like-id="${escapeHtml(post.id)}">いいね <span>${post.likes}</span></button>
               <button class="text-button" type="button" data-analyze-post="${escapeHtml(post.id)}">AI分析へ</button>
+              <button class="text-button" type="button" data-edit-post="${escapeHtml(post.id)}">編集</button>
               <button class="text-button" type="button" data-feature-post="${escapeHtml(post.id)}">表紙にする</button>
-              <button class="text-button" type="button" data-replace-post="${escapeHtml(post.id)}">画像変更</button>
+              <button class="text-button" type="button" data-replace-post="${escapeHtml(post.id)}">メディア変更</button>
               <button class="text-button danger-text" type="button" data-delete-post="${escapeHtml(post.id)}">削除</button>
             </div>
           </div>
@@ -604,6 +738,10 @@ function bindPostActions(root) {
     button.addEventListener("click", () => featurePost(button.dataset.featurePost));
   });
 
+  root.querySelectorAll("[data-edit-post]").forEach((button) => {
+    button.addEventListener("click", () => openPostModal(button.dataset.editPost));
+  });
+
   root.querySelectorAll("[data-replace-post]").forEach((button) => {
     button.addEventListener("click", () => {
       replacingPostId = button.dataset.replacePost;
@@ -633,11 +771,12 @@ function renderTankPosts() {
           <div>
             <span>${escapeHtml(post.tag)}</span>
             <strong>${escapeHtml(post.title)}</strong>
-            <small>いいね ${post.likes}</small>
+            <small>いいね ${post.likes} / ${getPostMediaLabel(post)}</small>
             <div class="linked-actions">
               <button class="text-button" type="button" data-analyze-post="${escapeHtml(post.id)}">AI分析へ</button>
+              <button class="text-button" type="button" data-edit-post="${escapeHtml(post.id)}">編集</button>
               <button class="text-button" type="button" data-feature-post="${escapeHtml(post.id)}">表紙</button>
-              <button class="text-button" type="button" data-replace-post="${escapeHtml(post.id)}">画像</button>
+              <button class="text-button" type="button" data-replace-post="${escapeHtml(post.id)}">メディア</button>
               <button class="text-button danger-text" type="button" data-delete-post="${escapeHtml(post.id)}">削除</button>
             </div>
           </div>
@@ -651,22 +790,50 @@ function renderTankPosts() {
 
 function renderTankAlbum() {
   const tank = getActiveTank();
-  const posts = state.posts
-    .filter((post) => post.tankId === tank.id && post.imageDataUrl)
-    .sort((a, b) => Number(b.id === tank.featuredPostId) - Number(a.id === tank.featuredPostId))
-    .slice(0, 6);
+  const allPosts = state.posts
+    .filter((post) => post.tankId === tank.id && hasPostMedia(post))
+    .sort((a, b) => {
+      const featuredOrder = Number(b.id === tank.featuredPostId) - Number(a.id === tank.featuredPostId);
+      if (featuredOrder !== 0) {
+        return featuredOrder;
+      }
+
+      return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
+    });
+  const monthOptions = getAlbumMonthOptions(allPosts);
+
+  albumMonthFilter.innerHTML = [
+    '<option value="all">すべて</option>',
+    ...monthOptions.map((month) => `<option value="${escapeHtml(month.key)}">${escapeHtml(month.label)}</option>`),
+  ].join("");
+
+  if (activeAlbumMonth !== "all" && !monthOptions.some((month) => month.key === activeAlbumMonth)) {
+    activeAlbumMonth = "all";
+  }
+
+  albumMonthFilter.value = activeAlbumMonth;
+
+  const posts =
+    activeAlbumMonth === "all" ? allPosts : allPosts.filter((post) => getMonthKey(post.createdAt) === activeAlbumMonth);
+
+  albumCountLabel.textContent = `${posts.length}枚`;
 
   if (!posts.length) {
-    tankAlbumGrid.innerHTML = '<p class="empty-state">画像つき投稿を追加すると、この水槽のアルバムとして並びます。</p>';
+    tankAlbumGrid.innerHTML =
+      allPosts.length === 0
+        ? '<p class="empty-state">写真・動画つき投稿を追加すると、この水槽のアルバムとして並びます。</p>'
+        : '<p class="empty-state">この月の写真・動画はありません。表示を「すべて」に戻すと確認できます。</p>';
     return;
   }
 
   tankAlbumGrid.innerHTML = posts
     .map(
       (post) => `
-        <button class="album-tile ${post.id === tank.featuredPostId ? "is-featured" : ""}" type="button" data-analyze-post="${escapeHtml(post.id)}" style="background-image: url('${escapeAttribute(post.imageDataUrl)}')">
+        <button class="album-tile ${post.videoDataUrl ? "has-video" : ""} ${post.id === tank.featuredPostId ? "is-featured" : ""}" type="button" data-analyze-post="${escapeHtml(post.id)}" ${post.imageDataUrl ? `style="background-image: url('${escapeAttribute(post.imageDataUrl)}')"` : ""}>
           ${post.id === tank.featuredPostId ? "<small>表紙</small>" : ""}
+          ${post.videoDataUrl ? `<b class="media-badge">${formatVideoDuration(post.videoDuration)}</b>` : ""}
           <span>${escapeHtml(post.title)}</span>
+          <time>${formatAlbumDate(post.createdAt)}</time>
         </button>
       `,
     )
@@ -676,11 +843,54 @@ function renderTankAlbum() {
 }
 
 function renderPostImage(post) {
+  if (post.videoDataUrl) {
+    return `
+      <div class="post-image custom-video">
+        <video src="${escapeAttribute(post.videoDataUrl)}" controls muted playsinline preload="metadata"></video>
+        <b class="media-badge">${formatVideoDuration(post.videoDuration)}</b>
+      </div>
+    `;
+  }
+
   if (post.imageDataUrl) {
     return `<div class="post-image custom-photo" style="background-image: url('${escapeAttribute(post.imageDataUrl)}')"></div>`;
   }
 
   return `<div class="post-image ${escapeHtml(post.imageClass)}"></div>`;
+}
+
+function hasPostMedia(post) {
+  return Boolean(post.imageDataUrl || post.videoDataUrl);
+}
+
+function getPostMediaLabel(post) {
+  if (post.videoDataUrl) {
+    return `動画 ${formatVideoDuration(post.videoDuration)}`;
+  }
+
+  if (post.imageDataUrl) {
+    return "写真";
+  }
+
+  return "サンプル";
+}
+
+function getAlbumMonthOptions(posts) {
+  const monthMap = new Map();
+
+  posts.forEach((post) => {
+    const key = getMonthKey(post.createdAt);
+    if (!key || monthMap.has(key)) {
+      return;
+    }
+
+    monthMap.set(key, {
+      key,
+      label: formatMonthLabel(post.createdAt),
+    });
+  });
+
+  return [...monthMap.values()].sort((a, b) => b.key.localeCompare(a.key));
 }
 
 function featurePost(postId) {
@@ -748,10 +958,23 @@ function analyzePostImage(postId) {
   renderApp();
   renderAiResult(result, post);
   showView("ai");
-  showToast("投稿写真をAI分析に送りました");
+  showToast(post.videoDataUrl ? "動画投稿の確認画面を開きました" : "投稿写真をAI分析に送りました");
 }
 
 function analyzePostPhoto(post) {
+  if (post.videoDataUrl) {
+    return {
+      status: "動画チェック準備中",
+      levelClass: "warning",
+      summary: "動画投稿は表示まで対応しました。今後、魚の動きや水面の様子を短い動画から確認できるようにします。",
+      items: [
+        "今できること: 動画を投稿として保存し、コミュニティとアルバムで確認する",
+        "次に作ること: 動画のサムネイル、再生時間、AI分析の下準備",
+        "撮影のコツ: 10秒前後で、水面・魚・全景が分かるように撮る",
+      ],
+    };
+  }
+
   if (!post.imageDataUrl) {
     return {
       status: "写真なし",
@@ -833,13 +1056,20 @@ function getRiskScore(levelClass) {
 
 function renderAiResult(result, post = null) {
   const resultBox = document.querySelector("#ai-result");
-  const photoMarkup = post?.imageDataUrl
-    ? `<div class="ai-photo-preview" style="background-image: url('${escapeAttribute(post.imageDataUrl)}')"></div>`
-    : "";
+  const mediaMarkup = post?.videoDataUrl
+    ? `
+      <div class="ai-photo-preview has-video">
+        <video src="${escapeAttribute(post.videoDataUrl)}" controls muted playsinline preload="metadata"></video>
+        <b class="media-badge">${formatVideoDuration(post.videoDuration)}</b>
+      </div>
+    `
+    : post?.imageDataUrl
+      ? `<div class="ai-photo-preview" style="background-image: url('${escapeAttribute(post.imageDataUrl)}')"></div>`
+      : "";
 
   resultBox.className = `ai-result ${result.levelClass}`;
   resultBox.innerHTML = `
-    ${photoMarkup}
+    ${mediaMarkup}
     <p class="status-label">状態</p>
     <strong>${result.status}</strong>
     <p>${result.summary}</p>
@@ -977,9 +1207,46 @@ function closePostModal() {
   resetPostForm();
 }
 
+function openPostModal(postId = null) {
+  const post = state.posts.find((item) => item.id === postId);
+  editingPostId = post?.id || null;
+  pendingPostImageDataUrl = null;
+  pendingPostVideoDataUrl = null;
+  pendingPostVideoDuration = null;
+  pendingPostMediaType = null;
+
+  renderPostControls();
+  postModalTitle.textContent = post ? "投稿を編集" : "水槽を投稿";
+  postSubmitButton.textContent = post ? "更新する" : "投稿する";
+
+  if (post) {
+    postTankSelect.value = post.tankId || state.activeTankId;
+    document.querySelector("#post-title").value = post.title;
+    document.querySelector("#post-tag").value = post.tag;
+    document.querySelector("#post-text").value = post.text;
+  } else {
+    postTankSelect.value = state.activeTankId;
+    document.querySelector("#post-title").value = "今日の水槽";
+    document.querySelector("#post-tag").value = getActiveTank().kind || "水槽";
+    document.querySelector("#post-text").value = "水草が伸びてきたので記録します。";
+  }
+
+  postImageInput.value = "";
+  renderPostImagePreview();
+  modal.classList.add("is-open");
+  modal.setAttribute("aria-hidden", "false");
+}
+
 function resetPostForm() {
   pendingPostImageDataUrl = null;
+  pendingPostVideoDataUrl = null;
+  pendingPostVideoDuration = null;
+  pendingPostMediaType = null;
+  editingPostId = null;
   postImageInput.value = "";
+  postForm.reset();
+  postModalTitle.textContent = "水槽を投稿";
+  postSubmitButton.textContent = "投稿する";
   renderPostImagePreview();
 }
 
@@ -1035,8 +1302,14 @@ function normalizeState(saved) {
 
     return {
       imageDataUrl: null,
+      videoDataUrl: null,
+      videoDuration: null,
+      mediaType: post.videoDataUrl ? "video" : post.imageDataUrl ? "image" : null,
+      createdAt: daysAgoIso(index),
       ...post,
       tankId,
+      mediaType: post.mediaType || (post.videoDataUrl ? "video" : post.imageDataUrl ? "image" : null),
+      createdAt: post.createdAt || post.updatedAt || daysAgoIso(index),
     };
   });
 
@@ -1081,6 +1354,30 @@ function resizeImageFile(file, maxWidth, quality) {
       image.src = reader.result;
     };
     reader.readAsDataURL(file);
+  });
+}
+
+function readFileAsDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = reject;
+    reader.onload = () => resolve(reader.result);
+    reader.readAsDataURL(file);
+  });
+}
+
+function getVideoDuration(src) {
+  return new Promise((resolve) => {
+    const video = document.createElement("video");
+    video.preload = "metadata";
+    video.onloadedmetadata = () => {
+      if (video.src.startsWith("blob:")) {
+        window.URL.revokeObjectURL(video.src);
+      }
+      resolve(Number.isFinite(video.duration) ? Math.round(video.duration) : null);
+    };
+    video.onerror = () => resolve(null);
+    video.src = src;
   });
 }
 
@@ -1130,6 +1427,50 @@ function formatRelativeDate(value) {
     hour: "2-digit",
     minute: "2-digit",
   }).format(new Date(value));
+}
+
+function getMonthKey(value) {
+  const date = value ? new Date(value) : new Date();
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+}
+
+function formatMonthLabel(value) {
+  const date = value ? new Date(value) : new Date();
+  if (Number.isNaN(date.getTime())) {
+    return "日付なし";
+  }
+
+  return new Intl.DateTimeFormat("ja-JP", {
+    year: "numeric",
+    month: "long",
+  }).format(date);
+}
+
+function formatAlbumDate(value) {
+  const date = value ? new Date(value) : new Date();
+  if (Number.isNaN(date.getTime())) {
+    return "日付なし";
+  }
+
+  return new Intl.DateTimeFormat("ja-JP", {
+    month: "numeric",
+    day: "numeric",
+  }).format(date);
+}
+
+function formatVideoDuration(seconds) {
+  if (!Number.isFinite(Number(seconds)) || Number(seconds) <= 0) {
+    return "動画";
+  }
+
+  const totalSeconds = Math.round(Number(seconds));
+  const minutes = Math.floor(totalSeconds / 60);
+  const remainingSeconds = String(totalSeconds % 60).padStart(2, "0");
+  return `${minutes}:${remainingSeconds}`;
 }
 
 function toDatetimeLocalValue(date) {

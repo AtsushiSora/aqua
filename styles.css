@@ -1019,6 +1019,37 @@ time {
   gap: 8px;
 }
 
+.album-controls {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.album-controls > span {
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 900;
+}
+
+.album-controls label {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.album-controls label span {
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 900;
+}
+
+.album-controls select {
+  width: auto;
+  min-height: 34px;
+  padding: 0 30px 0 10px;
+  font-size: 0.8rem;
+}
+
 .album-tile {
   position: relative;
   min-height: 86px;
@@ -1029,6 +1060,12 @@ time {
   background-position: center;
   color: white;
   text-align: left;
+}
+
+.album-tile.has-video {
+  background:
+    radial-gradient(circle at 50% 42%, rgba(255, 255, 255, 0.16), transparent 26%),
+    linear-gradient(135deg, #183f45, #0c707c 52%, #6bbf9b);
 }
 
 .album-tile::after {
@@ -1042,10 +1079,21 @@ time {
   position: absolute;
   left: 8px;
   right: 8px;
-  bottom: 8px;
+  bottom: 22px;
   z-index: 1;
   font-size: 0.72rem;
   font-weight: 900;
+}
+
+.album-tile time {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  bottom: 7px;
+  z-index: 1;
+  color: rgba(255, 255, 255, 0.86);
+  font-size: 0.66rem;
+  font-weight: 800;
 }
 
 .album-tile small {
@@ -1057,6 +1105,19 @@ time {
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.9);
   color: var(--teal-dark);
+  font-size: 0.68rem;
+  font-weight: 900;
+}
+
+.media-badge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 1;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: rgba(13, 47, 52, 0.72);
+  color: white;
   font-size: 0.68rem;
   font-weight: 900;
 }
@@ -1265,6 +1326,8 @@ textarea {
 }
 
 .post-image {
+  position: relative;
+  overflow: hidden;
   aspect-ratio: 4 / 3;
 }
 
@@ -1272,6 +1335,21 @@ textarea {
 .post-preview.has-image {
   background-size: cover;
   background-position: center;
+}
+
+.post-image.custom-video,
+.post-preview.has-video,
+.ai-photo-preview.has-video {
+  background: #082f36;
+}
+
+.post-image video,
+.post-preview video,
+.ai-photo-preview video {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .medaka {
@@ -1345,9 +1423,11 @@ textarea {
 }
 
 .ai-photo-preview {
+  position: relative;
   width: 100%;
   aspect-ratio: 16 / 9;
   margin-bottom: 18px;
+  overflow: hidden;
   border-radius: 8px;
   background-size: cover;
   background-position: center;
@@ -1432,6 +1512,7 @@ textarea {
   min-height: 210px;
   display: grid;
   place-items: center;
+  overflow: hidden;
   border: 1px dashed rgba(17, 153, 156, 0.42);
   border-radius: 8px;
   background:
@@ -1560,6 +1641,10 @@ textarea {
   .section-head {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .album-controls {
+    justify-content: space-between;
   }
 
   .quick-dock {
