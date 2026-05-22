@@ -56,8 +56,8 @@
 
         <div class="sidebar-panel">
           <p class="eyebrow">次の予定</p>
-          <strong>明日 8:00</strong>
-          <span>メイン水槽の水温確認</span>
+          <strong id="sidebar-next-time">今日 18:00</strong>
+          <span id="sidebar-next-task">水温チェック</span>
         </div>
       </aside>
 
@@ -68,7 +68,7 @@
             <input type="search" placeholder="水槽、投稿、ガイドを検索">
           </label>
           <div class="topbar-actions">
-            <button class="icon-button" type="button" title="通知" aria-label="通知">●</button>
+            <button class="icon-button" id="notification-button" type="button" title="通知" aria-label="通知">●</button>
             <button class="primary-button" type="button" data-open-post>投稿</button>
           </div>
         </header>
@@ -183,6 +183,17 @@
                       <small data-task-status="checkAlgae">夜</small>
                     </label>
                   </div>
+                </section>
+
+                <section class="panel reminder-panel">
+                  <div class="section-head">
+                    <div>
+                      <p class="eyebrow">Reminder</p>
+                      <h2>今日のリマインダー</h2>
+                    </div>
+                    <button class="text-button" id="enable-notifications-button" type="button">通知を許可</button>
+                  </div>
+                  <div class="reminder-list" id="reminder-list"></div>
                 </section>
 
                 <section class="panel">

@@ -29,6 +29,35 @@ const logDateInput = document.querySelector("#log-date");
 const heroPhoto = document.querySelector("#hero-photo");
 const heroPhotoButton = document.querySelector("#hero-photo-button");
 const heroPhotoInput = document.querySelector("#hero-photo-input");
+const notificationButton = document.querySelector("#notification-button");
+const enableNotificationsButton = document.querySelector("#enable-notifications-button");
+const reminderList = document.querySelector("#reminder-list");
+const sidebarNextTime = document.querySelector("#sidebar-next-time");
+const sidebarNextTask = document.querySelector("#sidebar-next-task");
+
+const taskLabels = {
+  feedMorning: "朝の餌やり",
+  checkTemp: "水温チェック",
+  checkAlgae: "ガラス面のコケ確認",
+};
+
+const defaultReminders = {
+  feedMorning: {
+    time: "08:00",
+    enabled: true,
+    lastNotifiedOn: null,
+  },
+  checkTemp: {
+    time: "18:00",
+    enabled: true,
+    lastNotifiedOn: null,
+  },
+  checkAlgae: {
+    time: "20:00",
+    enabled: false,
+    lastNotifiedOn: null,
+  },
+};
 
 const sampleLogs = [
   {
@@ -121,6 +150,8 @@ const defaultState = {
     checkTemp: false,
     checkAlgae: false,
   },
+  taskDate: getDateKey(new Date()),
+  reminders: cloneState(defaultReminders),
 };
 
 let state = loadState();
@@ -178,10 +209,29 @@ document.querySelectorAll("[data-close-modal]").forEach((button) => {
 document.querySelectorAll("[data-task]").forEach((checkbox) => {
   checkbox.addEventListener("change", () => {
     state.tasks[checkbox.dataset.task] = checkbox.checked;
+    state.taskDate = getDateKey(new Date());
     saveState();
     renderTasks();
+    renderReminders();
   });
 });
+
+notificationButton.addEventListener("click", () => {
+  const nextReminder = getNextReminder();
+  if (!nextReminder) {
+    showToast("有効なリマインダーはありません");
+    return;
+  }
+
+  if (!canUseNotifications()) {
+    showToast(`${formatReminderDate(nextReminder.date)} ${nextReminder.label}`);
+    return;
+  }
+
+  requestNotificationPermission();
+});
+
+enableNotificationsButton.addEventListener("click", requestNotificationPermission);
 
 postTankFilter.addEventListener("change", renderPosts);
 
@@ -497,6 +547,7 @@ document.querySelectorAll("[data-guide-filter]").forEach((button) => {
 
 function renderApp() {
   ensureActiveTank();
+  ensureDailyTasks();
   renderHeroPhoto();
   renderTankList();
   renderTankProfile();
@@ -506,6 +557,7 @@ function renderApp() {
   renderTankPosts();
   renderTankAlbum();
   renderTasks();
+  renderReminders();
   renderDashboard();
 }
 
@@ -1006,9 +1058,197 @@ function renderTasks() {
   });
 
   document.querySelectorAll("[data-task-status]").forEach((status) => {
-    const isDone = Boolean(state.tasks[status.dataset.taskStatus]);
-    status.textContent = isDone ? "完了" : status.dataset.taskStatus === "checkAlgae" ? "夜" : "18:00";
+    const taskId = status.dataset.taskStatus;
+    const isDone = Boolean(state.tasks[taskId]);
+    status.textContent = isDone ? "完了" : getReminderStatus(taskId);
   });
+}
+
+function renderReminders() {
+  if (!reminderList) {
+    return;
+  }
+
+  reminderList.innerHTML = Object.entries(taskLabels)
+    .map(([taskId, label]) => {
+      const reminder = state.reminders[taskId] || defaultReminders[taskId];
+      const checked = reminder.enabled ? "checked" : "";
+      const rowClass = reminder.enabled ? "" : "is-off";
+      const status = state.tasks[taskId] ? "今日のタスクは完了" : reminder.enabled ? "通知対象" : "通知オフ";
+
+      return `
+        <label class="reminder-row ${rowClass}">
+          <input type="checkbox" data-reminder-enabled="${escapeHtml(taskId)}" ${checked}>
+          <span>
+            <strong>${escapeHtml(label)}</strong>
+            <small>${status}</small>
+          </span>
+          <input type="time" value="${escapeAttribute(reminder.time)}" data-reminder-time="${escapeHtml(taskId)}" aria-label="${escapeHtml(label)}の通知時刻">
+        </label>
+      `;
+    })
+    .join("");
+
+  reminderList.querySelectorAll("[data-reminder-enabled]").forEach((input) => {
+    input.addEventListener("change", () => {
+      const taskId = input.dataset.reminderEnabled;
+      state.reminders[taskId].enabled = input.checked;
+      saveState();
+      renderTasks();
+      renderReminders();
+    });
+  });
+
+  reminderList.querySelectorAll("[data-reminder-time]").forEach((input) => {
+    input.addEventListener("change", () => {
+      const taskId = input.dataset.reminderTime;
+      state.reminders[taskId].time = input.value || defaultReminders[taskId].time;
+      state.reminders[taskId].lastNotifiedOn = null;
+      saveState();
+      renderTasks();
+      renderReminders();
+    });
+  });
+
+  renderNextReminder();
+  renderNotificationButtons();
+}
+
+function renderNextReminder() {
+  const nextReminder = getNextReminder();
+
+  if (!nextReminder) {
+    sidebarNextTime.textContent = "予定なし";
+    sidebarNextTask.textContent = "リマインダーはオフです";
+    return;
+  }
+
+  sidebarNextTime.textContent = formatReminderDate(nextReminder.date);
+  sidebarNextTask.textContent = nextReminder.label;
+}
+
+function renderNotificationButtons() {
+  const label = getNotificationButtonLabel();
+  notificationButton.title = label;
+  enableNotificationsButton.textContent = label;
+}
+
+function getReminderStatus(taskId) {
+  const reminder = state.reminders[taskId];
+
+  if (!reminder?.enabled) {
+    return "OFF";
+  }
+
+  return reminder.time || defaultReminders[taskId].time;
+}
+
+function getNextReminder() {
+  const now = new Date();
+  return Object.entries(taskLabels)
+    .map(([taskId, label]) => {
+      const reminder = state.reminders[taskId] || defaultReminders[taskId];
+      if (!reminder.enabled) {
+        return null;
+      }
+
+      let date = getReminderDate(reminder.time, now);
+      if (date <= now || state.tasks[taskId]) {
+        date.setDate(date.getDate() + 1);
+      }
+
+      return { taskId, label, date };
+    })
+    .filter(Boolean)
+    .sort((a, b) => a.date - b.date)[0];
+}
+
+function checkDueReminders() {
+  ensureDailyTasks();
+
+  const now = new Date();
+  const todayKey = getDateKey(now);
+  let changed = false;
+
+  Object.entries(taskLabels).forEach(([taskId, label]) => {
+    const reminder = state.reminders[taskId];
+    if (!reminder?.enabled || state.tasks[taskId] || reminder.lastNotifiedOn === todayKey) {
+      return;
+    }
+
+    const dueAt = getReminderDate(reminder.time, now);
+    const deltaMs = now.getTime() - dueAt.getTime();
+    if (deltaMs < 0 || deltaMs > 60000) {
+      return;
+    }
+
+    reminder.lastNotifiedOn = todayKey;
+    changed = true;
+    notifyReminder(label);
+  });
+
+  if (changed) {
+    saveState();
+    renderReminders();
+  }
+}
+
+function notifyReminder(label) {
+  const message = `${getActiveTank().name} の${label}の時間です`;
+
+  if (canUseNotifications() && Notification.permission === "granted") {
+    new Notification("AquaNote", {
+      body: message,
+      tag: `aquanote-${label}`,
+    });
+    return;
+  }
+
+  showToast(message);
+}
+
+function requestNotificationPermission() {
+  if (!canUseNotifications()) {
+    showToast("このブラウザでは通知に対応していません");
+    return;
+  }
+
+  if (Notification.permission === "granted") {
+    showToast("通知は有効です");
+    renderNotificationButtons();
+    return;
+  }
+
+  if (Notification.permission === "denied") {
+    showToast("ブラウザ設定で通知がブロックされています");
+    renderNotificationButtons();
+    return;
+  }
+
+  Notification.requestPermission().then((permission) => {
+    showToast(permission === "granted" ? "通知を有効にしました" : "通知は許可されませんでした");
+    renderNotificationButtons();
+  });
+}
+
+function canUseNotifications() {
+  return "Notification" in window;
+}
+
+function getNotificationButtonLabel() {
+  if (!canUseNotifications()) {
+    return "通知非対応";
+  }
+
+  if (Notification.permission === "granted") {
+    return "通知オン";
+  }
+
+  if (Notification.permission === "denied") {
+    return "通知ブロック中";
+  }
+
+  return "通知を許可";
 }
 
 function renderDashboard() {
@@ -1201,6 +1441,18 @@ function ensureActiveTank() {
   }
 }
 
+function ensureDailyTasks() {
+  const todayKey = getDateKey(new Date());
+
+  if (state.taskDate === todayKey) {
+    return;
+  }
+
+  state.tasks = getEmptyTasks();
+  state.taskDate = todayKey;
+  saveState();
+}
+
 function closePostModal() {
   modal.classList.remove("is-open");
   modal.setAttribute("aria-hidden", "true");
@@ -1266,6 +1518,7 @@ function loadState() {
       const migrated = cloneState(defaultState);
       migrated.posts = Array.isArray(legacy.posts) ? legacy.posts : migrated.posts;
       migrated.tasks = { ...migrated.tasks, ...legacy.tasks };
+      migrated.taskDate = getDateKey(new Date());
       migrated.tanks[0].logs = legacy.logs;
       migrated.tanks[0].latestAi = legacy.latestAi || null;
       return migrated;
@@ -1282,6 +1535,8 @@ function normalizeState(saved) {
     ...cloneState(defaultState),
     ...saved,
     tasks: { ...defaultState.tasks, ...saved.tasks },
+    taskDate: saved.taskDate || getDateKey(new Date()),
+    reminders: normalizeReminders(saved.reminders),
   };
 
   if (!normalized.tanks.length) {
@@ -1393,10 +1648,50 @@ function cloneState(value) {
   return JSON.parse(JSON.stringify(value));
 }
 
+function normalizeReminders(reminders = {}) {
+  const savedReminders = reminders && typeof reminders === "object" ? reminders : {};
+
+  return Object.fromEntries(
+    Object.entries(defaultReminders).map(([taskId, defaults]) => [
+      taskId,
+      {
+        ...defaults,
+        ...(savedReminders[taskId] || {}),
+        time: isValidTimeValue(savedReminders[taskId]?.time) ? savedReminders[taskId].time : defaults.time,
+        enabled: Boolean(savedReminders[taskId]?.enabled ?? defaults.enabled),
+        lastNotifiedOn: savedReminders[taskId]?.lastNotifiedOn || null,
+      },
+    ]),
+  );
+}
+
+function getEmptyTasks() {
+  return Object.fromEntries(Object.keys(taskLabels).map((taskId) => [taskId, false]));
+}
+
 function daysAgoIso(days) {
   const date = new Date();
   date.setDate(date.getDate() - days);
   return date.toISOString();
+}
+
+function getDateKey(date) {
+  return [
+    date.getFullYear(),
+    String(date.getMonth() + 1).padStart(2, "0"),
+    String(date.getDate()).padStart(2, "0"),
+  ].join("-");
+}
+
+function getReminderDate(time, baseDate = new Date()) {
+  const [hours, minutes] = (isValidTimeValue(time) ? time : "08:00").split(":").map(Number);
+  const date = new Date(baseDate);
+  date.setHours(hours, minutes, 0, 0);
+  return date;
+}
+
+function isValidTimeValue(value) {
+  return typeof value === "string" && /^([01]\d|2[0-3]):[0-5]\d$/.test(value);
 }
 
 function diffDays(value) {
@@ -1427,6 +1722,20 @@ function formatRelativeDate(value) {
     hour: "2-digit",
     minute: "2-digit",
   }).format(new Date(value));
+}
+
+function formatReminderDate(value) {
+  const date = value instanceof Date ? value : new Date(value);
+  const todayKey = getDateKey(new Date());
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const dateLabel = getDateKey(date) === todayKey ? "今日" : getDateKey(date) === getDateKey(tomorrow) ? "明日" : formatAlbumDate(date);
+  const timeLabel = new Intl.DateTimeFormat("ja-JP", {
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date);
+
+  return `${dateLabel} ${timeLabel}`;
 }
 
 function getMonthKey(value) {
@@ -1494,6 +1803,8 @@ function escapeAttribute(value) {
 setDefaultLogDate();
 renderPostImagePreview();
 renderApp();
+checkDueReminders();
+window.setInterval(checkDueReminders, 60000);
 
 const firstView = window.location.hash.replace("#", "") || "dashboard";
 if (document.getElementById(firstView)) {
