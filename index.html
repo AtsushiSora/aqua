@@ -499,7 +499,29 @@
                 <option value="all">すべての水槽・池</option>
               </select>
             </label>
+            <label>
+              <span>タグ検索</span>
+              <input id="community-tag-search" type="search" placeholder="例: メダカ、水草、池" autocomplete="off">
+            </label>
+            <label>
+              <span>並び順</span>
+              <select id="community-sort-select">
+                <option value="newest">新しい順</option>
+                <option value="popular">人気順</option>
+                <option value="comments">コメント順</option>
+              </select>
+            </label>
           </div>
+
+          <section class="community-ranking" aria-labelledby="community-ranking-title">
+            <div class="section-head">
+              <div>
+                <p class="eyebrow">Ranking</p>
+                <h2 id="community-ranking-title">人気投稿ランキング</h2>
+              </div>
+            </div>
+            <div class="ranking-list" id="community-ranking-list"></div>
+          </section>
 
           <div class="post-grid" id="post-grid">
             <article class="post-card">

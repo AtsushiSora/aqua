@@ -20,6 +20,9 @@ const tankEditForm = document.querySelector("#tank-edit-form");
 const postForm = document.querySelector("#post-form");
 const postTankSelect = document.querySelector("#post-tank-select");
 const postTankFilter = document.querySelector("#post-tank-filter");
+const communityTagSearch = document.querySelector("#community-tag-search");
+const communitySortSelect = document.querySelector("#community-sort-select");
+const communityRankingList = document.querySelector("#community-ranking-list");
 const postImageInput = document.querySelector("#post-image-input");
 const postImagePreview = document.querySelector("#post-image-preview");
 const postModalTitle = document.querySelector("#post-modal-title");
@@ -130,6 +133,15 @@ const defaultState = {
       imageClass: "reef",
       tankId: "tank-main",
       likes: 128,
+      createdAt: daysAgoIso(2),
+      comments: [
+        {
+          id: "sample-comment-reef-1",
+          author: "mizu_note",
+          text: "左奥の高さが出ていて奥行きがきれいです。",
+          createdAt: daysAgoIso(1),
+        },
+      ],
     },
     {
       id: "sample-medaka",
@@ -139,6 +151,21 @@ const defaultState = {
       imageClass: "medaka",
       tankId: "tank-pond",
       likes: 214,
+      createdAt: daysAgoIso(1),
+      comments: [
+        {
+          id: "sample-comment-medaka-1",
+          author: "biotope_days",
+          text: "睡蓮鉢の影が涼しそうで良いですね。",
+          createdAt: daysAgoIso(1),
+        },
+        {
+          id: "sample-comment-medaka-2",
+          author: "aqua_taro",
+          text: "屋外管理の参考になります。",
+          createdAt: daysAgoIso(2),
+        },
+      ],
     },
     {
       id: "sample-koi",
@@ -148,6 +175,15 @@ const defaultState = {
       imageClass: "koi",
       tankId: "tank-pond",
       likes: 96,
+      createdAt: daysAgoIso(3),
+      comments: [
+        {
+          id: "sample-comment-koi-1",
+          author: "pond_keeper",
+          text: "雨の翌日は同じ場所で写真を残すと比較しやすいです。",
+          createdAt: daysAgoIso(1),
+        },
+      ],
     },
   ],
   tasks: {
@@ -265,6 +301,8 @@ notificationButton.addEventListener("click", () => {
 enableNotificationsButton.addEventListener("click", requestNotificationPermission);
 
 postTankFilter.addEventListener("change", renderPosts);
+communityTagSearch.addEventListener("input", renderPosts);
+communitySortSelect.addEventListener("change", renderPosts);
 
 albumMonthFilter.addEventListener("change", () => {
   activeAlbumMonth = albumMonthFilter.value;
@@ -561,6 +599,7 @@ postForm.addEventListener("submit", (event) => {
     videoDuration: pendingPostVideoDuration,
     mediaType: pendingPostMediaType || (pendingPostImageDataUrl ? "image" : null),
     likes: 0,
+    comments: [],
     createdAt: new Date().toISOString(),
   };
 
@@ -596,6 +635,7 @@ function renderApp() {
   renderTimeline();
   renderPostControls();
   renderPosts();
+  renderCommunityRanking();
   renderTankPosts();
   renderTankAlbum();
   renderTasks();
@@ -667,7 +707,9 @@ function getSearchResults(query) {
     label: "投稿",
     title: post.title,
     description: `${post.tag} / ${getTankName(post.tankId)}`,
-    text: [post.title, post.tag, post.text, getTankName(post.tankId)].join(" "),
+    text: [post.title, post.tag, post.text, getTankName(post.tankId), ...post.comments.map((comment) => comment.text)].join(
+      " ",
+    ),
   }));
 
   const guideResults = getGuideSearchItems();
@@ -914,11 +956,11 @@ function renderTimeline() {
 }
 
 function renderPosts() {
-  const filter = postTankFilter.value;
-  const posts = filter === "all" ? state.posts : state.posts.filter((post) => post.tankId === filter);
+  const posts = getFilteredCommunityPosts();
 
   if (!posts.length) {
-    postGrid.innerHTML = '<p class="empty-state full-field">この水槽の投稿はまだありません。写真を投稿して最初の記録を残しましょう。</p>';
+    postGrid.innerHTML =
+      '<p class="empty-state full-field">条件に合う投稿はまだありません。検索条件を変えるか、写真を投稿して最初の記録を残しましょう。</p>';
     return;
   }
 
@@ -934,8 +976,10 @@ function renderPosts() {
             </div>
             <h2>${escapeHtml(post.title)}</h2>
             <p>${escapeHtml(post.text)}</p>
+            ${renderPostComments(post)}
             <div class="post-actions">
               <button class="like-button" type="button" data-like-id="${escapeHtml(post.id)}">いいね <span>${post.likes}</span></button>
+              <span class="comment-count">${post.comments.length}件のコメント</span>
               <button class="text-button" type="button" data-analyze-post="${escapeHtml(post.id)}">AI分析へ</button>
               <button class="text-button" type="button" data-view-media="${escapeHtml(post.id)}">詳細</button>
               <button class="text-button" type="button" data-edit-post="${escapeHtml(post.id)}">編集</button>
@@ -952,6 +996,145 @@ function renderPosts() {
   bindPostActions(postGrid);
 }
 
+function getFilteredCommunityPosts() {
+  const filter = postTankFilter.value;
+  const tagQuery = normalizeSearchTerm(communityTagSearch.value);
+  const sort = communitySortSelect.value;
+  const filteredPosts = state.posts.filter((post) => {
+    const matchesTank = filter === "all" || post.tankId === filter;
+    const searchableText = [
+      post.title,
+      post.tag,
+      post.text,
+      getTankName(post.tankId),
+      ...post.comments.map((comment) => comment.text),
+    ].join(" ");
+    const matchesTag = !tagQuery || normalizeSearchTerm(searchableText).includes(tagQuery);
+    return matchesTank && matchesTag;
+  });
+
+  return sortCommunityPosts(filteredPosts, sort);
+}
+
+function sortCommunityPosts(posts, sort) {
+  return [...posts].sort((a, b) => {
+    if (sort === "popular") {
+      const scoreOrder = getPostRankingScore(b) - getPostRankingScore(a);
+      if (scoreOrder !== 0) {
+        return scoreOrder;
+      }
+    }
+
+    if (sort === "comments") {
+      const commentOrder = b.comments.length - a.comments.length;
+      if (commentOrder !== 0) {
+        return commentOrder;
+      }
+    }
+
+    return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
+  });
+}
+
+function renderPostComments(post) {
+  const comments = post.comments.slice(-2);
+  const commentList = comments.length
+    ? comments
+        .map(
+          (comment) => `
+            <li>
+              <strong>${escapeHtml(comment.author)}</strong>
+              <span>${escapeHtml(comment.text)}</span>
+            </li>
+          `,
+        )
+        .join("")
+    : '<li class="empty-comment">まだコメントはありません</li>';
+
+  return `
+    <div class="comment-panel">
+      <ul>${commentList}</ul>
+      <form class="comment-form" data-comment-form="${escapeHtml(post.id)}">
+        <input type="text" name="comment" placeholder="コメントを書く" aria-label="${escapeHtml(post.title)}にコメント">
+        <button type="submit">送信</button>
+      </form>
+    </div>
+  `;
+}
+
+function addPostComment(postId, text) {
+  const commentText = String(text || "").trim();
+  const post = state.posts.find((item) => item.id === postId);
+
+  if (!post || !commentText) {
+    showToast("コメントを入力してください");
+    return;
+  }
+
+  post.comments.push({
+    id: createId("comment"),
+    author: "アクア太郎",
+    text: commentText.slice(0, 120),
+    createdAt: new Date().toISOString(),
+  });
+  saveState();
+  renderPosts();
+  renderCommunityRanking();
+  renderTankPosts();
+  showToast("コメントを追加しました");
+}
+
+function renderCommunityRanking() {
+  const rankedPosts = [...state.posts]
+    .sort((a, b) => {
+      const scoreOrder = getPostRankingScore(b) - getPostRankingScore(a);
+      if (scoreOrder !== 0) {
+        return scoreOrder;
+      }
+
+      return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
+    })
+    .slice(0, 5);
+
+  if (!rankedPosts.length) {
+    communityRankingList.innerHTML = '<p class="empty-state">投稿が増えるとランキングが表示されます。</p>';
+    return;
+  }
+
+  communityRankingList.innerHTML = rankedPosts
+    .map(
+      (post, index) => `
+        <button type="button" data-ranking-post="${escapeHtml(post.id)}">
+          <span>${index + 1}</span>
+          <strong>${escapeHtml(post.title)}</strong>
+          <small>${escapeHtml(post.tag)} / いいね ${post.likes} / コメント ${post.comments.length}</small>
+        </button>
+      `,
+    )
+    .join("");
+
+  communityRankingList.querySelectorAll("[data-ranking-post]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const post = state.posts.find((item) => item.id === button.dataset.rankingPost);
+      if (!post) {
+        return;
+      }
+
+      postTankFilter.value = "all";
+      communityTagSearch.value = "";
+      communitySortSelect.value = "popular";
+      highlightedSearchResult = { type: "post", id: post.id };
+      renderPosts();
+      showView("community");
+      flashSearchResult();
+    });
+  });
+}
+
+function getPostRankingScore(post) {
+  return Number(post.likes || 0) + post.comments.length * 3;
+}
+
 function bindPostActions(root) {
   root.querySelectorAll("[data-like-id]").forEach((button) => {
     button.addEventListener("click", () => {
@@ -963,8 +1146,16 @@ function bindPostActions(root) {
       post.likes += 1;
       saveState();
       renderPosts();
+      renderCommunityRanking();
       renderTankPosts();
       renderTankAlbum();
+    });
+  });
+
+  root.querySelectorAll("[data-comment-form]").forEach((form) => {
+    form.addEventListener("submit", (event) => {
+      event.preventDefault();
+      addPostComment(form.dataset.commentForm, new FormData(form).get("comment"));
     });
   });
 
@@ -1013,7 +1204,7 @@ function renderTankPosts() {
           <div>
             <span>${escapeHtml(post.tag)}</span>
             <strong>${escapeHtml(post.title)}</strong>
-            <small>いいね ${post.likes} / ${getPostMediaLabel(post)}</small>
+            <small>いいね ${post.likes} / コメント ${post.comments.length} / ${getPostMediaLabel(post)}</small>
             <div class="linked-actions">
               <button class="text-button" type="button" data-analyze-post="${escapeHtml(post.id)}">AI分析へ</button>
               <button class="text-button" type="button" data-view-media="${escapeHtml(post.id)}">詳細</button>
@@ -1193,7 +1384,7 @@ function openMediaDetail(postId) {
           </div>
           <div>
             <dt>反応</dt>
-            <dd>いいね ${Number(post.likes || 0)}</dd>
+            <dd>いいね ${Number(post.likes || 0)} / コメント ${post.comments.length}</dd>
           </div>
           <div>
             <dt>メディア</dt>
@@ -1813,7 +2004,7 @@ function loadState() {
       migrated.taskDate = getDateKey(new Date());
       migrated.tanks[0].logs = legacy.logs;
       migrated.tanks[0].latestAi = legacy.latestAi || null;
-      return migrated;
+      return normalizeState(migrated);
     }
 
     return cloneState(defaultState);
@@ -1856,6 +2047,7 @@ function normalizeState(saved) {
       createdAt: daysAgoIso(index),
       ...post,
       tankId,
+      comments: Array.isArray(post.comments) ? post.comments : [],
       mediaType: post.mediaType || (post.videoDataUrl ? "video" : post.imageDataUrl ? "image" : null),
       createdAt: post.createdAt || post.updatedAt || daysAgoIso(index),
     };
