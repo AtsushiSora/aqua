@@ -1978,6 +1978,69 @@ textarea {
   gap: 12px;
 }
 
+.notification-settings {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--glass-border);
+  border-radius: 8px;
+  background: rgba(248, 252, 251, 0.72);
+}
+
+.notification-settings .settings-head,
+.notification-settings > p,
+.preference-toggles,
+.quiet-hours {
+  grid-column: 1 / -1;
+}
+
+.notification-settings .settings-head {
+  display: grid;
+  gap: 3px;
+}
+
+.notification-settings .settings-head span {
+  color: var(--aqua-dark);
+  font-size: 0.82rem;
+  font-weight: 900;
+}
+
+.notification-settings .settings-head small,
+.notification-settings > p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.preference-toggles,
+.quiet-hours {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.preference-toggles label {
+  min-height: 42px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 10px;
+  border: 1px solid var(--glass-border);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.62);
+  color: var(--aqua-dark);
+  font-size: 0.84rem;
+  font-weight: 900;
+}
+
+.preference-toggles input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--aqua-dark);
+}
+
 .account-sync-panel {
   display: grid;
   align-content: start;
@@ -2456,6 +2519,9 @@ textarea {
   .community-tools,
   .account-form,
   .auth-form,
+  .notification-settings,
+  .preference-toggles,
+  .quiet-hours,
   .schema-grid,
   .post-grid,
   .ranking-list,

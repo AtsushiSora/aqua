@@ -23,7 +23,7 @@ Reason:
 
 | Table | Purpose |
 | --- | --- |
-| `profiles` | Public user profile, visibility, and plan |
+| `profiles` | Public user profile, visibility, plan, and notification preferences |
 | `tanks` | Tank/pond profile, tags, and featured post |
 | `logs` | Water temperature, pH, maintenance type, memo, and recorded date |
 | `posts` | Community post metadata and tank relationship |
@@ -46,7 +46,8 @@ Reason:
 9. Sync likes and ranking stats through `post_likes` and `post_stats`. Done in the prototype.
 10. Move image/video uploads to Storage. Done in the prototype.
 11. Sync saved AI analysis results to `ai_results`. Done in the prototype.
-12. Keep JSON export/import as a fallback during beta.
+12. Sync notification preferences through `profiles`. Done in the prototype.
+13. Keep JSON export/import as a fallback during beta.
 
 ## Auth and permission rules
 
@@ -71,17 +72,17 @@ Reason:
 
 ## Current implementation slice
 
-AI analysis results now sync after community/media sync:
+Notification preferences now sync through profiles:
 
-- Save tank and post analysis summaries in `ai_results`. Done in the prototype.
-- Load the latest cloud analysis results on sign-in.
-- Keep local latest AI state as an offline/browser-only fallback during beta.
+- Store notification channel, browser/email toggles, and quiet hours in `profiles`. Done in the prototype.
+- Use the account notification preference before showing browser reminders.
+- Keep in-app reminder checks as a fallback while notification delivery is tested.
 
 ## Next implementation slice
 
-Move reminders from in-app checks toward production notifications:
+Move reminder delivery out of the foreground app:
 
-- Decide whether scheduled reminders should become push notifications, email, or server-side scheduled jobs.
-- Store notification permission and delivery preferences per profile.
-- Keep in-app reminder checks as a fallback while notification delivery is tested.
+- Decide whether scheduled reminders should become PWA Push, email, or server-side scheduled jobs.
+- Add delivery logs or retry state if notifications are sent server-side.
+- Keep account-level notification preferences as the delivery contract.
 - Keep JSON export/import as a recovery path while the sync model is being tested.

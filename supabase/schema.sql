@@ -15,6 +15,11 @@ create table public.profiles (
   email text,
   visibility profile_visibility not null default 'public',
   plan account_plan not null default 'free',
+  notification_channel text not null default 'browser' check (notification_channel in ('browser', 'push', 'email', 'none')),
+  browser_notifications_enabled boolean not null default true,
+  email_notifications_enabled boolean not null default false,
+  quiet_hours_start time not null default '22:00',
+  quiet_hours_end time not null default '07:00',
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );

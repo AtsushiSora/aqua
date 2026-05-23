@@ -64,6 +64,7 @@ const authEmailInput = document.querySelector("#auth-email-input");
 const authPasswordInput = document.querySelector("#auth-password-input");
 const authSignOutButton = document.querySelector("#auth-sign-out-button");
 const authNote = document.querySelector("#auth-note");
+const notificationPreferenceSummary = document.querySelector("#notification-preference-summary");
 const supabaseConfig = window.AQUANOTE_SUPABASE_CONFIG || {};
 
 const taskLabels = {
@@ -133,6 +134,11 @@ const defaultState = {
     email: "aquataro@example.com",
     visibility: "public",
     plan: "free",
+    notificationChannel: "browser",
+    browserNotifications: true,
+    emailNotifications: false,
+    quietHoursStart: "22:00",
+    quietHoursEnd: "07:00",
     syncStatus: "local",
     lastSyncedAt: null,
   },
@@ -346,6 +352,16 @@ notificationButton.addEventListener("click", () => {
     return;
   }
 
+  if (state.account.notificationChannel === "none") {
+    showToast("アカウント設定で通知がオフです");
+    return;
+  }
+
+  if (state.account.notificationChannel === "email") {
+    showToast(`メール通知予定: ${formatReminderDate(nextReminder.date)} ${nextReminder.label}`);
+    return;
+  }
+
   if (!canUseNotifications()) {
     showToast(`${formatReminderDate(nextReminder.date)} ${nextReminder.label}`);
     return;
@@ -385,6 +401,11 @@ accountForm.addEventListener("submit", async (event) => {
     email: document.querySelector("#account-email-input").value.trim() || defaultState.account.email,
     visibility: document.querySelector("#account-visibility-input").value,
     plan: document.querySelector("#account-plan-input").value,
+    notificationChannel: document.querySelector("#account-notification-channel-input").value,
+    browserNotifications: document.querySelector("#account-browser-notifications-input").checked,
+    emailNotifications: document.querySelector("#account-email-notifications-input").checked,
+    quietHoursStart: document.querySelector("#account-quiet-start-input").value || defaultState.account.quietHoursStart,
+    quietHoursEnd: document.querySelector("#account-quiet-end-input").value || defaultState.account.quietHoursEnd,
   };
   saveState();
 
@@ -808,6 +829,12 @@ function renderAccount() {
   document.querySelector("#account-email-input").value = account.email;
   document.querySelector("#account-visibility-input").value = account.visibility;
   document.querySelector("#account-plan-input").value = account.plan;
+  document.querySelector("#account-notification-channel-input").value = account.notificationChannel;
+  document.querySelector("#account-browser-notifications-input").checked = Boolean(account.browserNotifications);
+  document.querySelector("#account-email-notifications-input").checked = Boolean(account.emailNotifications);
+  document.querySelector("#account-quiet-start-input").value = account.quietHoursStart;
+  document.querySelector("#account-quiet-end-input").value = account.quietHoursEnd;
+  notificationPreferenceSummary.textContent = getNotificationPreferenceSummary();
 
   const mediaCount = state.posts.filter((post) => hasPostMedia(post)).length;
   const commentCount = state.posts.reduce((total, post) => total + getDisplayCommentCount(post), 0);
@@ -991,7 +1018,7 @@ async function loadProfileFromSupabase() {
 
   const { data, error } = await supabaseClient
     .from("profiles")
-    .select("display_name, handle, email, visibility, plan, updated_at")
+    .select("display_name, handle, email, visibility, plan, notification_channel, browser_notifications_enabled, email_notifications_enabled, quiet_hours_start, quiet_hours_end, updated_at")
     .eq("id", authSession.user.id)
     .maybeSingle();
 
@@ -2033,7 +2060,7 @@ async function syncProfileToSupabase(options = {}) {
   const { data, error } = await supabaseClient
     .from("profiles")
     .upsert(getProfilePayload(authSession.user), { onConflict: "id" })
-    .select("display_name, handle, email, visibility, plan, updated_at")
+    .select("display_name, handle, email, visibility, plan, notification_channel, browser_notifications_enabled, email_notifications_enabled, quiet_hours_start, quiet_hours_end, updated_at")
     .maybeSingle();
 
   if (error) {
@@ -2073,6 +2100,11 @@ function getProfilePayload(user) {
     email: state.account.email || user.email || "",
     visibility: getAllowedValue(state.account.visibility, ["public", "friends", "private"], "public"),
     plan: getAllowedValue(state.account.plan, ["free", "plus", "pro"], "free"),
+    notification_channel: getAllowedValue(state.account.notificationChannel, ["browser", "push", "email", "none"], "browser"),
+    browser_notifications_enabled: Boolean(state.account.browserNotifications),
+    email_notifications_enabled: Boolean(state.account.emailNotifications),
+    quiet_hours_start: normalizeTimeValue(state.account.quietHoursStart, defaultState.account.quietHoursStart),
+    quiet_hours_end: normalizeTimeValue(state.account.quietHoursEnd, defaultState.account.quietHoursEnd),
     updated_at: new Date().toISOString(),
   };
 }
@@ -2086,6 +2118,17 @@ function applyRemoteProfile(profile) {
     email: profile.email || state.account.email,
     visibility: getAllowedValue(profile.visibility, ["public", "friends", "private"], state.account.visibility),
     plan: getAllowedValue(profile.plan, ["free", "plus", "pro"], state.account.plan),
+    notificationChannel: getAllowedValue(profile.notification_channel, ["browser", "push", "email", "none"], state.account.notificationChannel),
+    browserNotifications:
+      profile.browser_notifications_enabled === null || profile.browser_notifications_enabled === undefined
+        ? state.account.browserNotifications
+        : Boolean(profile.browser_notifications_enabled),
+    emailNotifications:
+      profile.email_notifications_enabled === null || profile.email_notifications_enabled === undefined
+        ? state.account.emailNotifications
+        : Boolean(profile.email_notifications_enabled),
+    quietHoursStart: normalizeTimeValue(profile.quiet_hours_start, state.account.quietHoursStart),
+    quietHoursEnd: normalizeTimeValue(profile.quiet_hours_end, state.account.quietHoursEnd),
     syncStatus: "synced",
     lastSyncedAt: profile.updated_at || new Date().toISOString(),
   };
@@ -3469,6 +3512,9 @@ function renderNotificationButtons() {
   const label = getNotificationButtonLabel();
   notificationButton.title = label;
   enableNotificationsButton.textContent = label;
+  if (notificationPreferenceSummary) {
+    notificationPreferenceSummary.textContent = getNotificationPreferenceSummary();
+  }
 }
 
 function getReminderStatus(taskId) {
@@ -3577,8 +3623,18 @@ function checkDueReminders() {
 
 function notifyReminder(label) {
   const message = `${getActiveTank().name} の${label}の時間です`;
+  const account = state.account;
 
-  if (canUseNotifications() && Notification.permission === "granted") {
+  if (account.notificationChannel === "none") {
+    return;
+  }
+
+  if (isWithinQuietHours(new Date())) {
+    showToast(`静音時間中です。${message}`);
+    return;
+  }
+
+  if (canDeliverBrowserNotification()) {
     new Notification("AquaNote", {
       body: message,
       tag: `aquanote-${label}`,
@@ -3586,31 +3642,62 @@ function notifyReminder(label) {
     return;
   }
 
+  if (account.notificationChannel === "email") {
+    showToast(`メール通知予定: ${message}`);
+    return;
+  }
+
+  if (account.notificationChannel === "push") {
+    showToast(`PWA Push準備中: ${message}`);
+    return;
+  }
+
   showToast(message);
 }
 
-function requestNotificationPermission() {
+async function requestNotificationPermission() {
+  if (state.account.notificationChannel === "none") {
+    showToast("アカウント設定で通知がオフです");
+    return;
+  }
+
+  if (state.account.notificationChannel === "email") {
+    showToast("メール通知は配信処理の実装後に使います");
+    return;
+  }
+
   if (!canUseNotifications()) {
     showToast("このブラウザでは通知に対応していません");
     return;
   }
 
   if (Notification.permission === "granted") {
+    state.account.browserNotifications = true;
+    saveState();
+    if (authSession?.user) {
+      await syncProfileToSupabase({ silent: true });
+    }
     showToast("通知は有効です");
     renderNotificationButtons();
     return;
   }
 
   if (Notification.permission === "denied") {
+    state.account.browserNotifications = false;
+    saveState();
     showToast("ブラウザ設定で通知がブロックされています");
     renderNotificationButtons();
     return;
   }
 
-  Notification.requestPermission().then((permission) => {
-    showToast(permission === "granted" ? "通知を有効にしました" : "通知は許可されませんでした");
-    renderNotificationButtons();
-  });
+  const permission = await Notification.requestPermission();
+  state.account.browserNotifications = permission === "granted";
+  saveState();
+  if (authSession?.user) {
+    await syncProfileToSupabase({ silent: true });
+  }
+  showToast(permission === "granted" ? "通知を有効にしました" : "通知は許可されませんでした");
+  renderNotificationButtons();
 }
 
 function canUseNotifications() {
@@ -3618,11 +3705,19 @@ function canUseNotifications() {
 }
 
 function getNotificationButtonLabel() {
+  if (state.account.notificationChannel === "none") {
+    return "通知オフ";
+  }
+
+  if (state.account.notificationChannel === "email") {
+    return "メール通知準備";
+  }
+
   if (!canUseNotifications()) {
     return "通知非対応";
   }
 
-  if (Notification.permission === "granted") {
+  if (canDeliverBrowserNotification()) {
     return "通知オン";
   }
 
@@ -3631,6 +3726,53 @@ function getNotificationButtonLabel() {
   }
 
   return "通知を許可";
+}
+
+function canDeliverBrowserNotification() {
+  return (
+    canUseNotifications() &&
+    Notification.permission === "granted" &&
+    Boolean(state.account.browserNotifications) &&
+    ["browser", "push"].includes(state.account.notificationChannel)
+  );
+}
+
+function getNotificationPreferenceSummary() {
+  const channelLabels = {
+    browser: "ブラウザ通知",
+    push: "PWA Push準備",
+    email: "メール通知準備",
+    none: "通知しない",
+  };
+  const channel = channelLabels[state.account.notificationChannel] || channelLabels.browser;
+  const quiet = `${state.account.quietHoursStart}-${state.account.quietHoursEnd}`;
+  const browserState = state.account.browserNotifications ? "ブラウザON" : "ブラウザOFF";
+  const emailState = state.account.emailNotifications ? "メールON" : "メールOFF";
+
+  return `${channel} / ${browserState} / ${emailState} / 静音 ${quiet}`;
+}
+
+function isWithinQuietHours(date) {
+  const start = state.account.quietHoursStart;
+  const end = state.account.quietHoursEnd;
+  if (!isValidTimeValue(start) || !isValidTimeValue(end) || start === end) {
+    return false;
+  }
+
+  const currentMinutes = date.getHours() * 60 + date.getMinutes();
+  const startMinutes = timeToMinutes(start);
+  const endMinutes = timeToMinutes(end);
+
+  if (startMinutes < endMinutes) {
+    return currentMinutes >= startMinutes && currentMinutes < endMinutes;
+  }
+
+  return currentMinutes >= startMinutes || currentMinutes < endMinutes;
+}
+
+function timeToMinutes(value) {
+  const [hours, minutes] = value.split(":").map(Number);
+  return hours * 60 + minutes;
 }
 
 function renderDashboard() {
@@ -4212,6 +4354,9 @@ function normalizeAccount(account = {}) {
     ? account.visibility
     : defaultState.account.visibility;
   const plan = ["free", "plus", "pro"].includes(account.plan) ? account.plan : defaultState.account.plan;
+  const notificationChannel = ["browser", "push", "email", "none"].includes(account.notificationChannel)
+    ? account.notificationChannel
+    : defaultState.account.notificationChannel;
   const syncStatus = account.syncStatus === "synced" ? "synced" : "local";
 
   return {
@@ -4222,6 +4367,13 @@ function normalizeAccount(account = {}) {
     email: String(account.email || defaultState.account.email).trim(),
     visibility,
     plan,
+    notificationChannel,
+    browserNotifications:
+      account.browserNotifications === undefined ? defaultState.account.browserNotifications : Boolean(account.browserNotifications),
+    emailNotifications:
+      account.emailNotifications === undefined ? defaultState.account.emailNotifications : Boolean(account.emailNotifications),
+    quietHoursStart: normalizeTimeValue(account.quietHoursStart, defaultState.account.quietHoursStart),
+    quietHoursEnd: normalizeTimeValue(account.quietHoursEnd, defaultState.account.quietHoursEnd),
     syncStatus,
     signedIn: Boolean(account.signedIn),
     lastSyncedAt: account.lastSyncedAt || null,
@@ -4371,7 +4523,12 @@ function diffCalendarDays(start, end) {
 }
 
 function isValidTimeValue(value) {
-  return typeof value === "string" && /^([01]\d|2[0-3]):[0-5]\d$/.test(value);
+  return typeof value === "string" && /^([01]\d|2[0-3]):[0-5]\d(?::[0-5]\d)?$/.test(value);
+}
+
+function normalizeTimeValue(value, fallback) {
+  const match = String(value || "").match(/^([01]\d|2[0-3]):([0-5]\d)(?::[0-5]\d)?$/);
+  return match ? `${match[1]}:${match[2]}` : fallback;
 }
 
 function isValidDateKey(value) {

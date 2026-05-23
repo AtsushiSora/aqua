@@ -706,6 +706,42 @@
                     <option value="pro">Pro</option>
                   </select>
                 </label>
+                <div class="notification-settings full-field">
+                  <div class="settings-head">
+                    <span>通知設定</span>
+                    <small>本番通知に向けた受け取り方を保存します</small>
+                  </div>
+                  <label>
+                    <span>受け取り方</span>
+                    <select id="account-notification-channel-input">
+                      <option value="browser">ブラウザ通知</option>
+                      <option value="push">PWA Push準備</option>
+                      <option value="email">メール通知準備</option>
+                      <option value="none">通知しない</option>
+                    </select>
+                  </label>
+                  <div class="preference-toggles">
+                    <label>
+                      <input id="account-browser-notifications-input" type="checkbox">
+                      <span>ブラウザ通知を使う</span>
+                    </label>
+                    <label>
+                      <input id="account-email-notifications-input" type="checkbox">
+                      <span>メール通知を使う</span>
+                    </label>
+                  </div>
+                  <div class="quiet-hours">
+                    <label>
+                      <span>静音開始</span>
+                      <input id="account-quiet-start-input" type="time">
+                    </label>
+                    <label>
+                      <span>静音終了</span>
+                      <input id="account-quiet-end-input" type="time">
+                    </label>
+                  </div>
+                  <p id="notification-preference-summary">通知設定を読み込み中</p>
+                </div>
                 <button class="primary-button full-field" type="submit">プロフィール保存</button>
               </form>
             </section>
@@ -761,7 +797,7 @@
               <div class="schema-grid">
                 <article>
                   <strong>profiles</strong>
-                  <span>表示名、ID、公開範囲、プラン</span>
+                  <span>表示名、ID、公開範囲、プラン、通知設定</span>
                 </article>
                 <article>
                   <strong>tanks</strong>
