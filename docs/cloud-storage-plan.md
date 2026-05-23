@@ -44,7 +44,7 @@ Reason:
 7. Sync reminders to the `reminders` table. Done in the prototype.
 8. Sync posts and comments to the `posts` and `comments` tables. Done in the prototype.
 9. Sync likes and ranking stats through `post_likes` and `post_stats`. Done in the prototype.
-10. Move image/video uploads to Storage.
+10. Move image/video uploads to Storage. Done in the prototype.
 11. Keep JSON export/import as a fallback during beta.
 
 ## Auth and permission rules
@@ -70,18 +70,18 @@ Reason:
 
 ## Current implementation slice
 
-Community reactions now sync after post/comment sync:
+Media objects now sync after post/comment sync:
 
-- Store likes in `post_likes` using `(post_id, user_id)`. Done in the prototype.
-- Read `post_stats` for likes, comments, and ranking score. Done in the prototype.
-- Use the cloud stats for popular sorting, ranking, post cards, tank posts, and album likes sorting.
+- Upload images, videos, and generated thumbnails to the private `aquanote-media` bucket. Done in the prototype.
+- Store object paths and metadata in `media`. Done in the prototype.
+- Prefer signed Storage URLs in post cards, albums, details, tank covers, and AI previews.
+- Keep local data URLs as an offline/browser-only fallback during beta.
 
 ## Next implementation slice
 
-Move media objects out of local JSON:
+Move saved AI analysis out of local JSON:
 
-- Upload images, videos, and generated thumbnails to the private `aquanote-media` bucket.
-- Store object paths and metadata in `media`.
-- Replace large local data URLs with signed or transformed media URLs.
-- Keep image/video data local until Storage upload is implemented.
+- Save tank and post analysis summaries in `ai_results`.
+- Link post analysis to uploaded media records where available.
+- Keep local AI summaries as a fallback if cloud write fails.
 - Keep JSON export/import as a recovery path while the sync model is being tested.

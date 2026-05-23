@@ -2,6 +2,8 @@ const STORAGE_KEY = "aquanote-state-v3";
 const LEGACY_STORAGE_KEY = "aquanote-state-v2";
 const VIDEO_UPLOAD_LIMIT_BYTES = 4 * 1024 * 1024;
 const EXPORT_VERSION = 1;
+const MEDIA_BUCKET = "aquanote-media";
+const MEDIA_SIGNED_URL_EXPIRES_SECONDS = 60 * 60;
 
 const viewLinks = document.querySelectorAll("[data-view-link]");
 const directViewButtons = document.querySelectorAll("[data-view-target]");
@@ -483,6 +485,9 @@ replacePostImageInput.addEventListener("change", async () => {
     saveState();
     renderApp();
     showToast("投稿メディアを差し替えました");
+    if (authSession?.user) {
+      await syncCloudState({ silent: true });
+    }
   } catch {
     showToast("メディアを読み込めませんでした");
   } finally {
@@ -1092,6 +1097,7 @@ async function loadCommunityFromSupabase() {
 
   if (Array.isArray(remotePosts) && remotePosts.length) {
     applyRemotePosts(remotePosts);
+    await loadMediaFromSupabase(remotePosts.map((post) => post.id));
     await loadCommentsFromSupabase(remotePosts.map((post) => post.id));
     await loadPostStatsFromSupabase(remotePosts.map((post) => post.id));
     await loadPostLikesFromSupabase(remotePosts.map((post) => post.id));
@@ -1099,6 +1105,27 @@ async function loadCommunityFromSupabase() {
   }
 
   return remotePosts || [];
+}
+
+async function loadMediaFromSupabase(postCloudIds) {
+  const ids = postCloudIds.filter(Boolean);
+  if (!supabaseClient || !authSession?.user || !ids.length) {
+    return [];
+  }
+
+  const { data, error } = await supabaseClient
+    .from("media")
+    .select("id, post_id, kind, storage_path, thumbnail_path, duration_seconds, width, height, created_at")
+    .in("post_id", ids)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    showToast(error.message || "メディアを読み込めませんでした");
+    return [];
+  }
+
+  await applyRemoteMedia(data || []);
+  return data || [];
 }
 
 async function loadCommentsFromSupabase(postCloudIds) {
@@ -1315,7 +1342,16 @@ async function syncCommunityToSupabase(options = {}) {
     return false;
   }
 
+  const mediaSynced = await syncMediaToSupabase({ silent: true });
+  if (!mediaSynced) {
+    if (!options.silent) {
+      showToast("メディア同期に失敗しました");
+    }
+    return false;
+  }
+
   const postCloudIds = getPostCloudIds();
+  await loadMediaFromSupabase(postCloudIds);
   await loadPostStatsFromSupabase(postCloudIds);
   await loadPostLikesFromSupabase(postCloudIds);
 
@@ -1388,6 +1424,54 @@ async function syncCommentsToSupabase(options = {}) {
   return true;
 }
 
+async function syncMediaToSupabase(options = {}) {
+  const postsWithMedia = state.posts.filter((post) => post.cloudId && hasLocalPostMedia(post));
+  if (!postsWithMedia.length) {
+    return true;
+  }
+
+  const syncedRows = [];
+
+  for (const post of postsWithMedia) {
+    const signature = getLocalMediaSignature(post);
+    if (post.mediaStoragePath && post.mediaStorageSignature === signature) {
+      continue;
+    }
+
+    try {
+      const uploaded = await uploadPostMediaToStorage(post, authSession.user);
+      const { data, error } = await supabaseClient
+        .from("media")
+        .upsert(getMediaPayload(post, uploaded, authSession.user), { onConflict: "post_id" })
+        .select("id, post_id, kind, storage_path, thumbnail_path, duration_seconds, width, height, created_at")
+        .maybeSingle();
+
+      if (error) {
+        throw error;
+      }
+
+      if (data) {
+        syncedRows.push(data);
+      }
+
+      post.mediaStoragePath = uploaded.storagePath;
+      post.mediaThumbnailPath = uploaded.thumbnailPath;
+      post.mediaStorageSignature = signature;
+    } catch (error) {
+      state.account.syncStatus = "local";
+      saveState({ keepSyncStatus: true });
+      renderAccount();
+      if (!options.silent) {
+        showToast(error.message || "メディア同期に失敗しました");
+      }
+      return false;
+    }
+  }
+
+  await applyRemoteMedia(syncedRows);
+  return true;
+}
+
 function getTankPayload(tank, user) {
   return {
     owner_id: user.id,
@@ -1456,6 +1540,116 @@ function getCommentPayload(comment, post, user) {
     body: String(comment.text || "").slice(0, 240),
     updated_at: new Date().toISOString(),
   };
+}
+
+function getMediaPayload(post, uploaded, user) {
+  return {
+    post_id: post.cloudId,
+    owner_id: user.id,
+    kind: uploaded.kind,
+    storage_path: uploaded.storagePath,
+    thumbnail_path: uploaded.thumbnailPath,
+    duration_seconds: uploaded.durationSeconds,
+    width: null,
+    height: null,
+  };
+}
+
+async function uploadPostMediaToStorage(post, user) {
+  const sourceDataUrl = post.mediaType === "video" ? post.videoDataUrl : post.imageDataUrl;
+  if (!sourceDataUrl) {
+    throw new Error("アップロードするメディアがありません");
+  }
+
+  const mediaBlob = await dataUrlToBlob(sourceDataUrl);
+  const mediaPath = getStorageObjectPath(user.id, post.cloudId, "media", mediaBlob.type);
+  const mediaError = await uploadStorageObject(mediaPath, mediaBlob);
+  if (mediaError) {
+    throw mediaError;
+  }
+
+  let thumbnailPath = null;
+  if (post.videoThumbnailDataUrl) {
+    const thumbnailBlob = await dataUrlToBlob(post.videoThumbnailDataUrl);
+    thumbnailPath = getStorageObjectPath(user.id, post.cloudId, "thumbnail", thumbnailBlob.type);
+    const thumbnailError = await uploadStorageObject(thumbnailPath, thumbnailBlob);
+    if (thumbnailError) {
+      throw thumbnailError;
+    }
+  }
+
+  return {
+    kind: post.mediaType === "video" ? "video" : "image",
+    storagePath: mediaPath,
+    thumbnailPath,
+    durationSeconds: post.mediaType === "video" ? Math.round(Number(post.videoDuration || 0)) || null : null,
+  };
+}
+
+async function uploadStorageObject(path, blob) {
+  const { error } = await supabaseClient.storage.from(MEDIA_BUCKET).upload(path, blob, {
+    contentType: blob.type || "application/octet-stream",
+    upsert: true,
+  });
+
+  return error || null;
+}
+
+function getStorageObjectPath(userId, postCloudId, slot, mimeType) {
+  return `${userId}/${postCloudId}/${slot}.${getExtensionFromMimeType(mimeType)}`;
+}
+
+function getExtensionFromMimeType(mimeType = "") {
+  const type = String(mimeType).toLowerCase();
+
+  if (type.includes("png")) {
+    return "png";
+  }
+
+  if (type.includes("webp")) {
+    return "webp";
+  }
+
+  if (type.includes("gif")) {
+    return "gif";
+  }
+
+  if (type.includes("mp4")) {
+    return "mp4";
+  }
+
+  if (type.includes("quicktime")) {
+    return "mov";
+  }
+
+  if (type.includes("webm")) {
+    return "webm";
+  }
+
+  return type.startsWith("video/") ? "mp4" : "jpg";
+}
+
+async function dataUrlToBlob(dataUrl) {
+  const response = await fetch(dataUrl);
+  return response.blob();
+}
+
+function hasLocalPostMedia(post) {
+  return Boolean(post.imageDataUrl || post.videoDataUrl);
+}
+
+function getLocalMediaSignature(post) {
+  const source = post.mediaType === "video" ? post.videoDataUrl : post.imageDataUrl;
+  const thumbnail = post.videoThumbnailDataUrl || "";
+
+  return [
+    post.mediaType || (post.videoDataUrl ? "video" : post.imageDataUrl ? "image" : "none"),
+    source ? source.length : 0,
+    source ? source.slice(0, 48) : "",
+    source ? source.slice(-48) : "",
+    thumbnail ? thumbnail.length : 0,
+    Math.round(Number(post.videoDuration || 0)),
+  ].join(":");
 }
 
 function applyRemoteTanks(remoteTanks) {
@@ -1549,6 +1743,12 @@ function applyRemotePosts(remotePosts) {
       videoThumbnailDataUrl: null,
       videoDuration: null,
       mediaType: null,
+      mediaCloudId: null,
+      mediaStoragePath: null,
+      mediaThumbnailPath: null,
+      mediaStorageSignature: null,
+      mediaUrl: null,
+      mediaThumbnailUrl: null,
       likes: 0,
       cloudLikes: null,
       cloudCommentsCount: null,
@@ -1591,6 +1791,48 @@ function applyRemotePostStats(remoteStats) {
     post.cloudCommentsCount = Math.max(0, Number(stat.comments_count || 0));
     post.rankingScore = Math.max(0, Number(stat.ranking_score || 0));
   });
+}
+
+async function applyRemoteMedia(remoteMediaRows) {
+  const latestByPost = new Map();
+
+  remoteMediaRows.forEach((media) => {
+    if (!media.post_id || latestByPost.has(media.post_id)) {
+      return;
+    }
+
+    latestByPost.set(media.post_id, media);
+  });
+
+  for (const media of latestByPost.values()) {
+    const post = state.posts.find((item) => item.cloudId === media.post_id);
+    if (!post) {
+      continue;
+    }
+
+    post.mediaCloudId = media.id;
+    post.mediaType = media.kind || post.mediaType;
+    post.mediaStoragePath = media.storage_path || post.mediaStoragePath || null;
+    post.mediaThumbnailPath = media.thumbnail_path || null;
+    post.videoDuration =
+      media.duration_seconds === null || media.duration_seconds === undefined
+        ? post.videoDuration || null
+        : Number(media.duration_seconds);
+    post.mediaUrl = post.mediaStoragePath ? await getSignedMediaUrl(post.mediaStoragePath) : null;
+    post.mediaThumbnailUrl = post.mediaThumbnailPath ? await getSignedMediaUrl(post.mediaThumbnailPath) : null;
+  }
+}
+
+async function getSignedMediaUrl(path) {
+  const { data, error } = await supabaseClient.storage
+    .from(MEDIA_BUCKET)
+    .createSignedUrl(path, MEDIA_SIGNED_URL_EXPIRES_SECONDS);
+
+  if (error) {
+    return null;
+  }
+
+  return data?.signedUrl || null;
 }
 
 function applyRemotePostLikes(scopedPostCloudIds, remoteLikes) {
@@ -1988,6 +2230,12 @@ function applyPostMedia(post, media) {
   post.videoDataUrl = media.videoDataUrl || null;
   post.videoThumbnailDataUrl = media.videoThumbnailDataUrl || null;
   post.videoDuration = media.videoDuration || null;
+  post.mediaCloudId = null;
+  post.mediaStoragePath = null;
+  post.mediaThumbnailPath = null;
+  post.mediaStorageSignature = null;
+  post.mediaUrl = null;
+  post.mediaThumbnailUrl = null;
 }
 
 function isSupportedPostMedia(file) {
@@ -1996,8 +2244,8 @@ function isSupportedPostMedia(file) {
 
 function renderPostImagePreview() {
   const editingPost = state.posts.find((post) => post.id === editingPostId);
-  const previewVideo = pendingPostVideoDataUrl || editingPost?.videoDataUrl;
-  const previewImage = pendingPostImageDataUrl || editingPost?.imageDataUrl;
+  const previewVideo = pendingPostVideoDataUrl || (editingPost ? getPostVideoSrc(editingPost) : null);
+  const previewImage = pendingPostImageDataUrl || (editingPost ? getPostImageSrc(editingPost) : null);
 
   if (previewVideo) {
     postImagePreview.removeAttribute("style");
@@ -2051,10 +2299,8 @@ function renderTankList() {
 function renderTankProfile() {
   const tank = getActiveTank();
   const aquariumVisual = document.querySelector(".aquarium-visual");
-  const featuredPost = state.posts.find(
-    (post) => post.id === tank.featuredPostId && (post.imageDataUrl || post.videoThumbnailDataUrl),
-  );
-  const featuredImage = featuredPost?.imageDataUrl || featuredPost?.videoThumbnailDataUrl;
+  const featuredPost = state.posts.find((post) => post.id === tank.featuredPostId && getPostThumbnailSrc(post));
+  const featuredImage = featuredPost ? getPostThumbnailSrc(featuredPost) : null;
 
   aquariumVisual.classList.toggle("has-cover", Boolean(featuredImage));
   aquariumVisual.style.backgroundImage = featuredImage ? `url("${featuredImage}")` : "";
@@ -2510,7 +2756,8 @@ function renderTankAlbum() {
   tankAlbumGrid.innerHTML = posts
     .map(
       (post) => {
-        const albumImage = post.imageDataUrl || post.videoThumbnailDataUrl;
+        const albumImage = getPostThumbnailSrc(post);
+        const hasVideo = Boolean(getPostVideoSrc(post) || post.mediaType === "video");
         const manualControls =
           activeAlbumSort === "manual"
             ? `
@@ -2522,9 +2769,9 @@ function renderTankAlbum() {
             : "";
         return `
         <article class="album-tile-shell">
-          <button class="album-tile ${post.videoDataUrl ? "has-video" : ""} ${post.id === tank.featuredPostId ? "is-featured" : ""}" type="button" data-view-media="${escapeHtml(post.id)}" ${albumImage ? `style="background-image: url('${escapeAttribute(albumImage)}')"` : ""}>
+          <button class="album-tile ${hasVideo ? "has-video" : ""} ${post.id === tank.featuredPostId ? "is-featured" : ""}" type="button" data-view-media="${escapeHtml(post.id)}" ${albumImage ? `style="background-image: url('${escapeAttribute(albumImage)}')"` : ""}>
             ${post.id === tank.featuredPostId ? "<small>表紙</small>" : ""}
-            ${post.videoDataUrl ? `<b class="media-badge">${formatVideoDuration(post.videoDuration)}</b>` : ""}
+            ${hasVideo ? `<b class="media-badge">${formatVideoDuration(post.videoDuration)}</b>` : ""}
             <span>${escapeHtml(post.title)}</span>
             <time>${formatAlbumDate(post.createdAt)}</time>
           </button>
@@ -2539,37 +2786,65 @@ function renderTankAlbum() {
 }
 
 function renderPostImage(post) {
-  if (post.videoDataUrl) {
-    const poster = post.videoThumbnailDataUrl ? ` poster="${escapeAttribute(post.videoThumbnailDataUrl)}"` : "";
+  const videoSrc = getPostVideoSrc(post);
+  const imageSrc = getPostImageSrc(post);
+  const thumbnailSrc = getPostThumbnailSrc(post);
+
+  if (videoSrc) {
+    const poster = thumbnailSrc ? ` poster="${escapeAttribute(thumbnailSrc)}"` : "";
     return `
       <div class="post-image custom-video">
-        <video src="${escapeAttribute(post.videoDataUrl)}" controls muted playsinline preload="metadata"${poster}></video>
+        <video src="${escapeAttribute(videoSrc)}" controls muted playsinline preload="metadata"${poster}></video>
         <b class="media-badge">${formatVideoDuration(post.videoDuration)}</b>
       </div>
     `;
   }
 
-  if (post.imageDataUrl) {
-    return `<div class="post-image custom-photo" style="background-image: url('${escapeAttribute(post.imageDataUrl)}')"></div>`;
+  if (imageSrc) {
+    return `<div class="post-image custom-photo" style="background-image: url('${escapeAttribute(imageSrc)}')"></div>`;
   }
 
   return `<div class="post-image ${escapeHtml(post.imageClass)}"></div>`;
 }
 
 function hasPostMedia(post) {
-  return Boolean(post.imageDataUrl || post.videoDataUrl);
+  return Boolean(getPostImageSrc(post) || getPostVideoSrc(post) || post.mediaStoragePath);
 }
 
 function getPostMediaLabel(post) {
-  if (post.videoDataUrl) {
+  if (getPostVideoSrc(post) || post.mediaType === "video") {
     return `動画 ${formatVideoDuration(post.videoDuration)}`;
   }
 
-  if (post.imageDataUrl) {
+  if (getPostImageSrc(post) || post.mediaType === "image") {
     return "写真";
   }
 
   return "サンプル";
+}
+
+function getPostImageSrc(post) {
+  if (post.mediaType === "image" && post.mediaUrl) {
+    return post.mediaUrl;
+  }
+
+  return post.imageDataUrl || null;
+}
+
+function getPostVideoSrc(post) {
+  if (post.mediaType === "video" && post.mediaUrl) {
+    return post.mediaUrl;
+  }
+
+  return post.videoDataUrl || null;
+}
+
+function getPostThumbnailSrc(post) {
+  if (post.mediaType === "video") {
+    return post.mediaThumbnailUrl || post.videoThumbnailDataUrl || null;
+  }
+
+  return getPostImageSrc(post);
 }
 
 function getAlbumMonthOptions(posts) {
@@ -2684,15 +2959,18 @@ function openMediaDetail(postId) {
   }
 
   const tank = state.tanks.find((item) => item.id === post.tankId);
-  const mediaMarkup = post.videoDataUrl
+  const videoSrc = getPostVideoSrc(post);
+  const imageSrc = getPostImageSrc(post);
+  const thumbnailSrc = getPostThumbnailSrc(post);
+  const mediaMarkup = videoSrc
     ? `
       <div class="media-detail-frame has-video">
-        <video src="${escapeAttribute(post.videoDataUrl)}" controls playsinline preload="metadata" ${post.videoThumbnailDataUrl ? `poster="${escapeAttribute(post.videoThumbnailDataUrl)}"` : ""}></video>
+        <video src="${escapeAttribute(videoSrc)}" controls playsinline preload="metadata" ${thumbnailSrc ? `poster="${escapeAttribute(thumbnailSrc)}"` : ""}></video>
         <b class="media-badge">${formatVideoDuration(post.videoDuration)}</b>
       </div>
     `
-    : post.imageDataUrl
-      ? `<div class="media-detail-frame" style="background-image: url('${escapeAttribute(post.imageDataUrl)}')"></div>`
+    : imageSrc
+      ? `<div class="media-detail-frame" style="background-image: url('${escapeAttribute(imageSrc)}')"></div>`
       : `<div class="media-detail-frame ${escapeHtml(post.imageClass || "reef")}"></div>`;
 
   mediaDetailBody.innerHTML = `
@@ -2760,7 +3038,7 @@ function featurePost(postId) {
     return;
   }
 
-  if (!post.imageDataUrl && !post.videoThumbnailDataUrl) {
+  if (!getPostThumbnailSrc(post)) {
     showToast("写真またはサムネイル付き動画を表紙にできます");
     return;
   }
@@ -2820,11 +3098,11 @@ function analyzePostImage(postId) {
   renderApp();
   renderAiResult(result, post);
   showView("ai");
-  showToast(post.videoDataUrl ? "動画投稿の確認画面を開きました" : "投稿写真をAI分析に送りました");
+  showToast(getPostVideoSrc(post) ? "動画投稿の確認画面を開きました" : "投稿写真をAI分析に送りました");
 }
 
 function analyzePostPhoto(post) {
-  if (post.videoDataUrl) {
+  if (getPostVideoSrc(post) || post.mediaType === "video") {
     return {
       status: "動画チェック準備中",
       levelClass: "warning",
@@ -2838,7 +3116,7 @@ function analyzePostPhoto(post) {
     };
   }
 
-  if (!post.imageDataUrl) {
+  if (!getPostImageSrc(post) && post.mediaType !== "image") {
     return {
       status: "写真なし",
       levelClass: "warning",
@@ -3247,15 +3525,17 @@ function getRiskScore(levelClass) {
 
 function renderAiResult(result, post = null) {
   const resultBox = document.querySelector("#ai-result");
-  const mediaMarkup = post?.videoDataUrl
+  const videoSrc = post ? getPostVideoSrc(post) : null;
+  const imageSrc = post ? getPostImageSrc(post) : null;
+  const mediaMarkup = videoSrc
     ? `
       <div class="ai-photo-preview has-video">
-        <video src="${escapeAttribute(post.videoDataUrl)}" controls muted playsinline preload="metadata"></video>
+        <video src="${escapeAttribute(videoSrc)}" controls muted playsinline preload="metadata"></video>
         <b class="media-badge">${formatVideoDuration(post.videoDuration)}</b>
       </div>
     `
-    : post?.imageDataUrl
-      ? `<div class="ai-photo-preview" style="background-image: url('${escapeAttribute(post.imageDataUrl)}')"></div>`
+    : imageSrc
+      ? `<div class="ai-photo-preview" style="background-image: url('${escapeAttribute(imageSrc)}')"></div>`
       : "";
 
   resultBox.className = `ai-result ${result.levelClass}`;
@@ -3529,6 +3809,12 @@ function normalizeState(saved) {
       videoThumbnailDataUrl: null,
       videoDuration: null,
       mediaType: post.videoDataUrl ? "video" : post.imageDataUrl ? "image" : null,
+      mediaCloudId: null,
+      mediaStoragePath: null,
+      mediaThumbnailPath: null,
+      mediaStorageSignature: null,
+      mediaUrl: null,
+      mediaThumbnailUrl: null,
       createdAt: daysAgoIso(index),
       ...post,
       tankId,
@@ -3536,6 +3822,12 @@ function normalizeState(saved) {
       mediaType: post.mediaType || (post.videoDataUrl ? "video" : post.imageDataUrl ? "image" : null),
       createdAt: post.createdAt || post.updatedAt || daysAgoIso(index),
       cloudId: post.cloudId || null,
+      mediaCloudId: post.mediaCloudId || null,
+      mediaStoragePath: post.mediaStoragePath || null,
+      mediaThumbnailPath: post.mediaThumbnailPath || null,
+      mediaStorageSignature: post.mediaStorageSignature || null,
+      mediaUrl: post.mediaUrl || null,
+      mediaThumbnailUrl: post.mediaThumbnailUrl || null,
       cloudLikes:
         hasStoredNumber(post.cloudLikes) && Number.isFinite(Number(post.cloudLikes)) ? Math.max(0, Number(post.cloudLikes)) : null,
       cloudCommentsCount:

@@ -77,7 +77,8 @@ create table public.media (
   duration_seconds integer,
   width integer,
   height integer,
-  created_at timestamptz not null default now()
+  created_at timestamptz not null default now(),
+  unique (post_id)
 );
 
 create table public.comments (
@@ -279,6 +280,48 @@ to authenticated
 using (owner_id = (select auth.uid()))
 with check (owner_id = (select auth.uid()));
 
--- Storage bucket name: aquanote-media
--- Suggested object path: <owner_id>/<post_id>/<filename>
--- Add matching storage.objects policies after creating the bucket in Supabase.
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values (
+  'aquanote-media',
+  'aquanote-media',
+  false,
+  10485760,
+  array['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'video/mp4', 'video/quicktime', 'video/webm']
+)
+on conflict (id) do nothing;
+
+create policy "Users read own aquanote media objects"
+on storage.objects for select
+to authenticated
+using (
+  bucket_id = 'aquanote-media'
+  and (storage.foldername(name))[1] = (select auth.uid())::text
+);
+
+create policy "Users insert own aquanote media objects"
+on storage.objects for insert
+to authenticated
+with check (
+  bucket_id = 'aquanote-media'
+  and (storage.foldername(name))[1] = (select auth.uid())::text
+);
+
+create policy "Users update own aquanote media objects"
+on storage.objects for update
+to authenticated
+using (
+  bucket_id = 'aquanote-media'
+  and (storage.foldername(name))[1] = (select auth.uid())::text
+)
+with check (
+  bucket_id = 'aquanote-media'
+  and (storage.foldername(name))[1] = (select auth.uid())::text
+);
+
+create policy "Users delete own aquanote media objects"
+on storage.objects for delete
+to authenticated
+using (
+  bucket_id = 'aquanote-media'
+  and (storage.foldername(name))[1] = (select auth.uid())::text
+);
