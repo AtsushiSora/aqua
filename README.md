@@ -71,13 +71,14 @@
 - PWA Push購読情報のSupabase `push_subscriptions` 同期
 - VAPID署名つきWeb Push送信処理
 - 期限切れPush購読の自動無効化
+- アカウント画面でのPush/メール配信ログ表示
 - PWA用の `manifest.webmanifest` と `sw.js`
 
 ## 次に作るとよいもの
 
 - 本物のAI画像分析
 - 通知配信ワーカーの本番環境変数設定
-- Push配信ログの可視化
+- 通知配信ログの絞り込みと再送導線
 - ネイティブスマホアプリ、またはPWAの本番化
 
 ## 通知配信ワーカー

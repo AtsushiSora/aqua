@@ -65,6 +65,8 @@ const authPasswordInput = document.querySelector("#auth-password-input");
 const authSignOutButton = document.querySelector("#auth-sign-out-button");
 const authNote = document.querySelector("#auth-note");
 const notificationPreferenceSummary = document.querySelector("#notification-preference-summary");
+const notificationDeliveryRefreshButton = document.querySelector("#notification-delivery-refresh-button");
+const notificationDeliveryLog = document.querySelector("#notification-delivery-log");
 const supabaseConfig = window.AQUANOTE_SUPABASE_CONFIG || {};
 const pushConfig = window.AQUANOTE_PUSH_CONFIG || {};
 
@@ -269,6 +271,7 @@ let activeAlbumSort = "featured";
 let highlightedSearchResult = null;
 let supabaseClient = createSupabaseClient();
 let authSession = null;
+let notificationDeliveryHistory = [];
 
 function showView(id) {
   views.forEach((view) => {
@@ -450,6 +453,7 @@ authForm.addEventListener("submit", async (event) => {
 });
 
 authSignOutButton.addEventListener("click", signOutSupabase);
+notificationDeliveryRefreshButton.addEventListener("click", () => loadNotificationDeliveryHistory());
 
 postImageInput.addEventListener("change", async () => {
   const file = postImageInput.files[0];
@@ -842,6 +846,7 @@ function renderAccount() {
   document.querySelector("#account-quiet-start-input").value = account.quietHoursStart;
   document.querySelector("#account-quiet-end-input").value = account.quietHoursEnd;
   notificationPreferenceSummary.textContent = getNotificationPreferenceSummary();
+  renderNotificationDeliveryLog();
 
   const mediaCount = state.posts.filter((post) => hasPostMedia(post)).length;
   const commentCount = state.posts.reduce((total, post) => total + getDisplayCommentCount(post), 0);
@@ -888,6 +893,52 @@ function renderAuthPanel() {
     : "Supabase Authへメールとパスワードで接続します。";
 }
 
+function renderNotificationDeliveryLog() {
+  if (!notificationDeliveryLog) {
+    return;
+  }
+
+  if (!supabaseClient) {
+    notificationDeliveryLog.innerHTML = `<p class="empty-state">Supabase設定後に通知配信ログを表示します。</p>`;
+    notificationDeliveryRefreshButton.disabled = true;
+    return;
+  }
+
+  if (!authSession?.user) {
+    notificationDeliveryLog.innerHTML = `<p class="empty-state">ログインするとPush/メール配信の予約と結果を確認できます。</p>`;
+    notificationDeliveryRefreshButton.disabled = true;
+    return;
+  }
+
+  notificationDeliveryRefreshButton.disabled = false;
+
+  if (!notificationDeliveryHistory.length) {
+    notificationDeliveryLog.innerHTML = `<p class="empty-state">通知配信ログはまだありません。</p>`;
+    return;
+  }
+
+  notificationDeliveryLog.innerHTML = notificationDeliveryHistory
+    .map((delivery) => {
+      const status = getDeliveryStatusLabel(delivery.status);
+      const channel = delivery.channel === "email" ? "メール" : "Push";
+      const lastError = delivery.last_error ? `<small>${escapeHtml(delivery.last_error)}</small>` : "";
+      return `
+        <article class="notification-delivery-item">
+          <div>
+            <span>${escapeHtml(channel)} / ${escapeHtml(delivery.label || delivery.task_key)}</span>
+            <strong>${escapeHtml(formatReminderDate(delivery.scheduled_for))}</strong>
+            ${lastError}
+          </div>
+          <div class="delivery-meta">
+            <span class="delivery-status ${escapeHtml(delivery.status || "pending")}">${escapeHtml(status)}</span>
+            <small>試行 ${Number(delivery.attempt_count || 0)}回</small>
+          </div>
+        </article>
+      `;
+    })
+    .join("");
+}
+
 async function handleAuthSubmit(action) {
   if (!supabaseClient) {
     showToast("Supabase設定がまだありません");
@@ -922,6 +973,7 @@ async function handleAuthSubmit(action) {
 
   if (authSession?.user) {
     await loadProfileFromSupabase();
+    await loadNotificationDeliveryHistory({ silent: true });
     await syncProfileToSupabase({ silent: true });
   }
 
@@ -942,6 +994,7 @@ async function signOutSupabase() {
   }
 
   authSession = null;
+  notificationDeliveryHistory = [];
   state.account.signedIn = false;
   state.account.syncStatus = "local";
   clearCurrentUserLikes();
@@ -1414,6 +1467,7 @@ async function syncNotificationDeliveriesToSupabase(options = {}) {
 
   const payloads = getNotificationDeliveryPayloads(authSession.user);
   if (!payloads.length) {
+    await loadNotificationDeliveryHistory({ silent: true });
     return true;
   }
 
@@ -1431,11 +1485,44 @@ async function syncNotificationDeliveriesToSupabase(options = {}) {
 
   state.account.syncStatus = "synced";
   state.account.lastSyncedAt = new Date().toISOString();
+  await loadNotificationDeliveryHistory({ silent: true });
   saveState({ keepSyncStatus: true });
   renderAccount();
 
   if (!options.silent) {
     showToast("通知配信予約をSupabaseに同期しました");
+  }
+
+  return true;
+}
+
+async function loadNotificationDeliveryHistory(options = {}) {
+  if (!supabaseClient || !authSession?.user) {
+    notificationDeliveryHistory = [];
+    renderNotificationDeliveryLog();
+    return false;
+  }
+
+  const { data, error } = await supabaseClient
+    .from("notification_deliveries")
+    .select("id, task_key, label, channel, scheduled_for, status, attempt_count, last_error, updated_at")
+    .eq("owner_id", authSession.user.id)
+    .order("scheduled_for", { ascending: false })
+    .limit(12);
+
+  if (error) {
+    if (!options.silent) {
+      showToast(error.message || "通知配信ログを読み込めませんでした");
+    }
+    renderNotificationDeliveryLog();
+    return false;
+  }
+
+  notificationDeliveryHistory = data || [];
+  renderNotificationDeliveryLog();
+
+  if (!options.silent) {
+    showToast("通知配信ログを更新しました");
   }
 
   return true;
@@ -2353,10 +2440,12 @@ async function initSupabaseAuth() {
       await loadTanksFromSupabase();
       await loadLogsFromSupabase();
       await loadRemindersFromSupabase();
+      await loadNotificationDeliveryHistory({ silent: true });
       await loadCommunityFromSupabase();
       await loadAiResultsFromSupabase();
     } else {
       state.account.signedIn = false;
+      notificationDeliveryHistory = [];
       clearCurrentUserLikes();
       saveState({ keepSyncStatus: true });
     }
@@ -2371,10 +2460,12 @@ async function initSupabaseAuth() {
     await loadTanksFromSupabase();
     await loadLogsFromSupabase();
     await loadRemindersFromSupabase();
+    await loadNotificationDeliveryHistory({ silent: true });
     await loadCommunityFromSupabase();
     await loadAiResultsFromSupabase();
   } else {
     state.account.signedIn = false;
+    notificationDeliveryHistory = [];
     clearCurrentUserLikes();
     saveState({ keepSyncStatus: true });
   }
@@ -3984,6 +4075,18 @@ function getNotificationPreferenceSummary() {
     : "";
 
   return `${channel} / ${browserState} / ${emailState} / 静音 ${quiet}${delivery}`;
+}
+
+function getDeliveryStatusLabel(status) {
+  const labels = {
+    pending: "予約中",
+    sent: "送信済み",
+    failed: "失敗",
+    skipped: "スキップ",
+    canceled: "取消",
+  };
+
+  return labels[status] || "未確認";
 }
 
 function getNextExternalNotificationDelivery() {

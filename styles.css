@@ -2085,6 +2085,82 @@ textarea {
   color: white;
 }
 
+.notification-history-panel {
+  display: grid;
+  align-content: start;
+}
+
+.notification-history-panel .section-head {
+  align-items: center;
+}
+
+.notification-delivery-log {
+  display: grid;
+  gap: 10px;
+}
+
+.notification-delivery-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  padding: 12px;
+  border: 1px solid var(--glass-border);
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.48), transparent),
+    var(--waterline),
+    rgba(248, 252, 251, 0.78);
+}
+
+.notification-delivery-item span,
+.notification-delivery-item small {
+  display: block;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.notification-delivery-item strong {
+  display: block;
+  margin: 4px 0;
+  color: var(--aqua-dark);
+  font-family: var(--font-jp);
+  font-size: 0.98rem;
+}
+
+.delivery-meta {
+  display: grid;
+  justify-items: end;
+  gap: 5px;
+}
+
+.delivery-status {
+  min-height: 28px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 9px;
+  border-radius: 999px;
+  background: rgba(241, 245, 249, 0.9);
+  color: var(--muted);
+}
+
+.delivery-status.sent {
+  background: rgba(231, 247, 243, 0.92);
+  color: var(--aqua-dark);
+}
+
+.delivery-status.failed {
+  background: rgba(255, 235, 230, 0.92);
+  color: var(--danger);
+}
+
+.delivery-status.skipped,
+.delivery-status.canceled {
+  background: rgba(255, 247, 232, 0.92);
+  color: var(--amber);
+}
+
 .sync-summary {
   display: grid;
   gap: 10px;
@@ -2554,6 +2630,14 @@ textarea {
 
   .interval-controls {
     grid-template-columns: 1fr;
+  }
+
+  .notification-delivery-item {
+    grid-template-columns: 1fr;
+  }
+
+  .delivery-meta {
+    justify-items: start;
   }
 
   .profile-actions {
