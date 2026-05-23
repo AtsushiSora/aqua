@@ -81,6 +81,7 @@ PWA Push subscription scaffold:
 - Save Push API subscription endpoints in `push_subscriptions`. Done in the prototype.
 - Add service worker `push` and `notificationclick` handlers. Done in the prototype.
 - Send saved subscriptions directly from the delivery worker with VAPID-signed Web Push. Done in the prototype.
+- Disable expired Push subscriptions after `404` / `410` responses. Done in the prototype.
 - Keep the optional `WEB_PUSH_ENDPOINT` provider path for hosted push gateways.
 - Keep in-app reminder checks as a fallback while notification delivery is tested.
 
@@ -91,5 +92,5 @@ Harden production notification delivery:
 - Configure the Scheduled Function environment variables.
 - Generate and install the VAPID key pair for both Netlify and `supabase-config.js`.
 - Validate delivery logs against `sent`, `failed`, `skipped`, and retry behavior.
-- Disable expired Push subscriptions after `404` / `410` responses.
+- Add an account-facing delivery log view for Push/email notification results.
 - Keep JSON export/import as a recovery path while the sync model is being tested.

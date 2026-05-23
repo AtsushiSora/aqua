@@ -36,9 +36,16 @@ type Delivery = {
 };
 
 type PushSubscriptionRecord = {
+  id: string;
   endpoint: string;
   p256dh: string;
   auth: string;
+};
+
+type PushSendResult = {
+  sent: number;
+  expired: number;
+  failed: number;
 };
 
 type DeliveryResult = {
@@ -138,7 +145,16 @@ async function processDelivery(delivery: Delivery): Promise<DeliveryResult> {
     return { id: delivery.id, status: "failed", reason: "Push provider is not configured" };
   }
 
-  await sendPush(pushSubscriptions, delivery);
+  const pushResult = await sendPush(pushSubscriptions, delivery);
+  if (pushResult.sent === 0 && pushResult.expired > 0 && pushResult.failed === 0) {
+    await updateDelivery(delivery, "skipped", "All push subscriptions expired");
+    return { id: delivery.id, status: "skipped", reason: "All push subscriptions expired" };
+  }
+
+  if (pushResult.sent === 0 && pushResult.failed > 0) {
+    throw new Error("All active push subscription sends failed");
+  }
+
   await updateDelivery(delivery, "sent");
   return { id: delivery.id, status: "sent" };
 }
@@ -165,7 +181,7 @@ async function sendEmail(to: string, delivery: Delivery) {
 
 async function listPushSubscriptions(ownerId: string): Promise<PushSubscriptionRecord[]> {
   const url = new URL(`${SUPABASE_URL}/rest/v1/push_subscriptions`);
-  url.searchParams.set("select", "endpoint,p256dh,auth");
+  url.searchParams.set("select", "id,endpoint,p256dh,auth");
   url.searchParams.set("owner_id", `eq.${ownerId}`);
   url.searchParams.set("enabled", "eq.true");
 
@@ -180,10 +196,9 @@ async function listPushSubscriptions(ownerId: string): Promise<PushSubscriptionR
   return response.json() as Promise<PushSubscriptionRecord[]>;
 }
 
-async function sendPush(subscriptions: PushSubscriptionRecord[], delivery: Delivery) {
+async function sendPush(subscriptions: PushSubscriptionRecord[], delivery: Delivery): Promise<PushSendResult> {
   if (canSendDirectWebPush()) {
-    await sendDirectWebPush(subscriptions, delivery);
-    return;
+    return sendDirectWebPush(subscriptions, delivery);
   }
 
   const response = await fetch(WEB_PUSH_ENDPOINT, {
@@ -206,9 +221,18 @@ async function sendPush(subscriptions: PushSubscriptionRecord[], delivery: Deliv
   if (!response.ok) {
     throw new Error(`Push send failed: ${response.status} ${await response.text()}`);
   }
+
+  return {
+    sent: subscriptions.length,
+    expired: 0,
+    failed: 0,
+  };
 }
 
-async function sendDirectWebPush(subscriptions: PushSubscriptionRecord[], delivery: Delivery) {
+async function sendDirectWebPush(
+  subscriptions: PushSubscriptionRecord[],
+  delivery: Delivery,
+): Promise<PushSendResult> {
   const notification = JSON.stringify({
     title: "AquaNote",
     body: `${delivery.label}の時間です。今日の管理タスクを確認しましょう。`,
@@ -219,12 +243,25 @@ async function sendDirectWebPush(subscriptions: PushSubscriptionRecord[], delive
   const results = await Promise.allSettled(
     subscriptions.map((subscription) => sendWebPushNotification(subscription, notification)),
   );
+  const sent = results.filter((result) => result.status === "fulfilled" && result.value === "sent").length;
+  const expiredSubscriptions = subscriptions.filter((_, index) => {
+    const result = results[index];
+    return result.status === "fulfilled" && result.value === "expired";
+  });
   const failures = results.filter((result) => result.status === "rejected");
 
-  if (failures.length === results.length) {
+  await Promise.all(expiredSubscriptions.map((subscription) => disablePushSubscription(subscription)));
+
+  if (sent === 0 && failures.length === results.length) {
     const reason = failures[0]?.status === "rejected" ? failures[0].reason : "Unknown push error";
     throw new Error(`All Web Push sends failed: ${reason instanceof Error ? reason.message : String(reason)}`);
   }
+
+  return {
+    sent,
+    expired: expiredSubscriptions.length,
+    failed: failures.length,
+  };
 }
 
 async function sendWebPushNotification(subscription: PushSubscriptionRecord, payload: string) {
@@ -241,8 +278,36 @@ async function sendWebPushNotification(subscription: PushSubscriptionRecord, pay
     body: encrypted,
   });
 
-  if (!response.ok && response.status !== 404 && response.status !== 410) {
+  if (response.status === 404 || response.status === 410) {
+    return "expired" as const;
+  }
+
+  if (!response.ok) {
     throw new Error(`Web Push send failed: ${response.status} ${await response.text()}`);
+  }
+
+  return "sent" as const;
+}
+
+async function disablePushSubscription(subscription: PushSubscriptionRecord) {
+  const url = new URL(`${SUPABASE_URL}/rest/v1/push_subscriptions`);
+  url.searchParams.set("id", `eq.${subscription.id}`);
+
+  const response = await fetch(url, {
+    method: "PATCH",
+    headers: {
+      ...supabaseHeaders(),
+      "Content-Type": "application/json",
+      Prefer: "return=minimal",
+    },
+    body: JSON.stringify({
+      enabled: false,
+      updated_at: new Date().toISOString(),
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to disable expired push subscription: ${response.status} ${await response.text()}`);
   }
 }
 
