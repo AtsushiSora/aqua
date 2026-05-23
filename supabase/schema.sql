@@ -136,6 +136,19 @@ create table public.notification_deliveries (
   unique (owner_id, task_key, scheduled_for)
 );
 
+create table public.push_subscriptions (
+  id uuid primary key default gen_random_uuid(),
+  owner_id uuid not null references public.profiles(id) on delete cascade,
+  endpoint text not null,
+  p256dh text not null,
+  auth text not null,
+  user_agent text,
+  enabled boolean not null default true,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (owner_id, endpoint)
+);
+
 create table public.ai_results (
   id uuid primary key default gen_random_uuid(),
   owner_id uuid not null references public.profiles(id) on delete cascade,
@@ -172,6 +185,8 @@ create index comments_post_created_idx on public.comments(post_id, created_at de
 create index reminders_owner_idx on public.reminders(owner_id);
 create index notification_deliveries_owner_scheduled_idx on public.notification_deliveries(owner_id, scheduled_for)
 where status = 'pending';
+create index push_subscriptions_owner_enabled_idx on public.push_subscriptions(owner_id)
+where enabled = true;
 create index ai_results_tank_checked_idx on public.ai_results(tank_id, checked_at desc);
 
 alter table public.profiles enable row level security;
@@ -183,6 +198,7 @@ alter table public.comments enable row level security;
 alter table public.post_likes enable row level security;
 alter table public.reminders enable row level security;
 alter table public.notification_deliveries enable row level security;
+alter table public.push_subscriptions enable row level security;
 alter table public.ai_results enable row level security;
 
 create policy "Public profiles are readable"
@@ -297,6 +313,12 @@ with check (owner_id = (select auth.uid()));
 
 create policy "Users manage own notification deliveries"
 on public.notification_deliveries for all
+to authenticated
+using (owner_id = (select auth.uid()))
+with check (owner_id = (select auth.uid()));
+
+create policy "Users manage own push subscriptions"
+on public.push_subscriptions for all
 to authenticated
 using (owner_id = (select auth.uid()))
 with check (owner_id = (select auth.uid()));

@@ -32,6 +32,7 @@ Reason:
 | `media` | Image/video object paths and generated thumbnails |
 | `reminders` | Feeding/check reminders with daily, weekly, and interval schedules |
 | `notification_deliveries` | Pending Push/email delivery jobs and retry state |
+| `push_subscriptions` | Browser Push endpoints and encryption keys |
 | `ai_results` | Saved analysis summaries for tanks and posts |
 
 ## Migration order
@@ -49,7 +50,8 @@ Reason:
 11. Sync saved AI analysis results to `ai_results`. Done in the prototype.
 12. Sync notification preferences through `profiles`. Done in the prototype.
 13. Sync next Push/email notification deliveries to `notification_deliveries`. Done in the prototype.
-14. Keep JSON export/import as a fallback during beta.
+14. Sync browser Push subscriptions to `push_subscriptions`. Done in the prototype.
+15. Keep JSON export/import as a fallback during beta.
 
 ## Auth and permission rules
 
@@ -74,18 +76,18 @@ Reason:
 
 ## Current implementation slice
 
-Notification delivery worker scaffold:
+PWA Push subscription scaffold:
 
-- Poll due `notification_deliveries` rows from a Netlify Scheduled Function. Done in the prototype.
-- Keep dry-run enabled by default until production delivery variables are configured.
-- Send email through Resend when configured; leave Push as the next provider integration.
+- Save Push API subscription endpoints in `push_subscriptions`. Done in the prototype.
+- Add service worker `push` and `notificationclick` handlers. Done in the prototype.
+- Let the delivery worker pass saved subscriptions to a configured Push provider endpoint.
 - Keep in-app reminder checks as a fallback while notification delivery is tested.
 
 ## Next implementation slice
 
-Connect a production delivery provider:
+Connect a production Push sender:
 
 - Configure the Scheduled Function environment variables.
-- Add a PWA Push provider or subscription table.
+- Provide a `WEB_PUSH_ENDPOINT` service that signs and sends Web Push messages.
 - Validate delivery logs against `sent`, `failed`, `skipped`, and retry behavior.
 - Keep JSON export/import as a recovery path while the sync model is being tested.

@@ -66,6 +66,7 @@ const authSignOutButton = document.querySelector("#auth-sign-out-button");
 const authNote = document.querySelector("#auth-note");
 const notificationPreferenceSummary = document.querySelector("#notification-preference-summary");
 const supabaseConfig = window.AQUANOTE_SUPABASE_CONFIG || {};
+const pushConfig = window.AQUANOTE_PUSH_CONFIG || {};
 
 const taskLabels = {
   feedMorning: "朝の餌やり",
@@ -412,6 +413,9 @@ accountForm.addEventListener("submit", async (event) => {
   if (authSession?.user) {
     const profileSynced = await syncProfileToSupabase();
     if (profileSynced) {
+      if (state.account.notificationChannel === "push") {
+        await syncPushSubscriptionToSupabase({ silent: true });
+      }
       await syncNotificationDeliveriesToSupabase({ silent: true });
     }
     return;
@@ -1437,6 +1441,72 @@ async function syncNotificationDeliveriesToSupabase(options = {}) {
   return true;
 }
 
+async function syncPushSubscriptionToSupabase(options = {}) {
+  if (!supabaseClient || !authSession?.user) {
+    if (!options.silent) {
+      showToast("Supabaseにログインしてください");
+    }
+    return false;
+  }
+
+  if (state.account.notificationChannel !== "push") {
+    return true;
+  }
+
+  if (!canUsePushNotifications()) {
+    if (!options.silent) {
+      showToast("このブラウザではPWA Pushに対応していません");
+    }
+    return false;
+  }
+
+  const applicationServerKey = getPushApplicationServerKey();
+  if (!applicationServerKey) {
+    if (!options.silent) {
+      showToast("PWA Pushの公開鍵が未設定です");
+    }
+    return false;
+  }
+
+  let subscription;
+  try {
+    const registration = await navigator.serviceWorker.ready;
+    subscription =
+      (await registration.pushManager.getSubscription()) ||
+      (await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey,
+      }));
+  } catch (error) {
+    if (!options.silent) {
+      showToast(error.message || "PWA Push購読の作成に失敗しました");
+    }
+    return false;
+  }
+
+  const payload = getPushSubscriptionPayload(subscription, authSession.user);
+
+  const { error } = await supabaseClient
+    .from("push_subscriptions")
+    .upsert(payload, { onConflict: "owner_id,endpoint" });
+
+  if (error) {
+    state.account.syncStatus = "local";
+    saveState({ keepSyncStatus: true });
+    renderAccount();
+    if (!options.silent) {
+      showToast(error.message || "PWA Push購読の同期に失敗しました");
+    }
+    return false;
+  }
+
+  if (!options.silent) {
+    showToast("PWA Push購読をSupabaseに同期しました");
+  }
+
+  return true;
+}
+
 async function syncCommunityToSupabase(options = {}) {
   if (!supabaseClient || !authSession?.user) {
     if (!options.silent) {
@@ -1716,6 +1786,19 @@ function getExternalNotificationChannel() {
   }
 
   return null;
+}
+
+function getPushSubscriptionPayload(subscription, user) {
+  const json = subscription.toJSON();
+  return {
+    owner_id: user.id,
+    endpoint: json.endpoint || subscription.endpoint,
+    p256dh: json.keys?.p256dh || "",
+    auth: json.keys?.auth || "",
+    user_agent: navigator.userAgent || "",
+    enabled: true,
+    updated_at: new Date().toISOString(),
+  };
 }
 
 function getPostPayload(post, user) {
@@ -3775,6 +3858,11 @@ async function requestNotificationPermission() {
     return;
   }
 
+  if (state.account.notificationChannel === "push" && !getPushApplicationServerKey()) {
+    showToast("PWA Pushの公開鍵を設定してください");
+    return;
+  }
+
   if (!canUseNotifications()) {
     showToast("このブラウザでは通知に対応していません");
     return;
@@ -3785,6 +3873,7 @@ async function requestNotificationPermission() {
     saveState();
     if (authSession?.user) {
       await syncProfileToSupabase({ silent: true });
+      await syncPushSubscriptionToSupabase({ silent: true });
     }
     showToast("通知は有効です");
     renderNotificationButtons();
@@ -3804,6 +3893,7 @@ async function requestNotificationPermission() {
   saveState();
   if (authSession?.user) {
     await syncProfileToSupabase({ silent: true });
+    await syncPushSubscriptionToSupabase({ silent: true });
   }
   showToast(permission === "granted" ? "通知を有効にしました" : "通知は許可されませんでした");
   renderNotificationButtons();
@@ -3811,6 +3901,10 @@ async function requestNotificationPermission() {
 
 function canUseNotifications() {
   return "Notification" in window;
+}
+
+function canUsePushNotifications() {
+  return canUseNotifications() && "serviceWorker" in navigator && "PushManager" in window;
 }
 
 function getNotificationButtonLabel() {
@@ -3844,6 +3938,32 @@ function canDeliverBrowserNotification() {
     Boolean(state.account.browserNotifications) &&
     ["browser", "push"].includes(state.account.notificationChannel)
   );
+}
+
+function getPushApplicationServerKey() {
+  const key = pushConfig.publicKey || pushConfig.vapidPublicKey;
+  if (!key) {
+    return null;
+  }
+
+  try {
+    return urlBase64ToUint8Array(key);
+  } catch (error) {
+    return null;
+  }
+}
+
+function urlBase64ToUint8Array(value) {
+  const padding = "=".repeat((4 - (value.length % 4)) % 4);
+  const base64 = `${value}${padding}`.replace(/-/g, "+").replace(/_/g, "/");
+  const rawData = window.atob(base64);
+  const output = new Uint8Array(rawData.length);
+
+  for (let index = 0; index < rawData.length; index += 1) {
+    output[index] = rawData.charCodeAt(index);
+  }
+
+  return output;
 }
 
 function getNotificationPreferenceSummary() {

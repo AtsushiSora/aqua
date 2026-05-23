@@ -68,12 +68,13 @@
 - 通知設定のSupabase `profiles` 同期
 - 次回通知配信予約のSupabase `notification_deliveries` 同期
 - Netlify Scheduled Functionによる通知配信ワーカーの下準備
+- PWA Push購読情報のSupabase `push_subscriptions` 同期
 - PWA用の `manifest.webmanifest` と `sw.js`
 
 ## 次に作るとよいもの
 
 - 本物のAI画像分析
-- PWA Pushプロバイダ接続
+- PWA Push送信プロバイダ接続
 - 通知配信ワーカーの本番環境変数設定
 - ネイティブスマホアプリ、またはPWAの本番化
 
@@ -88,3 +89,5 @@
 - `NOTIFICATION_DELIVERY_DRY_RUN=false`
 - `RESEND_API_KEY`
 - `NOTIFICATION_EMAIL_FROM`
+- `WEB_PUSH_ENDPOINT`
+- `WEB_PUSH_TOKEN`

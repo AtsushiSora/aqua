@@ -39,3 +39,39 @@ self.addEventListener("fetch", (event) => {
       .catch(() => caches.match(event.request))
   );
 });
+
+self.addEventListener("push", (event) => {
+  let data = {};
+  try {
+    data = event.data ? event.data.json() : {};
+  } catch (error) {
+    data = {};
+  }
+
+  const title = data.title || "AquaNote";
+  const options = {
+    body: data.body || "水槽管理のリマインダーがあります。",
+    tag: data.tag || "aquanote-reminder",
+    data: {
+      url: data.url || "./#dashboard",
+    },
+  };
+
+  event.waitUntil(self.registration.showNotification(title, options));
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const url = event.notification.data?.url || "./#dashboard";
+
+  event.waitUntil(
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((clients) => {
+      const existingClient = clients.find((client) => client.url.includes(self.location.origin));
+      if (existingClient) {
+        return existingClient.focus().then((client) => client.navigate(url));
+      }
+
+      return self.clients.openWindow(url);
+    })
+  );
+});

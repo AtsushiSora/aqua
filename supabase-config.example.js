@@ -5,3 +5,7 @@ window.AQUANOTE_SUPABASE_CONFIG = {
   publishableKey: "your-publishable-key",
   mediaBucket: "aquanote-media",
 };
+
+window.AQUANOTE_PUSH_CONFIG = {
+  publicKey: "your-vapid-public-key",
+};

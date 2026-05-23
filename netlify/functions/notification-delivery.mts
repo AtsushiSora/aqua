@@ -5,6 +5,8 @@ const SUPABASE_SERVICE_ROLE_KEY = Netlify.env.get("SUPABASE_SERVICE_ROLE_KEY") |
 const DELIVERY_DRY_RUN = Netlify.env.get("NOTIFICATION_DELIVERY_DRY_RUN") !== "false";
 const RESEND_API_KEY = Netlify.env.get("RESEND_API_KEY") || "";
 const EMAIL_FROM = Netlify.env.get("NOTIFICATION_EMAIL_FROM") || "";
+const WEB_PUSH_ENDPOINT = Netlify.env.get("WEB_PUSH_ENDPOINT") || "";
+const WEB_PUSH_TOKEN = Netlify.env.get("WEB_PUSH_TOKEN") || "";
 
 type Delivery = {
   id: string;
@@ -19,6 +21,12 @@ type Delivery = {
     notification_channel?: string | null;
     email_notifications_enabled?: boolean | null;
   } | null;
+};
+
+type PushSubscriptionRecord = {
+  endpoint: string;
+  p256dh: string;
+  auth: string;
 };
 
 type DeliveryResult = {
@@ -107,8 +115,20 @@ async function processDelivery(delivery: Delivery): Promise<DeliveryResult> {
     return { id: delivery.id, status: "sent" };
   }
 
-  await updateDelivery(delivery, "failed", "Push provider is not configured");
-  return { id: delivery.id, status: "failed", reason: "Push provider is not configured" };
+  const pushSubscriptions = await listPushSubscriptions(delivery.owner_id);
+  if (!pushSubscriptions.length) {
+    await updateDelivery(delivery, "skipped", "No active push subscription");
+    return { id: delivery.id, status: "skipped", reason: "No active push subscription" };
+  }
+
+  if (!WEB_PUSH_ENDPOINT || !WEB_PUSH_TOKEN) {
+    await updateDelivery(delivery, "failed", "Push provider is not configured");
+    return { id: delivery.id, status: "failed", reason: "Push provider is not configured" };
+  }
+
+  await sendPush(pushSubscriptions, delivery);
+  await updateDelivery(delivery, "sent");
+  return { id: delivery.id, status: "sent" };
 }
 
 async function sendEmail(to: string, delivery: Delivery) {
@@ -128,6 +148,46 @@ async function sendEmail(to: string, delivery: Delivery) {
 
   if (!response.ok) {
     throw new Error(`Email send failed: ${response.status} ${await response.text()}`);
+  }
+}
+
+async function listPushSubscriptions(ownerId: string): Promise<PushSubscriptionRecord[]> {
+  const url = new URL(`${SUPABASE_URL}/rest/v1/push_subscriptions`);
+  url.searchParams.set("select", "endpoint,p256dh,auth");
+  url.searchParams.set("owner_id", `eq.${ownerId}`);
+  url.searchParams.set("enabled", "eq.true");
+
+  const response = await fetch(url, {
+    headers: supabaseHeaders(),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to list push subscriptions: ${response.status} ${await response.text()}`);
+  }
+
+  return response.json() as Promise<PushSubscriptionRecord[]>;
+}
+
+async function sendPush(subscriptions: PushSubscriptionRecord[], delivery: Delivery) {
+  const response = await fetch(WEB_PUSH_ENDPOINT, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${WEB_PUSH_TOKEN}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      subscriptions,
+      notification: {
+        title: "AquaNote",
+        body: `${delivery.label}の時間です。今日の管理タスクを確認しましょう。`,
+        tag: `aquanote-${delivery.task_key}`,
+        url: "/#dashboard",
+      },
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Push send failed: ${response.status} ${await response.text()}`);
   }
 }
 
