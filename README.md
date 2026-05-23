@@ -26,6 +26,7 @@
 - リマインダーの曜日指定と何日ごと設定
 - ブラウザ通知の許可と、アプリ起動中のリマインダー通知
 - 通知チャンネル、メール通知準備、静音時間のアカウント設定
+- PWA Push/メール配信用の次回通知予約
 - 写真投稿風のコミュニティ画面
 - 投稿といいね数のブラウザ保存
 - 投稿コメントのブラウザ保存
@@ -65,10 +66,11 @@
 - 写真・動画・サムネイルのSupabase Storage / `media` 同期
 - AI分析結果のSupabase `ai_results` 同期
 - 通知設定のSupabase `profiles` 同期
+- 次回通知配信予約のSupabase `notification_deliveries` 同期
 - PWA用の `manifest.webmanifest` と `sw.js`
 
 ## 次に作るとよいもの
 
 - 本物のAI画像分析
-- サーバー側またはPWA Pushでの通知配信
+- `notification_deliveries` を処理するサーバー側またはPWA Push配信ワーカー
 - ネイティブスマホアプリ、またはPWAの本番化

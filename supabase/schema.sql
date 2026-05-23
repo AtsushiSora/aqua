@@ -121,6 +121,21 @@ create table public.reminders (
   unique (owner_id, task_key)
 );
 
+create table public.notification_deliveries (
+  id uuid primary key default gen_random_uuid(),
+  owner_id uuid not null references public.profiles(id) on delete cascade,
+  task_key text not null,
+  label text not null,
+  channel text not null check (channel in ('push', 'email')),
+  scheduled_for timestamptz not null,
+  status text not null default 'pending' check (status in ('pending', 'sent', 'failed', 'skipped', 'canceled')),
+  attempt_count integer not null default 0,
+  last_error text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (owner_id, task_key, scheduled_for)
+);
+
 create table public.ai_results (
   id uuid primary key default gen_random_uuid(),
   owner_id uuid not null references public.profiles(id) on delete cascade,
@@ -155,6 +170,8 @@ create index posts_owner_idx on public.posts(owner_id);
 create index media_post_idx on public.media(post_id);
 create index comments_post_created_idx on public.comments(post_id, created_at desc);
 create index reminders_owner_idx on public.reminders(owner_id);
+create index notification_deliveries_owner_scheduled_idx on public.notification_deliveries(owner_id, scheduled_for)
+where status = 'pending';
 create index ai_results_tank_checked_idx on public.ai_results(tank_id, checked_at desc);
 
 alter table public.profiles enable row level security;
@@ -165,6 +182,7 @@ alter table public.media enable row level security;
 alter table public.comments enable row level security;
 alter table public.post_likes enable row level security;
 alter table public.reminders enable row level security;
+alter table public.notification_deliveries enable row level security;
 alter table public.ai_results enable row level security;
 
 create policy "Public profiles are readable"
@@ -273,6 +291,12 @@ with check (user_id = (select auth.uid()));
 
 create policy "Users manage own reminders"
 on public.reminders for all
+to authenticated
+using (owner_id = (select auth.uid()))
+with check (owner_id = (select auth.uid()));
+
+create policy "Users manage own notification deliveries"
+on public.notification_deliveries for all
 to authenticated
 using (owner_id = (select auth.uid()))
 with check (owner_id = (select auth.uid()));

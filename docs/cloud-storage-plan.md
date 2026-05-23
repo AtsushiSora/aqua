@@ -31,6 +31,7 @@ Reason:
 | `comments` | Post comments |
 | `media` | Image/video object paths and generated thumbnails |
 | `reminders` | Feeding/check reminders with daily, weekly, and interval schedules |
+| `notification_deliveries` | Pending Push/email delivery jobs and retry state |
 | `ai_results` | Saved analysis summaries for tanks and posts |
 
 ## Migration order
@@ -47,7 +48,8 @@ Reason:
 10. Move image/video uploads to Storage. Done in the prototype.
 11. Sync saved AI analysis results to `ai_results`. Done in the prototype.
 12. Sync notification preferences through `profiles`. Done in the prototype.
-13. Keep JSON export/import as a fallback during beta.
+13. Sync next Push/email notification deliveries to `notification_deliveries`. Done in the prototype.
+14. Keep JSON export/import as a fallback during beta.
 
 ## Auth and permission rules
 
@@ -68,21 +70,22 @@ Reason:
 | `post.imageDataUrl` | upload to Storage, then `media.storage_path` |
 | `post.videoDataUrl` | upload to Storage, then `media.storage_path` |
 | `post.videoThumbnailDataUrl` | upload to Storage, then `media.thumbnail_path` |
-| `state.reminders` | `reminders` |
+| `state.reminders` | `reminders`, `notification_deliveries` |
 
 ## Current implementation slice
 
-Notification preferences now sync through profiles:
+Notification delivery reservations now sync after reminder changes:
 
-- Store notification channel, browser/email toggles, and quiet hours in `profiles`. Done in the prototype.
-- Use the account notification preference before showing browser reminders.
+- Store pending Push/email jobs in `notification_deliveries`. Done in the prototype.
+- Refresh pending delivery rows when reminders or notification preferences change.
+- Leave browser-only reminders in the foreground app.
 - Keep in-app reminder checks as a fallback while notification delivery is tested.
 
 ## Next implementation slice
 
-Move reminder delivery out of the foreground app:
+Build the delivery worker:
 
-- Decide whether scheduled reminders should become PWA Push, email, or server-side scheduled jobs.
-- Add delivery logs or retry state if notifications are sent server-side.
-- Keep account-level notification preferences as the delivery contract.
+- Poll due `notification_deliveries` rows from a server-side job.
+- Send through PWA Push or email based on `channel`.
+- Mark rows as `sent`, `failed`, `skipped`, or `canceled` and update `attempt_count`.
 - Keep JSON export/import as a recovery path while the sync model is being tested.

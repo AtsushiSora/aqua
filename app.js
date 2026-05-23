@@ -410,7 +410,10 @@ accountForm.addEventListener("submit", async (event) => {
   saveState();
 
   if (authSession?.user) {
-    await syncProfileToSupabase();
+    const profileSynced = await syncProfileToSupabase();
+    if (profileSynced) {
+      await syncNotificationDeliveriesToSupabase({ silent: true });
+    }
     return;
   }
 
@@ -983,6 +986,14 @@ async function syncCloudState(options = {}) {
     return false;
   }
 
+  const notificationDeliveriesSynced = await syncNotificationDeliveriesToSupabase({ silent: true });
+  if (!notificationDeliveriesSynced) {
+    if (!options.silent) {
+      showToast("通知配信予約の同期に失敗しました");
+    }
+    return false;
+  }
+
   const communitySynced = await syncCommunityToSupabase({ silent: true });
   if (!communitySynced) {
     if (!options.silent) {
@@ -1373,6 +1384,59 @@ async function syncRemindersToSupabase(options = {}) {
   return true;
 }
 
+async function syncNotificationDeliveriesToSupabase(options = {}) {
+  if (!supabaseClient || !authSession?.user) {
+    if (!options.silent) {
+      showToast("Supabaseにログインしてください");
+    }
+    return false;
+  }
+
+  const { error: deleteError } = await supabaseClient
+    .from("notification_deliveries")
+    .delete()
+    .eq("owner_id", authSession.user.id)
+    .eq("status", "pending");
+
+  if (deleteError) {
+    state.account.syncStatus = "local";
+    saveState({ keepSyncStatus: true });
+    renderAccount();
+    if (!options.silent) {
+      showToast(deleteError.message || "通知配信予約の更新に失敗しました");
+    }
+    return false;
+  }
+
+  const payloads = getNotificationDeliveryPayloads(authSession.user);
+  if (!payloads.length) {
+    return true;
+  }
+
+  const { error } = await supabaseClient.from("notification_deliveries").insert(payloads);
+
+  if (error) {
+    state.account.syncStatus = "local";
+    saveState({ keepSyncStatus: true });
+    renderAccount();
+    if (!options.silent) {
+      showToast(error.message || "通知配信予約の同期に失敗しました");
+    }
+    return false;
+  }
+
+  state.account.syncStatus = "synced";
+  state.account.lastSyncedAt = new Date().toISOString();
+  saveState({ keepSyncStatus: true });
+  renderAccount();
+
+  if (!options.silent) {
+    showToast("通知配信予約をSupabaseに同期しました");
+  }
+
+  return true;
+}
+
 async function syncCommunityToSupabase(options = {}) {
   if (!supabaseClient || !authSession?.user) {
     if (!options.silent) {
@@ -1610,6 +1674,48 @@ function getReminderPayload(taskId, label, reminder, user) {
     last_notified_on: reminder.lastNotifiedOn || null,
     updated_at: new Date().toISOString(),
   };
+}
+
+function getNotificationDeliveryPayloads(user) {
+  const channel = getExternalNotificationChannel();
+  if (!channel) {
+    return [];
+  }
+
+  const now = new Date();
+  return Object.entries(taskLabels)
+    .map(([taskId, label]) => {
+      const reminder = state.reminders[taskId] || defaultReminders[taskId];
+      const nextReminder = getNextReminderForTask(taskId, reminder, now);
+      if (!nextReminder) {
+        return null;
+      }
+
+      return {
+        owner_id: user.id,
+        task_key: taskId,
+        label,
+        channel,
+        scheduled_for: nextReminder.date.toISOString(),
+        status: "pending",
+        attempt_count: 0,
+        last_error: null,
+        updated_at: new Date().toISOString(),
+      };
+    })
+    .filter(Boolean);
+}
+
+function getExternalNotificationChannel() {
+  if (state.account.notificationChannel === "push") {
+    return "push";
+  }
+
+  if (state.account.notificationChannel === "email") {
+    return "email";
+  }
+
+  return null;
 }
 
 function getPostPayload(post, user) {
@@ -3455,7 +3561,10 @@ async function saveReminderSettings() {
   renderReminders();
 
   if (authSession?.user) {
-    await syncRemindersToSupabase({ silent: true });
+    const remindersSynced = await syncRemindersToSupabase({ silent: true });
+    if (remindersSynced) {
+      await syncNotificationDeliveriesToSupabase({ silent: true });
+    }
   }
 }
 
@@ -3749,7 +3858,20 @@ function getNotificationPreferenceSummary() {
   const browserState = state.account.browserNotifications ? "ブラウザON" : "ブラウザOFF";
   const emailState = state.account.emailNotifications ? "メールON" : "メールOFF";
 
-  return `${channel} / ${browserState} / ${emailState} / 静音 ${quiet}`;
+  const externalDelivery = getNextExternalNotificationDelivery();
+  const delivery = externalDelivery
+    ? ` / 次回配信 ${formatReminderDate(externalDelivery.date)} ${externalDelivery.label}`
+    : "";
+
+  return `${channel} / ${browserState} / ${emailState} / 静音 ${quiet}${delivery}`;
+}
+
+function getNextExternalNotificationDelivery() {
+  if (!getExternalNotificationChannel()) {
+    return null;
+  }
+
+  return getNextReminder();
 }
 
 function isWithinQuietHours(date) {
