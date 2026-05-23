@@ -1,4 +1,12 @@
 import type { Config } from "@netlify/functions";
+import {
+  createCipheriv,
+  createECDH,
+  createHmac,
+  createPrivateKey,
+  createSign,
+  randomBytes,
+} from "node:crypto";
 
 const SUPABASE_URL = Netlify.env.get("SUPABASE_URL") || Netlify.env.get("VITE_SUPABASE_URL") || "";
 const SUPABASE_SERVICE_ROLE_KEY = Netlify.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
@@ -7,6 +15,10 @@ const RESEND_API_KEY = Netlify.env.get("RESEND_API_KEY") || "";
 const EMAIL_FROM = Netlify.env.get("NOTIFICATION_EMAIL_FROM") || "";
 const WEB_PUSH_ENDPOINT = Netlify.env.get("WEB_PUSH_ENDPOINT") || "";
 const WEB_PUSH_TOKEN = Netlify.env.get("WEB_PUSH_TOKEN") || "";
+const WEB_PUSH_VAPID_SUBJECT = Netlify.env.get("WEB_PUSH_VAPID_SUBJECT") || "";
+const WEB_PUSH_VAPID_PUBLIC_KEY = Netlify.env.get("WEB_PUSH_VAPID_PUBLIC_KEY") || "";
+const WEB_PUSH_VAPID_PRIVATE_KEY = Netlify.env.get("WEB_PUSH_VAPID_PRIVATE_KEY") || "";
+const WEB_PUSH_TTL_SECONDS = Number(Netlify.env.get("WEB_PUSH_TTL_SECONDS") || 60 * 60 * 24);
 
 type Delivery = {
   id: string;
@@ -121,7 +133,7 @@ async function processDelivery(delivery: Delivery): Promise<DeliveryResult> {
     return { id: delivery.id, status: "skipped", reason: "No active push subscription" };
   }
 
-  if (!WEB_PUSH_ENDPOINT || !WEB_PUSH_TOKEN) {
+  if (!canSendDirectWebPush() && (!WEB_PUSH_ENDPOINT || !WEB_PUSH_TOKEN)) {
     await updateDelivery(delivery, "failed", "Push provider is not configured");
     return { id: delivery.id, status: "failed", reason: "Push provider is not configured" };
   }
@@ -169,6 +181,11 @@ async function listPushSubscriptions(ownerId: string): Promise<PushSubscriptionR
 }
 
 async function sendPush(subscriptions: PushSubscriptionRecord[], delivery: Delivery) {
+  if (canSendDirectWebPush()) {
+    await sendDirectWebPush(subscriptions, delivery);
+    return;
+  }
+
   const response = await fetch(WEB_PUSH_ENDPOINT, {
     method: "POST",
     headers: {
@@ -189,6 +206,171 @@ async function sendPush(subscriptions: PushSubscriptionRecord[], delivery: Deliv
   if (!response.ok) {
     throw new Error(`Push send failed: ${response.status} ${await response.text()}`);
   }
+}
+
+async function sendDirectWebPush(subscriptions: PushSubscriptionRecord[], delivery: Delivery) {
+  const notification = JSON.stringify({
+    title: "AquaNote",
+    body: `${delivery.label}の時間です。今日の管理タスクを確認しましょう。`,
+    tag: `aquanote-${delivery.task_key}`,
+    url: "/#dashboard",
+  });
+
+  const results = await Promise.allSettled(
+    subscriptions.map((subscription) => sendWebPushNotification(subscription, notification)),
+  );
+  const failures = results.filter((result) => result.status === "rejected");
+
+  if (failures.length === results.length) {
+    const reason = failures[0]?.status === "rejected" ? failures[0].reason : "Unknown push error";
+    throw new Error(`All Web Push sends failed: ${reason instanceof Error ? reason.message : String(reason)}`);
+  }
+}
+
+async function sendWebPushNotification(subscription: PushSubscriptionRecord, payload: string) {
+  const encrypted = encryptWebPushPayload(subscription, payload);
+  const response = await fetch(subscription.endpoint, {
+    method: "POST",
+    headers: {
+      Authorization: getVapidAuthorization(subscription.endpoint),
+      "Content-Encoding": "aes128gcm",
+      "Content-Type": "application/octet-stream",
+      TTL: String(WEB_PUSH_TTL_SECONDS),
+      Urgency: "normal",
+    },
+    body: encrypted,
+  });
+
+  if (!response.ok && response.status !== 404 && response.status !== 410) {
+    throw new Error(`Web Push send failed: ${response.status} ${await response.text()}`);
+  }
+}
+
+function encryptWebPushPayload(subscription: PushSubscriptionRecord, payload: string) {
+  const salt = randomBytes(16);
+  const receiverPublicKey = base64UrlToBuffer(subscription.p256dh);
+  const authSecret = base64UrlToBuffer(subscription.auth);
+  const sender = createECDH("prime256v1");
+  sender.generateKeys();
+  const senderPublicKey = sender.getPublicKey();
+  const sharedSecret = sender.computeSecret(receiverPublicKey);
+  const ikm = hkdf(authSecret, sharedSecret, webPushInfo(receiverPublicKey, senderPublicKey), 32);
+  const contentEncryptionKey = hkdf(salt, ikm, Buffer.from("Content-Encoding: aes128gcm\0"), 16);
+  const nonce = hkdf(salt, ikm, Buffer.from("Content-Encoding: nonce\0"), 12);
+  const plaintext = Buffer.concat([Buffer.from(payload), Buffer.from([0x02])]);
+  const cipher = createCipheriv("aes-128-gcm", contentEncryptionKey, nonce);
+  const ciphertext = Buffer.concat([cipher.update(plaintext), cipher.final(), cipher.getAuthTag()]);
+  const recordSize = Buffer.alloc(4);
+  recordSize.writeUInt32BE(4096, 0);
+
+  return Buffer.concat([
+    salt,
+    recordSize,
+    Buffer.from([senderPublicKey.length]),
+    senderPublicKey,
+    ciphertext,
+  ]);
+}
+
+function getVapidAuthorization(endpoint: string) {
+  const claims = {
+    aud: new URL(endpoint).origin,
+    exp: Math.floor(Date.now() / 1000) + 12 * 60 * 60,
+    sub: WEB_PUSH_VAPID_SUBJECT,
+  };
+  const header = base64UrlEncode(Buffer.from(JSON.stringify({ typ: "JWT", alg: "ES256" })));
+  const body = base64UrlEncode(Buffer.from(JSON.stringify(claims)));
+  const signature = signEs256(`${header}.${body}`);
+
+  return `vapid t=${header}.${body}.${signature}, k=${WEB_PUSH_VAPID_PUBLIC_KEY}`;
+}
+
+function signEs256(value: string) {
+  const publicKey = base64UrlToBuffer(WEB_PUSH_VAPID_PUBLIC_KEY);
+  const privateKey = createPrivateKey({
+    key: {
+      kty: "EC",
+      crv: "P-256",
+      x: base64UrlEncode(publicKey.subarray(1, 33)),
+      y: base64UrlEncode(publicKey.subarray(33, 65)),
+      d: WEB_PUSH_VAPID_PRIVATE_KEY,
+    },
+    format: "jwk",
+  });
+  const signer = createSign("SHA256");
+  signer.update(value);
+  signer.end();
+  const derSignature = signer.sign(privateKey);
+  return base64UrlEncode(derToJoseSignature(derSignature));
+}
+
+function derToJoseSignature(signature: Buffer) {
+  let offset = 3;
+  let rLength = signature[offset - 1];
+  if (rLength > 32) {
+    offset += rLength - 32;
+    rLength = 32;
+  }
+  const r = signature.subarray(offset, offset + rLength);
+  offset += rLength + 2;
+  let sLength = signature[offset - 1];
+  if (sLength > 32) {
+    offset += sLength - 32;
+    sLength = 32;
+  }
+  const s = signature.subarray(offset, offset + sLength);
+
+  return Buffer.concat([leftPad(r, 32), leftPad(s, 32)]);
+}
+
+function webPushInfo(receiverPublicKey: Buffer, senderPublicKey: Buffer) {
+  return Buffer.concat([
+    Buffer.from("WebPush: info\0"),
+    receiverPublicKey,
+    senderPublicKey,
+  ]);
+}
+
+function hkdf(salt: Buffer, ikm: Buffer, info: Buffer, length: number) {
+  const prk = createHmac("sha256", salt).update(ikm).digest();
+  const blocks: Buffer[] = [];
+  let previous = Buffer.alloc(0);
+  let counter = 1;
+
+  while (Buffer.concat(blocks).length < length) {
+    previous = createHmac("sha256", prk)
+      .update(Buffer.concat([previous, info, Buffer.from([counter])]))
+      .digest();
+    blocks.push(previous);
+    counter += 1;
+  }
+
+  return Buffer.concat(blocks).subarray(0, length);
+}
+
+function leftPad(value: Buffer, length: number) {
+  if (value.length >= length) {
+    return value.subarray(value.length - length);
+  }
+
+  return Buffer.concat([Buffer.alloc(length - value.length), value]);
+}
+
+function canSendDirectWebPush() {
+  return Boolean(WEB_PUSH_VAPID_SUBJECT && WEB_PUSH_VAPID_PUBLIC_KEY && WEB_PUSH_VAPID_PRIVATE_KEY);
+}
+
+function base64UrlToBuffer(value: string) {
+  const padding = "=".repeat((4 - (value.length % 4)) % 4);
+  return Buffer.from(`${value}${padding}`.replace(/-/g, "+").replace(/_/g, "/"), "base64");
+}
+
+function base64UrlEncode(value: Buffer) {
+  return value
+    .toString("base64")
+    .replace(/=/g, "")
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_");
 }
 
 async function updateDelivery(delivery: Delivery, status: DeliveryResult["status"], lastError = "") {

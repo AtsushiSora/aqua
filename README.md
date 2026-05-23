@@ -69,13 +69,14 @@
 - 次回通知配信予約のSupabase `notification_deliveries` 同期
 - Netlify Scheduled Functionによる通知配信ワーカーの下準備
 - PWA Push購読情報のSupabase `push_subscriptions` 同期
+- VAPID署名つきWeb Push送信処理
 - PWA用の `manifest.webmanifest` と `sw.js`
 
 ## 次に作るとよいもの
 
 - 本物のAI画像分析
-- PWA Push送信プロバイダ接続
 - 通知配信ワーカーの本番環境変数設定
+- Push配信ログと無効購読の自動停止
 - ネイティブスマホアプリ、またはPWAの本番化
 
 ## 通知配信ワーカー
@@ -89,5 +90,11 @@
 - `NOTIFICATION_DELIVERY_DRY_RUN=false`
 - `RESEND_API_KEY`
 - `NOTIFICATION_EMAIL_FROM`
-- `WEB_PUSH_ENDPOINT`
-- `WEB_PUSH_TOKEN`
+- `WEB_PUSH_VAPID_SUBJECT`
+- `WEB_PUSH_VAPID_PUBLIC_KEY`
+- `WEB_PUSH_VAPID_PRIVATE_KEY`
+- `WEB_PUSH_TTL_SECONDS`
+
+外部のPush中継サービスを使う場合は、VAPID環境変数の代わりに `WEB_PUSH_ENDPOINT` と `WEB_PUSH_TOKEN` を設定できます。
+`WEB_PUSH_VAPID_PUBLIC_KEY` は `supabase-config.js` の `window.AQUANOTE_PUSH_CONFIG.publicKey` と同じ値にします。
+VAPID鍵は `node scripts/generate-vapid-keys.mjs` で生成できます。
