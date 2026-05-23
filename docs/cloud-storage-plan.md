@@ -74,18 +74,18 @@ Reason:
 
 ## Current implementation slice
 
-Notification delivery reservations now sync after reminder changes:
+Notification delivery worker scaffold:
 
-- Store pending Push/email jobs in `notification_deliveries`. Done in the prototype.
-- Refresh pending delivery rows when reminders or notification preferences change.
-- Leave browser-only reminders in the foreground app.
+- Poll due `notification_deliveries` rows from a Netlify Scheduled Function. Done in the prototype.
+- Keep dry-run enabled by default until production delivery variables are configured.
+- Send email through Resend when configured; leave Push as the next provider integration.
 - Keep in-app reminder checks as a fallback while notification delivery is tested.
 
 ## Next implementation slice
 
-Build the delivery worker:
+Connect a production delivery provider:
 
-- Poll due `notification_deliveries` rows from a server-side job.
-- Send through PWA Push or email based on `channel`.
-- Mark rows as `sent`, `failed`, `skipped`, or `canceled` and update `attempt_count`.
+- Configure the Scheduled Function environment variables.
+- Add a PWA Push provider or subscription table.
+- Validate delivery logs against `sent`, `failed`, `skipped`, and retry behavior.
 - Keep JSON export/import as a recovery path while the sync model is being tested.
