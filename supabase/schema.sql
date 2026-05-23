@@ -121,11 +121,14 @@ create table public.ai_results (
   owner_id uuid not null references public.profiles(id) on delete cascade,
   tank_id uuid references public.tanks(id) on delete cascade,
   post_id uuid references public.posts(id) on delete set null,
+  local_id text not null,
   status text not null,
   level text not null default '',
   summary text not null,
   items text[] not null default '{}',
-  checked_at timestamptz not null default now()
+  checked_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (owner_id, local_id)
 );
 
 create view public.post_stats

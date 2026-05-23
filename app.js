@@ -643,7 +643,7 @@ document.querySelector("[data-reset-logs]").addEventListener("click", () => {
   showToast("サンプル状態に戻しました");
 });
 
-aiForm.addEventListener("submit", (event) => {
+aiForm.addEventListener("submit", async (event) => {
   event.preventDefault();
 
   const tank = getActiveTank();
@@ -653,15 +653,14 @@ aiForm.addEventListener("submit", (event) => {
   const days = Number(document.querySelector("#water-days").value);
   const result = analyzeTank({ water, fish, algae, days });
 
-  tank.latestAi = {
-    status: result.status,
-    summary: result.summary,
-    levelClass: result.levelClass,
-    checkedAt: new Date().toISOString(),
-  };
+  tank.latestAi = createAiResultState(result);
   saveState();
   renderAiResult(result);
   renderDashboard();
+
+  if (authSession?.user) {
+    await syncCloudState({ silent: true });
+  }
 });
 
 postForm.addEventListener("submit", async (event) => {
@@ -965,6 +964,14 @@ async function syncCloudState(options = {}) {
     return false;
   }
 
+  const aiSynced = await syncAiResultsToSupabase({ silent: true });
+  if (!aiSynced) {
+    if (!options.silent) {
+      showToast("AI分析結果の同期に失敗しました");
+    }
+    return false;
+  }
+
   state.account.syncStatus = "synced";
   state.account.lastSyncedAt = new Date().toISOString();
   saveState({ keepSyncStatus: true });
@@ -1191,6 +1198,27 @@ async function loadPostLikesFromSupabase(postCloudIds = getPostCloudIds()) {
   }
 
   applyRemotePostLikes(ids, data || []);
+  return data || [];
+}
+
+async function loadAiResultsFromSupabase() {
+  if (!supabaseClient || !authSession?.user) {
+    return [];
+  }
+
+  const { data, error } = await supabaseClient
+    .from("ai_results")
+    .select("id, tank_id, post_id, local_id, status, level, summary, items, checked_at, updated_at")
+    .eq("owner_id", authSession.user.id)
+    .order("checked_at", { ascending: false });
+
+  if (error) {
+    showToast(error.message || "AI分析結果を読み込めませんでした");
+    return [];
+  }
+
+  applyRemoteAiResults(data || []);
+  saveState({ keepSyncStatus: true });
   return data || [];
 }
 
@@ -1472,6 +1500,47 @@ async function syncMediaToSupabase(options = {}) {
   return true;
 }
 
+async function syncAiResultsToSupabase(options = {}) {
+  if (!supabaseClient || !authSession?.user) {
+    if (!options.silent) {
+      showToast("Supabaseにログインしてください");
+    }
+    return false;
+  }
+
+  const payloads = getAiResultPayloads(authSession.user);
+  if (!payloads.length) {
+    return true;
+  }
+
+  const { data, error } = await supabaseClient
+    .from("ai_results")
+    .upsert(payloads, { onConflict: "owner_id,local_id" })
+    .select("id, tank_id, post_id, local_id, status, level, summary, items, checked_at, updated_at");
+
+  if (error) {
+    state.account.syncStatus = "local";
+    saveState({ keepSyncStatus: true });
+    renderAccount();
+    if (!options.silent) {
+      showToast(error.message || "AI分析結果の同期に失敗しました");
+    }
+    return false;
+  }
+
+  applyRemoteAiResults(data || []);
+  state.account.syncStatus = "synced";
+  state.account.lastSyncedAt = new Date().toISOString();
+  saveState({ keepSyncStatus: true });
+  renderApp();
+
+  if (!options.silent) {
+    showToast("AI分析結果をSupabaseに同期しました");
+  }
+
+  return true;
+}
+
 function getTankPayload(tank, user) {
   return {
     owner_id: user.id,
@@ -1552,6 +1621,48 @@ function getMediaPayload(post, uploaded, user) {
     duration_seconds: uploaded.durationSeconds,
     width: null,
     height: null,
+  };
+}
+
+function getAiResultPayloads(user) {
+  const tankResults = state.tanks
+    .filter((tank) => tank.cloudId && tank.latestAi)
+    .map((tank) => getAiResultPayload({
+      user,
+      localId: `tank:${tank.id}:latest`,
+      tankCloudId: tank.cloudId,
+      postCloudId: null,
+      result: tank.latestAi,
+    }));
+
+  const postResults = state.posts
+    .filter((post) => post.cloudId && post.latestAi)
+    .map((post) => {
+      const tank = state.tanks.find((item) => item.id === post.tankId);
+      return getAiResultPayload({
+        user,
+        localId: `post:${post.id}:latest`,
+        tankCloudId: tank?.cloudId || null,
+        postCloudId: post.cloudId,
+        result: post.latestAi,
+      });
+    });
+
+  return [...tankResults, ...postResults];
+}
+
+function getAiResultPayload({ user, localId, tankCloudId, postCloudId, result }) {
+  return {
+    owner_id: user.id,
+    tank_id: tankCloudId,
+    post_id: postCloudId,
+    local_id: localId,
+    status: result.status || "未記録",
+    level: result.levelClass || "",
+    summary: result.summary || "",
+    items: Array.isArray(result.items) ? result.items : [],
+    checked_at: result.checkedAt || new Date().toISOString(),
+    updated_at: new Date().toISOString(),
   };
 }
 
@@ -1846,6 +1957,45 @@ function applyRemotePostLikes(scopedPostCloudIds, remoteLikes) {
   });
 }
 
+function applyRemoteAiResults(remoteResults) {
+  remoteResults.forEach((remoteResult) => {
+    const nextResult = {
+      cloudId: remoteResult.id,
+      status: remoteResult.status || "未記録",
+      levelClass: remoteResult.level || "",
+      summary: remoteResult.summary || "",
+      items: Array.isArray(remoteResult.items) ? remoteResult.items : [],
+      checkedAt: remoteResult.checked_at || remoteResult.updated_at || new Date().toISOString(),
+    };
+
+    const post = remoteResult.post_id ? state.posts.find((item) => item.cloudId === remoteResult.post_id) : null;
+    if (post) {
+      if (isNewerAiResult(nextResult, post.latestAi)) {
+        post.latestAi = nextResult;
+      }
+
+      const tank = state.tanks.find((item) => item.id === post.tankId);
+      if (tank && isNewerAiResult(nextResult, tank.latestAi)) {
+        tank.latestAi = nextResult;
+      }
+      return;
+    }
+
+    const tank = remoteResult.tank_id ? state.tanks.find((item) => item.cloudId === remoteResult.tank_id) : null;
+    if (tank && isNewerAiResult(nextResult, tank.latestAi)) {
+      tank.latestAi = nextResult;
+    }
+  });
+}
+
+function isNewerAiResult(nextResult, currentResult) {
+  if (!currentResult?.checkedAt) {
+    return true;
+  }
+
+  return new Date(nextResult.checkedAt || 0) >= new Date(currentResult.checkedAt || 0);
+}
+
 function applyRemoteComments(remoteComments) {
   remoteComments.forEach((remoteComment) => {
     const post = state.posts.find((item) => item.cloudId === remoteComment.post_id);
@@ -1972,6 +2122,7 @@ async function initSupabaseAuth() {
       await loadLogsFromSupabase();
       await loadRemindersFromSupabase();
       await loadCommunityFromSupabase();
+      await loadAiResultsFromSupabase();
     } else {
       state.account.signedIn = false;
       clearCurrentUserLikes();
@@ -1989,6 +2140,7 @@ async function initSupabaseAuth() {
     await loadLogsFromSupabase();
     await loadRemindersFromSupabase();
     await loadCommunityFromSupabase();
+    await loadAiResultsFromSupabase();
   } else {
     state.account.signedIn = false;
     clearCurrentUserLikes();
@@ -3077,7 +3229,7 @@ function deletePost(postId) {
   showToast("投稿を削除しました");
 }
 
-function analyzePostImage(postId) {
+async function analyzePostImage(postId) {
   const post = state.posts.find((item) => item.id === postId);
   if (!post) {
     return;
@@ -3086,19 +3238,20 @@ function analyzePostImage(postId) {
   state.activeTankId = post.tankId || state.activeTankId;
   const tank = getActiveTank();
   const result = analyzePostPhoto(post);
+  const aiResult = createAiResultState(result);
 
-  tank.latestAi = {
-    status: result.status,
-    summary: result.summary,
-    levelClass: result.levelClass,
-    checkedAt: new Date().toISOString(),
-  };
+  post.latestAi = aiResult;
+  tank.latestAi = aiResult;
 
   saveState();
   renderApp();
   renderAiResult(result, post);
   showView("ai");
   showToast(getPostVideoSrc(post) ? "動画投稿の確認画面を開きました" : "投稿写真をAI分析に送りました");
+
+  if (authSession?.user) {
+    await syncCloudState({ silent: true });
+  }
 }
 
 function analyzePostPhoto(post) {
@@ -3542,12 +3695,22 @@ function renderAiResult(result, post = null) {
   resultBox.innerHTML = `
     ${mediaMarkup}
     <p class="status-label">状態</p>
-    <strong>${result.status}</strong>
-    <p>${result.summary}</p>
+    <strong>${escapeHtml(result.status)}</strong>
+    <p>${escapeHtml(result.summary)}</p>
     <ul>
-      ${result.items.map((item) => `<li>${item}</li>`).join("")}
+      ${result.items.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}
     </ul>
   `;
+}
+
+function createAiResultState(result) {
+  return {
+    status: result.status,
+    summary: result.summary,
+    levelClass: result.levelClass,
+    items: Array.isArray(result.items) ? result.items : [],
+    checkedAt: new Date().toISOString(),
+  };
 }
 
 function analyzeTank({ water, fish, algae, days }) {
@@ -3794,7 +3957,7 @@ function normalizeState(saved) {
     volume: tank.volume || "容量未設定",
     tags: Array.isArray(tank.tags) ? tank.tags : [tank.kind || "水槽"],
     logs: Array.isArray(tank.logs) ? tank.logs.map(normalizeLog) : [],
-    latestAi: tank.latestAi || null,
+    latestAi: tank.latestAi ? normalizeAiResult(tank.latestAi) : null,
     featuredPostId: tank.featuredPostId || null,
     albumOrder: Array.isArray(tank.albumOrder) ? tank.albumOrder : [],
     cloudId: tank.cloudId || null,
@@ -3819,6 +3982,7 @@ function normalizeState(saved) {
       ...post,
       tankId,
       comments: Array.isArray(post.comments) ? post.comments.map(normalizeComment) : [],
+      latestAi: post.latestAi ? normalizeAiResult(post.latestAi) : null,
       mediaType: post.mediaType || (post.videoDataUrl ? "video" : post.imageDataUrl ? "image" : null),
       createdAt: post.createdAt || post.updatedAt || daysAgoIso(index),
       cloudId: post.cloudId || null,
@@ -3864,6 +4028,17 @@ function normalizeComment(comment) {
     text: comment.text || "",
     createdAt: comment.createdAt || new Date().toISOString(),
     cloudId: comment.cloudId || null,
+  };
+}
+
+function normalizeAiResult(result) {
+  return {
+    cloudId: result.cloudId || null,
+    status: result.status || "未記録",
+    summary: result.summary || "",
+    levelClass: result.levelClass || result.level || "",
+    items: Array.isArray(result.items) ? result.items : [],
+    checkedAt: result.checkedAt || result.checked_at || new Date().toISOString(),
   };
 }
 

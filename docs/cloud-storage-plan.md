@@ -45,7 +45,8 @@ Reason:
 8. Sync posts and comments to the `posts` and `comments` tables. Done in the prototype.
 9. Sync likes and ranking stats through `post_likes` and `post_stats`. Done in the prototype.
 10. Move image/video uploads to Storage. Done in the prototype.
-11. Keep JSON export/import as a fallback during beta.
+11. Sync saved AI analysis results to `ai_results`. Done in the prototype.
+12. Keep JSON export/import as a fallback during beta.
 
 ## Auth and permission rules
 
@@ -70,18 +71,17 @@ Reason:
 
 ## Current implementation slice
 
-Media objects now sync after post/comment sync:
+AI analysis results now sync after community/media sync:
 
-- Upload images, videos, and generated thumbnails to the private `aquanote-media` bucket. Done in the prototype.
-- Store object paths and metadata in `media`. Done in the prototype.
-- Prefer signed Storage URLs in post cards, albums, details, tank covers, and AI previews.
-- Keep local data URLs as an offline/browser-only fallback during beta.
+- Save tank and post analysis summaries in `ai_results`. Done in the prototype.
+- Load the latest cloud analysis results on sign-in.
+- Keep local latest AI state as an offline/browser-only fallback during beta.
 
 ## Next implementation slice
 
-Move saved AI analysis out of local JSON:
+Move reminders from in-app checks toward production notifications:
 
-- Save tank and post analysis summaries in `ai_results`.
-- Link post analysis to uploaded media records where available.
-- Keep local AI summaries as a fallback if cloud write fails.
+- Decide whether scheduled reminders should become push notifications, email, or server-side scheduled jobs.
+- Store notification permission and delivery preferences per profile.
+- Keep in-app reminder checks as a fallback while notification delivery is tested.
 - Keep JSON export/import as a recovery path while the sync model is being tested.

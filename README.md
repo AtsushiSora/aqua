@@ -62,11 +62,11 @@
 - 投稿とコメントのSupabase `posts` / `comments` 同期
 - いいねとランキングのSupabase `post_likes` / `post_stats` 同期
 - 写真・動画・サムネイルのSupabase Storage / `media` 同期
+- AI分析結果のSupabase `ai_results` 同期
 - PWA用の `manifest.webmanifest` と `sw.js`
 
 ## 次に作るとよいもの
 
 - 本物のAI画像分析
-- AI分析結果のSupabase `ai_results` 保存
 - 通知機能
 - ネイティブスマホアプリ、またはPWAの本番化
