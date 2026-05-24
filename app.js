@@ -4625,7 +4625,7 @@ function renderAiImageValidationSummary(entries) {
         <p>${escapeHtml(getAiWeakConditionSuggestion(weakCondition))}</p>
         ${
           weakCondition
-            ? `<button class="ghost-button" type="button" data-ai-weak-condition-note="${escapeHtml(weakCondition.key)}">改善メモへ反映</button>`
+            ? `<button class="ghost-button" type="button" data-ai-weak-condition-note="${escapeHtml(weakCondition.key)}">改善メモを履歴保存</button>`
             : ""
         }
       </div>
@@ -4728,8 +4728,7 @@ function applyAiWeakConditionNote(conditionKey) {
   const nextNote = `プロンプトv3改善候補: ${label}\n${suggestion}\n評価ログで要修正が多い実写真を確認し、見える範囲と見えない範囲の分離を強める。`;
   aiPromptImprovementNote.value = nextNote;
   state.aiPromptImprovementNote = nextNote;
-  saveState();
-  showToast("弱点候補を改善メモへ反映しました");
+  saveAiPromptNote({ silentEmpty: true, toastMessage: "弱点候補を改善メモ履歴へ保存しました" });
 }
 
 function getAiEvaluationSuggestion(counts, entries) {
@@ -4802,10 +4801,12 @@ function getAiPhotoConditionLabel(value) {
   return labels[value] || labels.unspecified;
 }
 
-function saveAiPromptNote() {
+function saveAiPromptNote(options = {}) {
   const note = aiPromptImprovementNote.value.trim();
   if (!note) {
-    showToast("改善メモを入力してください");
+    if (!options.silentEmpty) {
+      showToast("改善メモを入力してください");
+    }
     return;
   }
 
@@ -4826,7 +4827,7 @@ function saveAiPromptNote() {
     syncAiPromptNotesToSupabase({ silent: true });
   }
 
-  showToast("プロンプト改善メモを履歴に保存しました");
+  showToast(options.toastMessage || "プロンプト改善メモを履歴に保存しました");
 }
 
 function normalizeAiApiResult(result, fallbackResult) {
