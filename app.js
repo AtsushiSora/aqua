@@ -3057,7 +3057,23 @@ function exportAiReviewData(format) {
 
   if (format === "csv") {
     const rows = [
-      ["type", "createdAt", "target", "source", "status", "difference", "reviewLabel", "photoCondition", "model", "promptVersion", "summary", "retakeTips", "note"],
+      [
+        "type",
+        "createdAt",
+        "target",
+        "source",
+        "status",
+        "difference",
+        "reviewLabel",
+        "photoCondition",
+        "model",
+        "promptVersion",
+        "promptGeneration",
+        "v4ValidationStatus",
+        "summary",
+        "retakeTips",
+        "note",
+      ],
       ...entries.map((entry) => [
         "evaluation",
         entry.createdAt,
@@ -3069,6 +3085,8 @@ function exportAiReviewData(format) {
         getAiPhotoConditionLabel(entry.photoCondition),
         entry.model,
         entry.promptVersion,
+        getAiPromptGenerationLabel(getAiPromptGeneration(entry.promptVersion)),
+        getAiPromptValidationStatusLabel(getAiPromptValidationStatus(entry)),
         entry.summary,
         Array.isArray(entry.retakeTips) ? entry.retakeTips.join(" / ") : "",
         entry.note || "",
@@ -3084,6 +3102,8 @@ function exportAiReviewData(format) {
         "",
         "",
         note.promptVersion || "",
+        getAiPromptGenerationLabel(getAiPromptGeneration(note.promptVersion)),
+        "",
         "",
         "",
         note.note,
@@ -3099,6 +3119,8 @@ function exportAiReviewData(format) {
         "",
         "",
         "aquanote-care-v4-draft",
+        "v4",
+        "v4草案",
         item,
         "",
         "",
@@ -3120,7 +3142,13 @@ function exportAiReviewData(format) {
       from: activeAiEvaluationFromFilter,
       to: activeAiEvaluationToFilter,
     },
-    evaluations: entries,
+    evaluations: entries.map((entry) => ({
+      ...entry,
+      promptGeneration: getAiPromptGeneration(entry.promptVersion),
+      promptValidationStatus: getAiPromptValidationStatus(entry),
+      promptValidationStatusLabel: getAiPromptValidationStatusLabel(getAiPromptValidationStatus(entry)),
+    })),
+    promptValidation: getAiPromptValidationExportSummary(entries),
     promptImprovementNote: state.aiPromptImprovementNote || "",
     promptNotes: notes,
     promptV4Draft: {
@@ -4794,6 +4822,77 @@ function getAiPromptGeneration(promptVersion) {
     return "v3";
   }
   return "other";
+}
+
+function getAiPromptGenerationLabel(generation) {
+  if (generation === "v4") {
+    return "v4";
+  }
+  if (generation === "v3") {
+    return "v3";
+  }
+  return "世代未確認";
+}
+
+function getAiPromptValidationStatus(entry) {
+  const generation = getAiPromptGeneration(entry.promptVersion);
+  if (generation === "v3") {
+    return "v3_baseline";
+  }
+  if (generation !== "v4") {
+    return "not_v4";
+  }
+  if (entry.reviewLabel === "good") {
+    return "v4_good";
+  }
+  if (entry.reviewLabel === "needs_fix") {
+    return "v4_needs_fix";
+  }
+  if (entry.reviewLabel === "watch") {
+    return "v4_watch";
+  }
+  return "v4_unreviewed";
+}
+
+function getAiPromptValidationStatusLabel(status) {
+  const labels = {
+    v3_baseline: "v3比較元",
+    not_v4: "v4対象外",
+    v4_good: "v4良い例",
+    v4_needs_fix: "v4要修正",
+    v4_watch: "v4保留",
+    v4_unreviewed: "v4未評価",
+  };
+  return labels[status] || "v4対象外";
+}
+
+function getAiPromptValidationExportSummary(entries) {
+  const generationCounts = entries.reduce(
+    (counts, entry) => {
+      counts[getAiPromptGeneration(entry.promptVersion)] += 1;
+      return counts;
+    },
+    { v3: 0, v4: 0, other: 0 },
+  );
+  const v4Entries = entries.filter((entry) => getAiPromptGeneration(entry.promptVersion) === "v4");
+  const v4StatusCounts = v4Entries.reduce(
+    (counts, entry) => {
+      const status = getAiPromptValidationStatus(entry);
+      counts[status] += 1;
+      return counts;
+    },
+    { v4_good: 0, v4_needs_fix: 0, v4_watch: 0, v4_unreviewed: 0 },
+  );
+
+  return {
+    generationCounts,
+    v4: {
+      total: v4Entries.length,
+      reviewed: v4Entries.filter((entry) => ["good", "needs_fix", "watch"].includes(entry.reviewLabel)).length,
+      ...v4StatusCounts,
+    },
+    comparison: getAiPromptGenerationComparison(entries),
+  };
 }
 
 function getAiPromptGenerationComparison(entries) {
