@@ -3,7 +3,7 @@ import type { Config } from "@netlify/functions";
 const OPENAI_BASE_URL = Netlify.env.get("OPENAI_BASE_URL") || "";
 const OPENAI_API_KEY = Netlify.env.get("OPENAI_API_KEY") || "";
 const AI_ANALYSIS_MODEL = Netlify.env.get("AI_ANALYSIS_MODEL") || "gpt-4o-mini";
-const PROMPT_VERSION = "aquanote-care-v2";
+const PROMPT_VERSION = "aquanote-care-v3";
 
 type AnalysisRequest = {
   tank?: {
@@ -87,9 +87,11 @@ function buildMessages(payload: AnalysisRequest) {
     "AquaNoteの水槽管理補助として、写真とログから確認ポイントを返してください。",
     "写真に写っている範囲だけを根拠にし、見えない魚病・水質値・原因を断定しないでください。",
     "病名や死亡リスクを診断せず、管理者が次に確認する観察項目として書いてください。",
-    "写真品質が低い、暗い、魚や水面が見えない場合は、その限界と撮り直しポイントを含めてください。",
+    "暗い写真、魚が小さい写真、反射が強い写真、コケや水面が一部しか見えない写真では、観察できた範囲と見えない範囲を分けてください。",
+    "写真品質が低い場合でも無理に判定せず、retakeTipsに撮り直しや追加撮影の観点を返してください。",
+    "水の透明度、コケ、魚の泳ぎ・体表、餌の残り、底床の汚れ、機材まわりの異常のうち、写真で見えるものだけをobservationsに入れてください。",
     "必ず 今日やること / 数日見ること / 危険サイン の3種類をitemsに含めてください。",
-    "JSONのみで返してください: {\"status\":\"良好|注意|要確認\",\"levelClass\":\"|warning|danger\",\"confidence\":0.0,\"summary\":\"短い要約\",\"observations\":[\"見える根拠\"],\"items\":[\"今日やること: ...\",\"数日見ること: ...\",\"危険サイン: ...\"]}",
+    "JSONのみで返してください: {\"status\":\"良好|注意|要確認\",\"levelClass\":\"|warning|danger\",\"confidence\":0.0,\"summary\":\"短い要約\",\"observations\":[\"見える根拠\"],\"retakeTips\":[\"撮り直し・追加確認\"],\"items\":[\"今日やること: ...\",\"数日見ること: ...\",\"危険サイン: ...\"]}",
     `水槽: ${JSON.stringify(payload.tank || {})}`,
     `ログ: ${JSON.stringify(payload.log || {})}`,
     `投稿: ${JSON.stringify({
@@ -133,6 +135,9 @@ function normalizeAnalysis(content: string) {
   const observations = Array.isArray(parsed.observations)
     ? parsed.observations.slice(0, 4).map((item: unknown) => String(item))
     : [];
+  const retakeTips = Array.isArray(parsed.retakeTips)
+    ? parsed.retakeTips.slice(0, 4).map((item: unknown) => String(item))
+    : [];
   const confidence = Math.min(1, Math.max(0, Number(parsed.confidence) || 0.5));
 
   return {
@@ -140,6 +145,7 @@ function normalizeAnalysis(content: string) {
     levelClass,
     confidence,
     observations,
+    retakeTips,
     summary: String(parsed.summary || "画像とログから確認ポイントを整理しました。"),
     items: items.length ? items : ["今日やること: 水温、pH、食欲を確認", "数日見ること: 水の透明度とコケの変化"],
   };

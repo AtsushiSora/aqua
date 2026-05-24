@@ -4292,6 +4292,9 @@ function getAiResultDifference(result, fallbackResult, error = "") {
   if (Array.isArray(result.observations) && result.observations.length) {
     changes.push("見える根拠あり");
   }
+  if (Array.isArray(result.retakeTips) && result.retakeTips.length) {
+    changes.push("撮り直し観点あり");
+  }
   if (Number.isFinite(Number(result.confidence))) {
     changes.push(`信頼度 ${Math.round(Number(result.confidence) * 100)}%`);
   }
@@ -4666,6 +4669,9 @@ function normalizeAiApiResult(result, fallbackResult) {
   const observations = Array.isArray(result?.observations)
     ? result.observations.map((item) => String(item)).slice(0, 4)
     : [];
+  const retakeTips = Array.isArray(result?.retakeTips)
+    ? result.retakeTips.map((item) => String(item)).slice(0, 4)
+    : [];
   const confidence = Number.isFinite(Number(result?.confidence)) ? Math.min(1, Math.max(0, Number(result.confidence))) : null;
 
   return {
@@ -4674,6 +4680,7 @@ function normalizeAiApiResult(result, fallbackResult) {
     summary: result?.summary ? String(result.summary) : fallbackResult.summary,
     items,
     observations,
+    retakeTips,
     confidence,
     model: result?.model || null,
     promptVersion: result?.promptVersion || null,
@@ -5337,6 +5344,7 @@ function renderAiResult(result, post = null) {
     Number.isFinite(Number(result.confidence)) ? `信頼度: ${Math.round(Number(result.confidence) * 100)}%` : "",
   ].filter(Boolean);
   const observations = Array.isArray(result.observations) ? result.observations : [];
+  const retakeTips = Array.isArray(result.retakeTips) ? result.retakeTips : [];
   const mediaMarkup = videoSrc
     ? `
       <div class="ai-photo-preview has-video">
@@ -5367,6 +5375,18 @@ function renderAiResult(result, post = null) {
         `
         : ""
     }
+    ${
+      retakeTips.length
+        ? `
+          <div class="ai-observations">
+            <span>撮り直し・追加確認</span>
+            <ul>
+              ${retakeTips.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}
+            </ul>
+          </div>
+        `
+        : ""
+    }
     <ul>
       ${result.items.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}
     </ul>
@@ -5380,6 +5400,7 @@ function createAiResultState(result) {
     levelClass: result.levelClass,
     items: Array.isArray(result.items) ? result.items : [],
     observations: Array.isArray(result.observations) ? result.observations : [],
+    retakeTips: Array.isArray(result.retakeTips) ? result.retakeTips : [],
     confidence: result.confidence ?? null,
     model: result.model || null,
     promptVersion: result.promptVersion || null,
@@ -5717,6 +5738,7 @@ function normalizeAiResult(result) {
     levelClass: result.levelClass || result.level || "",
     items: Array.isArray(result.items) ? result.items : [],
     observations: Array.isArray(result.observations) ? result.observations : [],
+    retakeTips: Array.isArray(result.retakeTips) ? result.retakeTips : [],
     confidence: result.confidence ?? null,
     model: result.model || null,
     promptVersion: result.promptVersion || null,
