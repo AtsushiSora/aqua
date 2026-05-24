@@ -470,7 +470,7 @@ accountForm.addEventListener("submit", async (event) => {
 });
 
 accountUiModeInput.addEventListener("change", () => {
-  state.account.uiMode = getAllowedValue(accountUiModeInput.value, ["standard", "simple", "adult"], "standard");
+  state.account.uiMode = getAllowedValue(accountUiModeInput.value, ["standard", "simple", "glance", "adult"], "standard");
   applyUiMode();
   saveState();
   showToast("表示モードを切り替えました");
@@ -991,7 +991,7 @@ function renderAccount() {
   document.querySelector("#account-email-input").value = account.email;
   document.querySelector("#account-visibility-input").value = account.visibility;
   document.querySelector("#account-plan-input").value = account.plan;
-  accountUiModeInput.value = getAllowedValue(account.uiMode, ["standard", "simple", "adult"], "standard");
+  accountUiModeInput.value = getAllowedValue(account.uiMode, ["standard", "simple", "glance", "adult"], "standard");
   document.querySelector("#account-notification-channel-input").value = account.notificationChannel;
   document.querySelector("#account-browser-notifications-input").checked = Boolean(account.browserNotifications);
   document.querySelector("#account-email-notifications-input").checked = Boolean(account.emailNotifications);
@@ -1028,7 +1028,7 @@ function renderAccount() {
 }
 
 function applyUiMode() {
-  document.body.dataset.uiMode = getAllowedValue(state.account?.uiMode, ["standard", "simple", "adult"], "standard");
+  document.body.dataset.uiMode = getAllowedValue(state.account?.uiMode, ["standard", "simple", "glance", "adult"], "standard");
 }
 
 function renderAuthPanel() {
@@ -2916,7 +2916,7 @@ function getProfilePayload(user) {
     email: state.account.email || user.email || "",
     visibility: getAllowedValue(state.account.visibility, ["public", "friends", "private"], "public"),
     plan: getAllowedValue(state.account.plan, ["free", "plus", "pro"], "free"),
-    ui_mode: getAllowedValue(state.account.uiMode, ["standard", "simple", "adult"], "standard"),
+    ui_mode: getAllowedValue(state.account.uiMode, ["standard", "simple", "glance", "adult"], "standard"),
     notification_channel: getAllowedValue(state.account.notificationChannel, ["browser", "push", "email", "none"], "browser"),
     browser_notifications_enabled: Boolean(state.account.browserNotifications),
     email_notifications_enabled: Boolean(state.account.emailNotifications),
@@ -2935,7 +2935,7 @@ function applyRemoteProfile(profile) {
     email: profile.email || state.account.email,
     visibility: getAllowedValue(profile.visibility, ["public", "friends", "private"], state.account.visibility),
     plan: getAllowedValue(profile.plan, ["free", "plus", "pro"], state.account.plan),
-    uiMode: getAllowedValue(profile.ui_mode, ["standard", "simple", "adult"], state.account.uiMode),
+    uiMode: getAllowedValue(profile.ui_mode, ["standard", "simple", "glance", "adult"], state.account.uiMode),
     notificationChannel: getAllowedValue(profile.notification_channel, ["browser", "push", "email", "none"], state.account.notificationChannel),
     browserNotifications:
       profile.browser_notifications_enabled === null || profile.browser_notifications_enabled === undefined
@@ -6450,7 +6450,7 @@ function normalizeAccount(account = {}) {
     ? account.visibility
     : defaultState.account.visibility;
   const plan = ["free", "plus", "pro"].includes(account.plan) ? account.plan : defaultState.account.plan;
-  const uiMode = ["standard", "simple", "adult"].includes(account.uiMode) ? account.uiMode : defaultState.account.uiMode;
+  const uiMode = ["standard", "simple", "glance", "adult"].includes(account.uiMode) ? account.uiMode : defaultState.account.uiMode;
   const notificationChannel = ["browser", "push", "email", "none"].includes(account.notificationChannel)
     ? account.notificationChannel
     : defaultState.account.notificationChannel;
