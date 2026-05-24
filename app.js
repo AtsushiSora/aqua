@@ -4571,8 +4571,16 @@ function renderAiImageValidationSummary(entries) {
   const needsFixCount = gatewayPhotoEntries.filter((entry) => entry.reviewLabel === "needs_fix").length;
   const goodCount = gatewayPhotoEntries.filter((entry) => entry.reviewLabel === "good").length;
   const conditionCounts = getAiPhotoConditionCounts(gatewayPhotoEntries);
+  const weakCondition = getAiWeakPhotoCondition(conditionCounts);
   const latestGatewayPhoto = gatewayPhotoEntries[0] || null;
-  const suggestion = getAiImageValidationSuggestion({ photoEntries, gatewayPhotoEntries, needsFixCount, goodCount, conditionCounts });
+  const suggestion = getAiImageValidationSuggestion({
+    photoEntries,
+    gatewayPhotoEntries,
+    needsFixCount,
+    goodCount,
+    conditionCounts,
+    weakCondition,
+  });
 
   aiImageValidationSummary.innerHTML = `
     <article>
@@ -4599,9 +4607,14 @@ function renderAiImageValidationSummary(entries) {
         <span>条件別サンプル</span>
         <ul>
           ${["dark", "small_fish", "algae", "reflection"]
-            .map((key) => `<li>${escapeHtml(getAiPhotoConditionLabel(key))}: ${conditionCounts[key]}</li>`)
+            .map((key) => `<li>${escapeHtml(getAiPhotoConditionLabel(key))}: ${conditionCounts[key].total}件 / 要修正${conditionCounts[key].needsFix}件</li>`)
             .join("")}
         </ul>
+      </div>
+      <div class="ai-condition-risk ${weakCondition ? "is-warning" : ""}">
+        <span>弱点候補</span>
+        <strong>${escapeHtml(weakCondition ? getAiPhotoConditionLabel(weakCondition.key) : "未検出")}</strong>
+        <p>${escapeHtml(getAiWeakConditionSuggestion(weakCondition))}</p>
       </div>
       ${
         latestGatewayPhoto
@@ -4612,7 +4625,7 @@ function renderAiImageValidationSummary(entries) {
   `;
 }
 
-function getAiImageValidationSuggestion({ photoEntries, gatewayPhotoEntries, needsFixCount, goodCount, conditionCounts }) {
+function getAiImageValidationSuggestion({ photoEntries, gatewayPhotoEntries, needsFixCount, goodCount, conditionCounts, weakCondition }) {
   if (!photoEntries.length) {
     return "まず投稿写真からAI分析を実行して、ローカル分析との差分を確認します。";
   }
@@ -4622,10 +4635,12 @@ function getAiImageValidationSuggestion({ photoEntries, gatewayPhotoEntries, nee
   }
 
   if (needsFixCount > 0) {
-    return "要修正の写真があります。評価メモとCSV/JSON書き出しを使って、プロンプトv3の修正点を整理してください。";
+    return weakCondition
+      ? `${getAiPhotoConditionLabel(weakCondition.key)}で要修正が目立ちます。撮り直し観点と評価メモを見てプロンプト改善候補を整理してください。`
+      : "要修正の写真があります。評価メモとCSV/JSON書き出しを使って、プロンプトv3の修正点を整理してください。";
   }
 
-  const missingCondition = ["dark", "small_fish", "algae", "reflection"].find((key) => !conditionCounts[key]);
+  const missingCondition = ["dark", "small_fish", "algae", "reflection"].find((key) => !conditionCounts[key].total);
   if (missingCondition) {
     return `${getAiPhotoConditionLabel(missingCondition)}の評価サンプルが不足しています。次の投稿写真で条件タグを付けて検証してください。`;
   }
@@ -4645,11 +4660,48 @@ function getAiPhotoConditionCounts(entries) {
         ["unspecified", "normal", "dark", "small_fish", "algae", "reflection"],
         "unspecified",
       );
-      counts[key] += 1;
+      counts[key].total += 1;
+      if (entry.reviewLabel === "needs_fix") {
+        counts[key].needsFix += 1;
+      }
       return counts;
     },
-    { unspecified: 0, normal: 0, dark: 0, small_fish: 0, algae: 0, reflection: 0 },
+    {
+      unspecified: { total: 0, needsFix: 0 },
+      normal: { total: 0, needsFix: 0 },
+      dark: { total: 0, needsFix: 0 },
+      small_fish: { total: 0, needsFix: 0 },
+      algae: { total: 0, needsFix: 0 },
+      reflection: { total: 0, needsFix: 0 },
+    },
   );
+}
+
+function getAiWeakPhotoCondition(conditionCounts) {
+  return ["dark", "small_fish", "algae", "reflection"]
+    .map((key) => ({
+      key,
+      total: conditionCounts[key].total,
+      needsFix: conditionCounts[key].needsFix,
+      ratio: conditionCounts[key].total ? conditionCounts[key].needsFix / conditionCounts[key].total : 0,
+    }))
+    .filter((item) => item.needsFix > 0)
+    .sort((a, b) => b.ratio - a.ratio || b.needsFix - a.needsFix)[0] || null;
+}
+
+function getAiWeakConditionSuggestion(weakCondition) {
+  if (!weakCondition) {
+    return "要修正が多い撮影条件はまだ見えていません。条件タグを付けた評価サンプルを増やしてください。";
+  }
+
+  const suggestions = {
+    dark: "暗い写真では、見える範囲の限定、ライト点灯、正面からの再撮影をより強く促す必要があります。",
+    small_fish: "魚が小さい写真では、魚の体表や泳ぎを断定せず、拡大写真や短い動画の追加確認を促します。",
+    algae: "コケ多めの写真では、水質値を断定せず、コケの位置、水換え履歴、照明時間の確認へ寄せます。",
+    reflection: "反射ありの写真では、反射で見えない範囲を明記し、角度を変えた撮影を促します。",
+  };
+
+  return suggestions[weakCondition.key] || "要修正の多い条件に合わせて、観察できた範囲と見えない範囲の分離を強めます。";
 }
 
 function getAiEvaluationSuggestion(counts, entries) {

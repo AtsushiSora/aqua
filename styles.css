@@ -2220,6 +2220,30 @@ textarea {
   font-weight: 900;
 }
 
+.ai-condition-risk {
+  padding: 10px;
+  border: 1px solid var(--glass-border);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.58);
+}
+
+.ai-condition-risk.is-warning {
+  border-color: rgba(217, 145, 45, 0.28);
+  background: rgba(255, 246, 225, 0.78);
+}
+
+.ai-condition-risk strong {
+  display: block;
+  margin-top: 3px;
+  color: var(--aqua-dark);
+  font-size: 0.95rem;
+}
+
+.ai-condition-risk p {
+  margin-top: 6px;
+  font-size: 0.78rem;
+}
+
 .ai-evaluation-log {
   display: grid;
   gap: 10px;
