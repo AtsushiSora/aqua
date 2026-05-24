@@ -48,6 +48,7 @@
 - 投稿画像からAI分析画面へ送る導線
 - コミュニティ投稿の水槽別フィルター
 - 状態選択からのAI分析デモ
+- Netlify Function経由のAI画像/ログ分析API入口
 - 飼育ガイドとPR枠の表示
 - スマホ幅対応のレスポンシブUI
 - アカウントプロフィールのプロトタイプ
@@ -82,7 +83,7 @@
 
 - 本物のAI画像分析
 - 通知配信ワーカーの本番環境変数設定
-- 本物のAI画像分析API接続
+- AI分析APIの本番モデル検証
 - ネイティブスマホアプリ、またはPWAの本番化
 
 ## 通知配信ワーカー
@@ -119,3 +120,13 @@ VAPID鍵は `node scripts/generate-vapid-keys.mjs` で生成できます。
 3. dry-runのまま通知予約が `notification_deliveries` に作られることを確認する。
 4. `NOTIFICATION_DELIVERY_DRY_RUN=false` にして直近リマインダーを同期する。
 5. アカウント画面の配信ログで `sent` / `failed` / `skipped` を確認し、失敗時は詳細を見て再送予約する。
+
+## AI分析API
+
+`netlify/functions/ai-analysis.mts` は `/api/ai-analysis` で画像と水槽ログを受け取り、Netlify AI GatewayのOpenAI互換エンドポイントへ送ります。Gatewayが未設定、またはローカルで `index.html` を直接開いている場合は、アプリ側で既存のローカル分析にフォールバックします。
+
+主な環境変数:
+
+- `OPENAI_BASE_URL`
+- `OPENAI_API_KEY` 任意
+- `AI_ANALYSIS_MODEL=gpt-4o-mini`

@@ -87,15 +87,15 @@ PWA Push subscription scaffold:
 - Expand delivery history rows with error context and operational notes. Done in the prototype.
 - Surface a production notification verification checklist in the account view. Done in the prototype.
 - Surface a production notification rehearsal flow in the account view. Done in the prototype.
+- Add a Netlify Function entrypoint for AI image/log analysis. Done in the prototype.
 - Keep the optional `WEB_PUSH_ENDPOINT` provider path for hosted push gateways.
 - Keep in-app reminder checks as a fallback while notification delivery is tested.
 
 ## Next implementation slice
 
-Harden production notification delivery:
+Validate real AI analysis:
 
-- Configure the Scheduled Function environment variables.
-- Generate and install the VAPID key pair for both Netlify and `supabase-config.js`.
-- Validate delivery logs against `sent`, `failed`, `skipped`, and retry behavior.
-- Connect a real AI image analysis API.
+- Enable Netlify AI Gateway and confirm `OPENAI_BASE_URL`.
+- Test `gpt-4o-mini` against real aquarium photos.
+- Tune the prompt so results stay as care guidance, not diagnosis.
 - Keep JSON export/import as a recovery path while the sync model is being tested.

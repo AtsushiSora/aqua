@@ -4,6 +4,7 @@ const VIDEO_UPLOAD_LIMIT_BYTES = 4 * 1024 * 1024;
 const EXPORT_VERSION = 1;
 const MEDIA_BUCKET = "aquanote-media";
 const MEDIA_SIGNED_URL_EXPIRES_SECONDS = 60 * 60;
+const AI_ANALYSIS_ENDPOINT = "/api/ai-analysis";
 
 const viewLinks = document.querySelectorAll("[data-view-link]");
 const directViewButtons = document.querySelectorAll("[data-view-target]");
@@ -708,7 +709,8 @@ aiForm.addEventListener("submit", async (event) => {
   const fish = document.querySelector("#fish-state").value;
   const algae = document.querySelector("#algae-state").value;
   const days = Number(document.querySelector("#water-days").value);
-  const result = analyzeTank({ water, fish, algae, days });
+  const fallbackResult = analyzeTank({ water, fish, algae, days });
+  const result = await analyzeTankWithApi({ tank, water, fish, algae, days, fallbackResult });
 
   tank.latestAi = createAiResultState(result);
   saveState();
@@ -3735,7 +3737,8 @@ async function analyzePostImage(postId) {
 
   state.activeTankId = post.tankId || state.activeTankId;
   const tank = getActiveTank();
-  const result = analyzePostPhoto(post);
+  const fallbackResult = analyzePostPhoto(post);
+  const result = await analyzePostWithApi({ post, tank, fallbackResult });
   const aiResult = createAiResultState(result);
 
   post.latestAi = aiResult;
@@ -3750,6 +3753,97 @@ async function analyzePostImage(postId) {
   if (authSession?.user) {
     await syncCloudState({ silent: true });
   }
+}
+
+async function analyzeTankWithApi({ tank, water, fish, algae, days, fallbackResult }) {
+  const latestLog = tank.logs[0] || null;
+  return requestAiAnalysis(
+    {
+      tank: getAiTankPayload(tank),
+      log: {
+        water,
+        fish,
+        algae,
+        days,
+        latestTemp: latestLog?.temp,
+        latestPh: latestLog?.ph,
+        latestNote: latestLog?.note,
+      },
+    },
+    fallbackResult,
+  );
+}
+
+async function analyzePostWithApi({ post, tank, fallbackResult }) {
+  if (getPostVideoSrc(post) || post.mediaType === "video" || (!getPostImageSrc(post) && post.mediaType !== "image")) {
+    return fallbackResult;
+  }
+
+  return requestAiAnalysis(
+    {
+      tank: getAiTankPayload(tank),
+      post: {
+        title: post.title,
+        text: post.text,
+        tag: post.tag,
+        mediaType: post.mediaType || "image",
+        imageDataUrl: post.imageDataUrl || null,
+        imageUrl: post.mediaUrl || null,
+      },
+    },
+    fallbackResult,
+  );
+}
+
+async function requestAiAnalysis(payload, fallbackResult) {
+  if (location.protocol === "file:") {
+    return fallbackResult;
+  }
+
+  try {
+    const response = await fetch(AI_ANALYSIS_ENDPOINT, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      throw new Error(await response.text());
+    }
+
+    return normalizeAiApiResult(await response.json(), fallbackResult);
+  } catch (error) {
+    showToast("AI APIに接続できないため、ローカル分析を表示しました");
+    return fallbackResult;
+  }
+}
+
+function normalizeAiApiResult(result, fallbackResult) {
+  const status = ["良好", "注意", "要確認"].includes(result?.status) ? result.status : fallbackResult.status;
+  const levelClass = ["", "warning", "danger"].includes(result?.levelClass)
+    ? result.levelClass
+    : fallbackResult.levelClass;
+  const items = Array.isArray(result?.items) && result.items.length
+    ? result.items.map((item) => String(item)).slice(0, 5)
+    : fallbackResult.items;
+
+  return {
+    status,
+    levelClass,
+    summary: result?.summary ? String(result.summary) : fallbackResult.summary,
+    items,
+  };
+}
+
+function getAiTankPayload(tank) {
+  return {
+    name: tank.name,
+    kind: tank.kind,
+    residents: tank.residents,
+    volumeLabel: tank.volume,
+  };
 }
 
 function analyzePostPhoto(post) {
