@@ -2173,6 +2173,37 @@ textarea {
   color: var(--amber);
 }
 
+.notification-delivery-detail {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: 2px 0 0;
+  padding-top: 10px;
+  border-top: 1px solid var(--glass-border);
+}
+
+.notification-delivery-detail div {
+  min-width: 0;
+  padding: 8px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.58);
+}
+
+.notification-delivery-detail dt {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 900;
+}
+
+.notification-delivery-detail dd {
+  margin: 3px 0 0;
+  color: var(--ink);
+  font-size: 0.82rem;
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+
 .sync-summary {
   display: grid;
   gap: 10px;
@@ -2645,6 +2676,10 @@ textarea {
   }
 
   .notification-delivery-item {
+    grid-template-columns: 1fr;
+  }
+
+  .notification-delivery-detail {
     grid-template-columns: 1fr;
   }
 

@@ -274,6 +274,7 @@ let supabaseClient = createSupabaseClient();
 let authSession = null;
 let notificationDeliveryHistory = [];
 let activeNotificationDeliveryFilter = "all";
+let activeNotificationDeliveryDetailId = null;
 
 function showView(id) {
   views.forEach((view) => {
@@ -463,11 +464,19 @@ notificationDeliveryFilter.addEventListener("change", () => {
 
 notificationDeliveryLog.addEventListener("click", async (event) => {
   const button = event.target.closest("[data-retry-delivery]");
-  if (!button) {
+  if (button) {
+    await retryNotificationDelivery(button.dataset.retryDelivery);
     return;
   }
 
-  await retryNotificationDelivery(button.dataset.retryDelivery);
+  const detailButton = event.target.closest("[data-delivery-detail]");
+  if (detailButton) {
+    activeNotificationDeliveryDetailId =
+      activeNotificationDeliveryDetailId === detailButton.dataset.deliveryDetail
+        ? null
+        : detailButton.dataset.deliveryDetail;
+    renderNotificationDeliveryLog();
+  }
 });
 
 postImageInput.addEventListener("change", async () => {
@@ -952,6 +961,10 @@ function renderNotificationDeliveryLog() {
         delivery.status === "failed"
           ? `<button class="text-button" type="button" data-retry-delivery="${escapeHtml(delivery.id)}">再送予約</button>`
           : "";
+      const detailPanel =
+        activeNotificationDeliveryDetailId === delivery.id
+          ? getNotificationDeliveryDetailMarkup(delivery, channel, status)
+          : "";
       return `
         <article class="notification-delivery-item">
           <div>
@@ -962,12 +975,49 @@ function renderNotificationDeliveryLog() {
           <div class="delivery-meta">
             <span class="delivery-status ${escapeHtml(delivery.status || "pending")}">${escapeHtml(status)}</span>
             <small>試行 ${Number(delivery.attempt_count || 0)}回</small>
+            <button class="text-button" type="button" data-delivery-detail="${escapeHtml(delivery.id)}">
+              ${activeNotificationDeliveryDetailId === delivery.id ? "閉じる" : "詳細"}
+            </button>
             ${retryButton}
           </div>
+          ${detailPanel}
         </article>
       `;
     })
     .join("");
+}
+
+function getNotificationDeliveryDetailMarkup(delivery, channel, status) {
+  const updatedAt = delivery.updated_at ? formatFullDate(delivery.updated_at) : "未更新";
+  const errorText = delivery.last_error || "記録なし";
+  return `
+    <dl class="notification-delivery-detail">
+      <div>
+        <dt>状態</dt>
+        <dd>${escapeHtml(status)}</dd>
+      </div>
+      <div>
+        <dt>配信先</dt>
+        <dd>${escapeHtml(channel)}</dd>
+      </div>
+      <div>
+        <dt>タスク</dt>
+        <dd>${escapeHtml(delivery.task_key || "-")}</dd>
+      </div>
+      <div>
+        <dt>更新</dt>
+        <dd>${escapeHtml(updatedAt)}</dd>
+      </div>
+      <div>
+        <dt>エラー</dt>
+        <dd>${escapeHtml(errorText)}</dd>
+      </div>
+      <div>
+        <dt>運用メモ</dt>
+        <dd>${escapeHtml(getDeliveryOperationNote(delivery))}</dd>
+      </div>
+    </dl>
+  `;
 }
 
 async function handleAuthSubmit(action) {
@@ -4146,6 +4196,32 @@ function getDeliveryStatusLabel(status) {
   };
 
   return labels[status] || "未確認";
+}
+
+function getDeliveryOperationNote(delivery) {
+  if (delivery.status === "pending") {
+    return "次回の通知ワーカー実行で処理されます。dry-run中は送信されません。";
+  }
+
+  if (delivery.status === "sent") {
+    return "送信処理は完了しています。端末側の受信状況はPush権限とService Worker状態も確認してください。";
+  }
+
+  if (delivery.status === "failed") {
+    return delivery.channel === "email"
+      ? "送信元メール、Resend APIキー、宛先メールを確認してから再送予約してください。"
+      : "VAPID鍵、Push購読、Service Worker、Push endpointの応答を確認してから再送予約してください。";
+  }
+
+  if (delivery.status === "skipped") {
+    return "通知設定、チャンネル、購読状態、メールアドレスのいずれかにより送信対象外になっています。";
+  }
+
+  if (delivery.status === "canceled") {
+    return "リマインダー変更などで取り消された予約です。必要なら通知設定を保存し直してください。";
+  }
+
+  return "配信ワーカーの結果と環境変数を確認してください。";
 }
 
 function getNextExternalNotificationDelivery() {
