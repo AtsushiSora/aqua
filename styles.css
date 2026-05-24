@@ -433,6 +433,20 @@ body[data-ui-mode="glance"] .metric-card.alert {
   background: rgba(60, 30, 28, 0.84);
 }
 
+body[data-ui-mode="glance"] .ui-mode-switch {
+  border-color: rgba(137, 247, 255, 0.2);
+  background: rgba(17, 27, 34, 0.96);
+}
+
+body[data-ui-mode="glance"] .ui-mode-switch select {
+  color: #f7fbfb;
+}
+
+body[data-ui-mode="glance"] .design-cycle-button {
+  background: radial-gradient(circle at 28% 18%, #f7fbfb, var(--aqua) 30%, #167dff 80%);
+  color: #061014;
+}
+
 .brand-mark {
   width: 44px;
   height: 44px;
@@ -890,6 +904,57 @@ time {
   line-height: 1.15;
   letter-spacing: 0;
   color: var(--ink);
+}
+
+.home-controls {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.ui-mode-switch {
+  min-height: 46px;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  padding: 8px 10px 8px 12px;
+  border: 1px solid var(--glass-border);
+  border-radius: 999px;
+  background: var(--glass-strong);
+}
+
+.ui-mode-switch span {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
+.ui-mode-switch select {
+  min-height: 30px;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font-size: 0.82rem;
+  font-weight: 900;
+  outline: none;
+}
+
+.design-cycle-button {
+  min-height: 46px;
+  padding: 0 14px;
+  border: 1px solid var(--glass-border);
+  border-radius: 999px;
+  background: var(--aqua-dark);
+  color: white;
+  font-size: 0.82rem;
+  font-weight: 900;
+  box-shadow: var(--shadow-soft);
+}
+
+.design-cycle-button:hover {
+  transform: translateY(-1px);
 }
 
 .app-status-pill {
@@ -3529,8 +3594,19 @@ textarea {
     margin-top: 4px;
   }
 
+  .home-controls {
+    justify-content: stretch;
+  }
+
+  .ui-mode-switch,
+  .design-cycle-button,
   .app-status-pill {
     min-width: 0;
+    width: 100%;
+  }
+
+  .ui-mode-switch {
+    justify-content: space-between;
   }
 
   .hero-band {

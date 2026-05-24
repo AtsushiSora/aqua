@@ -90,9 +90,21 @@
               <p class="eyebrow">AquaNote Home</p>
               <h1 id="dashboard-title">今日のアクアノート</h1>
             </div>
-            <div class="app-status-pill" aria-label="選択中の水槽">
-              <span id="app-active-tank">リビング水草水槽</span>
-              <strong id="app-health-chip">良好</strong>
+            <div class="home-controls">
+              <label class="ui-mode-switch">
+                <span>デザイン</span>
+                <select id="home-ui-mode-input" aria-label="ホームの表示モード">
+                  <option value="standard">ベーシックモード</option>
+                  <option value="simple">かんたんモード</option>
+                  <option value="glance">一目モード</option>
+                  <option value="adult">大人モード</option>
+                </select>
+              </label>
+              <button class="design-cycle-button" id="home-ui-mode-cycle-button" type="button">デザイン変更</button>
+              <div class="app-status-pill" aria-label="選択中の水槽">
+                <span id="app-active-tank">リビング水草水槽</span>
+                <strong id="app-health-chip">良好</strong>
+              </div>
             </div>
           </div>
 
@@ -777,7 +789,7 @@
                 <label>
                   <span>表示モード</span>
                   <select id="account-ui-mode-input">
-                    <option value="standard">今のモード</option>
+                    <option value="standard">ベーシックモード</option>
                     <option value="simple">かんたんモード</option>
                     <option value="glance">一目モード</option>
                     <option value="adult">大人モード</option>

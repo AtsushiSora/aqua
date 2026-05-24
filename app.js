@@ -87,8 +87,11 @@ const notificationDeliveryRefreshButton = document.querySelector("#notification-
 const notificationDeliveryLog = document.querySelector("#notification-delivery-log");
 const notificationVerificationList = document.querySelector("#notification-verification-list");
 const accountUiModeInput = document.querySelector("#account-ui-mode-input");
+const homeUiModeInput = document.querySelector("#home-ui-mode-input");
+const homeUiModeCycleButton = document.querySelector("#home-ui-mode-cycle-button");
 const supabaseConfig = window.AQUANOTE_SUPABASE_CONFIG || {};
 const pushConfig = window.AQUANOTE_PUSH_CONFIG || {};
+const UI_MODES = ["standard", "simple", "glance", "adult"];
 
 const taskLabels = {
   feedMorning: "朝の餌やり",
@@ -470,10 +473,16 @@ accountForm.addEventListener("submit", async (event) => {
 });
 
 accountUiModeInput.addEventListener("change", () => {
-  state.account.uiMode = getAllowedValue(accountUiModeInput.value, ["standard", "simple", "glance", "adult"], "standard");
-  applyUiMode();
-  saveState();
-  showToast("表示モードを切り替えました");
+  updateUiMode(accountUiModeInput.value);
+});
+
+homeUiModeInput.addEventListener("change", () => {
+  updateUiMode(homeUiModeInput.value);
+});
+
+homeUiModeCycleButton.addEventListener("click", () => {
+  const currentIndex = UI_MODES.indexOf(getAllowedValue(state.account.uiMode, UI_MODES, "standard"));
+  updateUiMode(UI_MODES[(currentIndex + 1) % UI_MODES.length]);
 });
 
 mockSyncButton.addEventListener("click", async () => {
@@ -991,7 +1000,8 @@ function renderAccount() {
   document.querySelector("#account-email-input").value = account.email;
   document.querySelector("#account-visibility-input").value = account.visibility;
   document.querySelector("#account-plan-input").value = account.plan;
-  accountUiModeInput.value = getAllowedValue(account.uiMode, ["standard", "simple", "glance", "adult"], "standard");
+  accountUiModeInput.value = getAllowedValue(account.uiMode, UI_MODES, "standard");
+  homeUiModeInput.value = getAllowedValue(account.uiMode, UI_MODES, "standard");
   document.querySelector("#account-notification-channel-input").value = account.notificationChannel;
   document.querySelector("#account-browser-notifications-input").checked = Boolean(account.browserNotifications);
   document.querySelector("#account-email-notifications-input").checked = Boolean(account.emailNotifications);
@@ -1028,7 +1038,31 @@ function renderAccount() {
 }
 
 function applyUiMode() {
-  document.body.dataset.uiMode = getAllowedValue(state.account?.uiMode, ["standard", "simple", "glance", "adult"], "standard");
+  const uiMode = getAllowedValue(state.account?.uiMode, UI_MODES, "standard");
+  document.body.dataset.uiMode = uiMode;
+  if (accountUiModeInput) {
+    accountUiModeInput.value = uiMode;
+  }
+  if (homeUiModeInput) {
+    homeUiModeInput.value = uiMode;
+  }
+}
+
+function updateUiMode(value) {
+  state.account.uiMode = getAllowedValue(value, UI_MODES, "standard");
+  applyUiMode();
+  saveState();
+  showToast(`${getUiModeLabel(state.account.uiMode)}に切り替えました`);
+}
+
+function getUiModeLabel(value) {
+  const labels = {
+    standard: "ベーシックモード",
+    simple: "かんたんモード",
+    glance: "一目モード",
+    adult: "大人モード",
+  };
+  return labels[value] || labels.standard;
 }
 
 function renderAuthPanel() {
@@ -2916,7 +2950,7 @@ function getProfilePayload(user) {
     email: state.account.email || user.email || "",
     visibility: getAllowedValue(state.account.visibility, ["public", "friends", "private"], "public"),
     plan: getAllowedValue(state.account.plan, ["free", "plus", "pro"], "free"),
-    ui_mode: getAllowedValue(state.account.uiMode, ["standard", "simple", "glance", "adult"], "standard"),
+    ui_mode: getAllowedValue(state.account.uiMode, UI_MODES, "standard"),
     notification_channel: getAllowedValue(state.account.notificationChannel, ["browser", "push", "email", "none"], "browser"),
     browser_notifications_enabled: Boolean(state.account.browserNotifications),
     email_notifications_enabled: Boolean(state.account.emailNotifications),
@@ -2935,7 +2969,7 @@ function applyRemoteProfile(profile) {
     email: profile.email || state.account.email,
     visibility: getAllowedValue(profile.visibility, ["public", "friends", "private"], state.account.visibility),
     plan: getAllowedValue(profile.plan, ["free", "plus", "pro"], state.account.plan),
-    uiMode: getAllowedValue(profile.ui_mode, ["standard", "simple", "glance", "adult"], state.account.uiMode),
+    uiMode: getAllowedValue(profile.ui_mode, UI_MODES, state.account.uiMode),
     notificationChannel: getAllowedValue(profile.notification_channel, ["browser", "push", "email", "none"], state.account.notificationChannel),
     browserNotifications:
       profile.browser_notifications_enabled === null || profile.browser_notifications_enabled === undefined
@@ -6450,7 +6484,7 @@ function normalizeAccount(account = {}) {
     ? account.visibility
     : defaultState.account.visibility;
   const plan = ["free", "plus", "pro"].includes(account.plan) ? account.plan : defaultState.account.plan;
-  const uiMode = ["standard", "simple", "glance", "adult"].includes(account.uiMode) ? account.uiMode : defaultState.account.uiMode;
+  const uiMode = UI_MODES.includes(account.uiMode) ? account.uiMode : defaultState.account.uiMode;
   const notificationChannel = ["browser", "push", "email", "none"].includes(account.notificationChannel)
     ? account.notificationChannel
     : defaultState.account.notificationChannel;
