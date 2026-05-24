@@ -98,14 +98,15 @@ PWA Push subscription scaffold:
 - Sync prompt-improvement notes to `ai_prompt_notes`. Done in the prototype.
 - Classify AI evaluation rows as good, needs-fix, or watch. Done in the prototype.
 - Aggregate AI evaluation labels and surface prompt-improvement candidates. Done in the prototype.
+- Export filtered AI evaluation reviews as CSV/JSON. Done in the prototype.
 - Keep the optional `WEB_PUSH_ENDPOINT` provider path for hosted push gateways.
 - Keep in-app reminder checks as a fallback while notification delivery is tested.
 
 ## Next implementation slice
 
-Export AI evaluation reviews:
+Refine AI evaluation review exports:
 
 - Enable Netlify AI Gateway and confirm `OPENAI_BASE_URL`.
 - Test `gpt-4o-mini` against real aquarium photos.
-- Export AI evaluation logs, review labels, and prompt-improvement notes for model tuning.
+- Add date-range and review-label filters for tuning exports.
 - Keep JSON export/import as a recovery path while the sync model is being tested.

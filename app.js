@@ -44,6 +44,8 @@ const aiPromptImprovementNote = document.querySelector("#ai-prompt-improvement-n
 const aiPromptNoteSaveButton = document.querySelector("#ai-prompt-note-save-button");
 const aiPromptNoteHistory = document.querySelector("#ai-prompt-note-history");
 const aiEvaluationSummary = document.querySelector("#ai-evaluation-summary");
+const aiReviewExportCsvButton = document.querySelector("#ai-review-export-csv-button");
+const aiReviewExportJsonButton = document.querySelector("#ai-review-export-json-button");
 const logDateInput = document.querySelector("#log-date");
 const heroPhoto = document.querySelector("#hero-photo");
 const heroPhotoButton = document.querySelector("#hero-photo-button");
@@ -495,6 +497,8 @@ aiPromptImprovementNote.addEventListener("input", () => {
   saveState();
 });
 aiPromptNoteSaveButton.addEventListener("click", () => saveAiPromptNote());
+aiReviewExportCsvButton.addEventListener("click", () => exportAiReviewData("csv"));
+aiReviewExportJsonButton.addEventListener("click", () => exportAiReviewData("json"));
 aiEvaluationLog.addEventListener("input", (event) => {
   const field = event.target.closest("[data-ai-evaluation-note]");
   if (!field) {
@@ -2965,16 +2969,102 @@ function exportAppData() {
     exportedAt: new Date().toISOString(),
     state,
   };
-  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+  downloadFile(
+    `aquanote-backup-${getDateKey(new Date())}.json`,
+    JSON.stringify(payload, null, 2),
+    "application/json;charset=utf-8",
+  );
+  showToast("データを書き出しました");
+}
+
+function downloadFile(filename, content, type) {
+  const blob = new Blob([content], { type });
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
-  link.download = `aquanote-backup-${getDateKey(new Date())}.json`;
+  link.download = filename;
   document.body.append(link);
   link.click();
   link.remove();
   URL.revokeObjectURL(url);
-  showToast("データを書き出しました");
+}
+
+function toCsv(rows) {
+  return rows.map((row) => row.map(escapeCsvCell).join(",")).join("\n");
+}
+
+function escapeCsvCell(value) {
+  const text = String(value ?? "");
+  if (/[",\n\r]/.test(text)) {
+    return `"${text.replaceAll('"', '""')}"`;
+  }
+
+  return text;
+}
+
+function exportAiReviewData(format) {
+  const entries = getVisibleAiEvaluationEntries();
+  const notes = Array.isArray(state.aiPromptNotes) ? state.aiPromptNotes : [];
+  if (!entries.length && !notes.length) {
+    showToast("書き出すAI評価レビューがありません");
+    return;
+  }
+
+  const dateKey = getDateKey(new Date());
+
+  if (format === "csv") {
+    const rows = [
+      ["type", "createdAt", "target", "source", "status", "difference", "reviewLabel", "model", "promptVersion", "summary", "note"],
+      ...entries.map((entry) => [
+        "evaluation",
+        entry.createdAt,
+        entry.target,
+        entry.source,
+        entry.status,
+        entry.difference,
+        getAiReviewLabel(entry.reviewLabel),
+        entry.model,
+        entry.promptVersion,
+        entry.summary,
+        entry.note || "",
+      ]),
+      ...notes.map((note) => [
+        "prompt_note",
+        note.createdAt,
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        note.promptVersion || "",
+        "",
+        note.note,
+      ]),
+    ];
+    downloadFile(`aquanote-ai-reviews-${dateKey}.csv`, toCsv(rows), "text/csv;charset=utf-8");
+    showToast("AI評価レビューをCSVで書き出しました");
+    return;
+  }
+
+  const payload = {
+    app: "AquaNote",
+    version: EXPORT_VERSION,
+    exportedAt: new Date().toISOString(),
+    filters: {
+      source: activeAiEvaluationSourceFilter,
+      status: activeAiEvaluationStatusFilter,
+    },
+    evaluations: entries,
+    promptImprovementNote: state.aiPromptImprovementNote || "",
+    promptNotes: notes,
+  };
+  downloadFile(
+    `aquanote-ai-reviews-${dateKey}.json`,
+    JSON.stringify(payload, null, 2),
+    "application/json;charset=utf-8",
+  );
+  showToast("AI評価レビューをJSONで書き出しました");
 }
 
 async function importAppData() {
@@ -4271,11 +4361,7 @@ function renderAiEvaluationLog() {
   renderAiPromptNoteHistory();
   const entries = Array.isArray(state.aiEvaluationLog) ? state.aiEvaluationLog : [];
   renderAiEvaluationSummary(entries);
-  const visibleEntries = entries.filter((entry) => {
-    const sourceMatch = activeAiEvaluationSourceFilter === "all" || entry.source === activeAiEvaluationSourceFilter;
-    const statusMatch = activeAiEvaluationStatusFilter === "all" || entry.status === activeAiEvaluationStatusFilter;
-    return sourceMatch && statusMatch;
-  });
+  const visibleEntries = getVisibleAiEvaluationEntries(entries);
 
   if (!visibleEntries.length) {
     const message = entries.length
@@ -4309,6 +4395,14 @@ function renderAiEvaluationLog() {
       `,
     )
     .join("");
+}
+
+function getVisibleAiEvaluationEntries(entries = state.aiEvaluationLog || []) {
+  return entries.filter((entry) => {
+    const sourceMatch = activeAiEvaluationSourceFilter === "all" || entry.source === activeAiEvaluationSourceFilter;
+    const statusMatch = activeAiEvaluationStatusFilter === "all" || entry.status === activeAiEvaluationStatusFilter;
+    return sourceMatch && statusMatch;
+  });
 }
 
 function renderAiPromptNoteHistory() {
@@ -4404,6 +4498,16 @@ function getAiReviewOptions(currentValue = "unreviewed") {
   return options
     .map(([value, label]) => `<option value="${value}" ${value === currentValue ? "selected" : ""}>${label}</option>`)
     .join("");
+}
+
+function getAiReviewLabel(value) {
+  const labels = {
+    unreviewed: "未評価",
+    good: "良い例",
+    needs_fix: "要修正",
+    watch: "保留",
+  };
+  return labels[value] || labels.unreviewed;
 }
 
 function saveAiPromptNote() {
