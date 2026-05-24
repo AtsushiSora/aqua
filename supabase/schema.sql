@@ -15,6 +15,7 @@ create table public.profiles (
   email text,
   visibility profile_visibility not null default 'public',
   plan account_plan not null default 'free',
+  ui_mode text not null default 'standard' check (ui_mode in ('standard', 'simple', 'adult')),
   notification_channel text not null default 'browser' check (notification_channel in ('browser', 'push', 'email', 'none')),
   browser_notifications_enabled boolean not null default true,
   email_notifications_enabled boolean not null default false,

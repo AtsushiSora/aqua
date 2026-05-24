@@ -86,6 +86,7 @@ const notificationDeliveryFilter = document.querySelector("#notification-deliver
 const notificationDeliveryRefreshButton = document.querySelector("#notification-delivery-refresh-button");
 const notificationDeliveryLog = document.querySelector("#notification-delivery-log");
 const notificationVerificationList = document.querySelector("#notification-verification-list");
+const accountUiModeInput = document.querySelector("#account-ui-mode-input");
 const supabaseConfig = window.AQUANOTE_SUPABASE_CONFIG || {};
 const pushConfig = window.AQUANOTE_PUSH_CONFIG || {};
 
@@ -156,6 +157,7 @@ const defaultState = {
     email: "aquataro@example.com",
     visibility: "public",
     plan: "free",
+    uiMode: "standard",
     notificationChannel: "browser",
     browserNotifications: true,
     emailNotifications: false,
@@ -443,6 +445,7 @@ accountForm.addEventListener("submit", async (event) => {
     email: document.querySelector("#account-email-input").value.trim() || defaultState.account.email,
     visibility: document.querySelector("#account-visibility-input").value,
     plan: document.querySelector("#account-plan-input").value,
+    uiMode: accountUiModeInput.value,
     notificationChannel: document.querySelector("#account-notification-channel-input").value,
     browserNotifications: document.querySelector("#account-browser-notifications-input").checked,
     emailNotifications: document.querySelector("#account-email-notifications-input").checked,
@@ -464,6 +467,13 @@ accountForm.addEventListener("submit", async (event) => {
 
   renderAccount();
   showToast("プロフィールを保存しました");
+});
+
+accountUiModeInput.addEventListener("change", () => {
+  state.account.uiMode = getAllowedValue(accountUiModeInput.value, ["standard", "simple", "adult"], "standard");
+  applyUiMode();
+  saveState();
+  showToast("表示モードを切り替えました");
 });
 
 mockSyncButton.addEventListener("click", async () => {
@@ -922,6 +932,7 @@ document.querySelectorAll("[data-guide-filter]").forEach((button) => {
 function renderApp() {
   ensureActiveTank();
   ensureDailyTasks();
+  applyUiMode();
   renderHeroPhoto();
   renderTankList();
   renderTankProfile();
@@ -980,6 +991,7 @@ function renderAccount() {
   document.querySelector("#account-email-input").value = account.email;
   document.querySelector("#account-visibility-input").value = account.visibility;
   document.querySelector("#account-plan-input").value = account.plan;
+  accountUiModeInput.value = getAllowedValue(account.uiMode, ["standard", "simple", "adult"], "standard");
   document.querySelector("#account-notification-channel-input").value = account.notificationChannel;
   document.querySelector("#account-browser-notifications-input").checked = Boolean(account.browserNotifications);
   document.querySelector("#account-email-notifications-input").checked = Boolean(account.emailNotifications);
@@ -1013,6 +1025,10 @@ function renderAccount() {
   `;
 
   renderAuthPanel();
+}
+
+function applyUiMode() {
+  document.body.dataset.uiMode = getAllowedValue(state.account?.uiMode, ["standard", "simple", "adult"], "standard");
 }
 
 function renderAuthPanel() {
@@ -1364,7 +1380,7 @@ async function loadProfileFromSupabase() {
 
   const { data, error } = await supabaseClient
     .from("profiles")
-    .select("display_name, handle, email, visibility, plan, notification_channel, browser_notifications_enabled, email_notifications_enabled, quiet_hours_start, quiet_hours_end, updated_at")
+    .select("display_name, handle, email, visibility, plan, ui_mode, notification_channel, browser_notifications_enabled, email_notifications_enabled, quiet_hours_start, quiet_hours_end, updated_at")
     .eq("id", authSession.user.id)
     .maybeSingle();
 
@@ -2860,7 +2876,7 @@ async function syncProfileToSupabase(options = {}) {
   const { data, error } = await supabaseClient
     .from("profiles")
     .upsert(getProfilePayload(authSession.user), { onConflict: "id" })
-    .select("display_name, handle, email, visibility, plan, notification_channel, browser_notifications_enabled, email_notifications_enabled, quiet_hours_start, quiet_hours_end, updated_at")
+    .select("display_name, handle, email, visibility, plan, ui_mode, notification_channel, browser_notifications_enabled, email_notifications_enabled, quiet_hours_start, quiet_hours_end, updated_at")
     .maybeSingle();
 
   if (error) {
@@ -2900,6 +2916,7 @@ function getProfilePayload(user) {
     email: state.account.email || user.email || "",
     visibility: getAllowedValue(state.account.visibility, ["public", "friends", "private"], "public"),
     plan: getAllowedValue(state.account.plan, ["free", "plus", "pro"], "free"),
+    ui_mode: getAllowedValue(state.account.uiMode, ["standard", "simple", "adult"], "standard"),
     notification_channel: getAllowedValue(state.account.notificationChannel, ["browser", "push", "email", "none"], "browser"),
     browser_notifications_enabled: Boolean(state.account.browserNotifications),
     email_notifications_enabled: Boolean(state.account.emailNotifications),
@@ -2918,6 +2935,7 @@ function applyRemoteProfile(profile) {
     email: profile.email || state.account.email,
     visibility: getAllowedValue(profile.visibility, ["public", "friends", "private"], state.account.visibility),
     plan: getAllowedValue(profile.plan, ["free", "plus", "pro"], state.account.plan),
+    uiMode: getAllowedValue(profile.ui_mode, ["standard", "simple", "adult"], state.account.uiMode),
     notificationChannel: getAllowedValue(profile.notification_channel, ["browser", "push", "email", "none"], state.account.notificationChannel),
     browserNotifications:
       profile.browser_notifications_enabled === null || profile.browser_notifications_enabled === undefined
@@ -6432,6 +6450,7 @@ function normalizeAccount(account = {}) {
     ? account.visibility
     : defaultState.account.visibility;
   const plan = ["free", "plus", "pro"].includes(account.plan) ? account.plan : defaultState.account.plan;
+  const uiMode = ["standard", "simple", "adult"].includes(account.uiMode) ? account.uiMode : defaultState.account.uiMode;
   const notificationChannel = ["browser", "push", "email", "none"].includes(account.notificationChannel)
     ? account.notificationChannel
     : defaultState.account.notificationChannel;
@@ -6445,6 +6464,7 @@ function normalizeAccount(account = {}) {
     email: String(account.email || defaultState.account.email).trim(),
     visibility,
     plan,
+    uiMode,
     notificationChannel,
     browserNotifications:
       account.browserNotifications === undefined ? defaultState.account.browserNotifications : Boolean(account.browserNotifications),

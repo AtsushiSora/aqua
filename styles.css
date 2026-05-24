@@ -76,6 +76,81 @@ body::after {
   pointer-events: none;
 }
 
+body[data-ui-mode="simple"] {
+  --bg: #f2fbfa;
+  --surface: #ffffff;
+  --surface-soft: #f6fffb;
+  --ink: #123237;
+  --muted: #48656a;
+  --line: #cfe8e3;
+  --aqua: #0c9fb0;
+  --aqua-dark: #08717e;
+  --nav: #184b51;
+  --green: #4ca66f;
+  --coral: #f07167;
+  --amber: #d99a24;
+  --glass: rgba(255, 255, 255, 0.92);
+  --glass-strong: rgba(255, 255, 255, 0.98);
+  --glass-border: rgba(12, 159, 176, 0.2);
+  --aqua-wash: rgba(12, 159, 176, 0.13);
+  --waterline: linear-gradient(115deg, transparent 0 62%, rgba(12, 159, 176, 0.12) 62% 64%, transparent 64% 100%);
+  --shadow: 0 12px 28px rgba(18, 50, 55, 0.08);
+  --shadow-soft: 0 8px 18px rgba(18, 50, 55, 0.06);
+  font-size: 17px;
+}
+
+body[data-ui-mode="adult"] {
+  --bg: #f3f5f2;
+  --surface: #fbfcfa;
+  --surface-soft: #f1f4f0;
+  --ink: #172321;
+  --muted: #59635f;
+  --line: #dce2dd;
+  --aqua: #247d80;
+  --aqua-dark: #1d5558;
+  --nav: #25312f;
+  --green: #557f62;
+  --coral: #b75f55;
+  --amber: #9c7430;
+  --cream: #f7f3e8;
+  --pink: #f7e7e1;
+  --glass: rgba(251, 252, 250, 0.9);
+  --glass-strong: rgba(251, 252, 250, 0.96);
+  --glass-border: rgba(29, 85, 88, 0.16);
+  --aqua-wash: rgba(36, 125, 128, 0.08);
+  --waterline: linear-gradient(115deg, transparent 0 70%, rgba(36, 125, 128, 0.07) 70% 71%, transparent 71% 100%);
+  --shadow: 0 16px 38px rgba(23, 35, 33, 0.09);
+  --shadow-soft: 0 8px 22px rgba(23, 35, 33, 0.06);
+}
+
+body[data-ui-mode="simple"]::before {
+  background:
+    linear-gradient(180deg, rgba(242, 251, 250, 0.66), rgba(242, 251, 250, 0.9)),
+    linear-gradient(135deg, rgba(12, 159, 176, 0.2), transparent 48%),
+    url("assets/site-concept.png") center / cover no-repeat;
+  opacity: 0.42;
+}
+
+body[data-ui-mode="simple"]::after {
+  background:
+    repeating-linear-gradient(180deg, rgba(255, 255, 255, 0.22) 0 2px, transparent 2px 46px),
+    linear-gradient(115deg, transparent 0 34%, rgba(12, 159, 176, 0.1) 34% 36%, transparent 36% 100%);
+}
+
+body[data-ui-mode="adult"]::before {
+  background:
+    linear-gradient(180deg, rgba(243, 245, 242, 0.82), rgba(239, 244, 241, 0.92)),
+    linear-gradient(120deg, rgba(29, 85, 88, 0.16), transparent 46%),
+    url("assets/site-concept.png") center / cover no-repeat;
+  opacity: 0.26;
+}
+
+body[data-ui-mode="adult"]::after {
+  background:
+    repeating-linear-gradient(178deg, rgba(255, 255, 255, 0.14) 0 1px, transparent 1px 54px),
+    linear-gradient(110deg, transparent 0 68%, rgba(36, 125, 128, 0.06) 68% 69%, transparent 69% 100%);
+}
+
 button,
 input,
 select,
@@ -117,6 +192,78 @@ button {
   gap: 12px;
   color: inherit;
   text-decoration: none;
+}
+
+body[data-ui-mode="simple"] .sidebar {
+  gap: 22px;
+}
+
+body[data-ui-mode="simple"] .nav-link,
+body[data-ui-mode="simple"] .quick-dock button,
+body[data-ui-mode="simple"] .primary-button,
+body[data-ui-mode="simple"] .ghost-button,
+body[data-ui-mode="simple"] .text-button,
+body[data-ui-mode="simple"] .photo-button {
+  min-height: 46px;
+  font-weight: 900;
+}
+
+body[data-ui-mode="simple"] .nav-link span:last-child,
+body[data-ui-mode="simple"] label span,
+body[data-ui-mode="simple"] .task-row span {
+  font-size: 0.98rem;
+}
+
+body[data-ui-mode="simple"] .hero-copy h2,
+body[data-ui-mode="simple"] .view-head h1,
+body[data-ui-mode="simple"] .app-home-top h1 {
+  letter-spacing: 0;
+}
+
+body[data-ui-mode="simple"] .eyebrow {
+  color: var(--aqua-dark);
+  font-size: 0.78rem;
+}
+
+body[data-ui-mode="simple"] .panel,
+body[data-ui-mode="simple"] .metric-card,
+body[data-ui-mode="simple"] .rail-card,
+body[data-ui-mode="simple"] .ai-form,
+body[data-ui-mode="simple"] .ai-result,
+body[data-ui-mode="simple"] .ai-api-panel,
+body[data-ui-mode="simple"] .ai-evaluation-panel {
+  border-width: 2px;
+}
+
+body[data-ui-mode="adult"] .sidebar,
+body[data-ui-mode="adult"] .topbar,
+body[data-ui-mode="adult"] .panel,
+body[data-ui-mode="adult"] .rail-card,
+body[data-ui-mode="adult"] .metric-card,
+body[data-ui-mode="adult"] .ai-form,
+body[data-ui-mode="adult"] .ai-result,
+body[data-ui-mode="adult"] .ai-api-panel,
+body[data-ui-mode="adult"] .ai-evaluation-panel {
+  backdrop-filter: blur(14px);
+  box-shadow: var(--shadow-soft);
+}
+
+body[data-ui-mode="adult"] .brand-mark,
+body[data-ui-mode="adult"] .primary-button,
+body[data-ui-mode="adult"] .sync-status-button.is-synced {
+  background: linear-gradient(135deg, var(--aqua-dark), #3e6f55);
+}
+
+body[data-ui-mode="adult"] .hero-band {
+  background:
+    linear-gradient(115deg, rgba(251, 252, 250, 0.92), rgba(241, 244, 240, 0.74)),
+    var(--waterline);
+}
+
+body[data-ui-mode="adult"] .hero-copy h2,
+body[data-ui-mode="adult"] .view-head h1,
+body[data-ui-mode="adult"] .section-head h2 {
+  font-weight: 800;
 }
 
 .brand-mark {

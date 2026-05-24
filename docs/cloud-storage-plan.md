@@ -23,7 +23,7 @@ Reason:
 
 | Table | Purpose |
 | --- | --- |
-| `profiles` | Public user profile, visibility, plan, and notification preferences |
+| `profiles` | Public user profile, visibility, plan, UI mode, and notification preferences |
 | `tanks` | Tank/pond profile, tags, and featured post |
 | `logs` | Water temperature, pH, maintenance type, memo, and recorded date |
 | `posts` | Community post metadata and tank relationship |
@@ -54,6 +54,8 @@ Reason:
 13. Sync next Push/email notification deliveries to `notification_deliveries`. Done in the prototype.
 14. Sync browser Push subscriptions to `push_subscriptions`. Done in the prototype.
 15. Keep JSON export/import as a fallback during beta.
+
+Existing Supabase projects should add `profiles.ui_mode` before enabling profile sync for UI mode preferences.
 
 ## Auth and permission rules
 
@@ -89,6 +91,7 @@ PWA Push subscription scaffold:
 - Expand delivery history rows with error context and operational notes. Done in the prototype.
 - Surface a production notification verification checklist in the account view. Done in the prototype.
 - Surface a production notification rehearsal flow in the account view. Done in the prototype.
+- Store the selected UI mode on the local profile and Supabase profile payload. Done in the prototype.
 - Add a Netlify Function entrypoint for AI image/log analysis. Done in the prototype.
 - Show AI Gateway/model verification status in the AI view. Done in the prototype.
 - Tune the AI prompt to v3 with visible evidence, confidence, retake tips, and non-diagnostic care guidance. Done in the prototype.
