@@ -1957,6 +1957,45 @@ textarea {
   grid-template-columns: 1fr;
 }
 
+.ai-api-panel {
+  display: grid;
+  align-content: start;
+}
+
+.ai-api-panel .section-head {
+  align-items: center;
+}
+
+.ai-api-status-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.ai-api-status-grid article {
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid var(--glass-border);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.64);
+}
+
+.ai-api-status-grid span {
+  display: block;
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-weight: 900;
+}
+
+.ai-api-status-grid strong {
+  display: block;
+  margin-top: 4px;
+  color: var(--aqua-dark);
+  font-family: var(--font-jp);
+  font-size: 0.9rem;
+  overflow-wrap: anywhere;
+}
+
 .ai-result {
   padding: clamp(20px, 3vw, 30px);
   border-left: 4px solid var(--green);
@@ -2761,6 +2800,7 @@ textarea {
   .notification-settings,
   .preference-toggles,
   .quiet-hours,
+  .ai-api-status-grid,
   .schema-grid,
   .post-grid,
   .ranking-list,

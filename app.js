@@ -35,6 +35,8 @@ const replacePostImageInput = document.querySelector("#replace-post-image-input"
 const mediaDetailModal = document.querySelector("#media-detail-modal");
 const mediaDetailBody = document.querySelector("#media-detail-body");
 const aiForm = document.querySelector("#ai-form");
+const aiApiCheckButton = document.querySelector("#ai-api-check-button");
+const aiApiStatusGrid = document.querySelector("#ai-api-status-grid");
 const logDateInput = document.querySelector("#log-date");
 const heroPhoto = document.querySelector("#hero-photo");
 const heroPhotoButton = document.querySelector("#hero-photo-button");
@@ -277,6 +279,13 @@ let authSession = null;
 let notificationDeliveryHistory = [];
 let activeNotificationDeliveryFilter = "all";
 let activeNotificationDeliveryDetailId = null;
+let aiApiStatus = {
+  checkedAt: null,
+  configured: null,
+  model: "未確認",
+  gateway: "未確認",
+  lastSource: "ローカル分析",
+};
 
 function showView(id) {
   views.forEach((view) => {
@@ -458,6 +467,7 @@ authForm.addEventListener("submit", async (event) => {
 });
 
 authSignOutButton.addEventListener("click", signOutSupabase);
+aiApiCheckButton.addEventListener("click", () => checkAiAnalysisApi());
 notificationDeliveryRefreshButton.addEventListener("click", () => loadNotificationDeliveryHistory());
 notificationDeliveryFilter.addEventListener("change", () => {
   activeNotificationDeliveryFilter = notificationDeliveryFilter.value;
@@ -824,6 +834,7 @@ function renderApp() {
   renderReminders();
   renderDashboard();
   renderAccount();
+  renderAiApiStatus();
 }
 
 function renderPostControls() {
@@ -3797,6 +3808,8 @@ async function analyzePostWithApi({ post, tank, fallbackResult }) {
 
 async function requestAiAnalysis(payload, fallbackResult) {
   if (location.protocol === "file:") {
+    aiApiStatus.lastSource = "ローカル分析";
+    renderAiApiStatus();
     return fallbackResult;
   }
 
@@ -3813,11 +3826,92 @@ async function requestAiAnalysis(payload, fallbackResult) {
       throw new Error(await response.text());
     }
 
-    return normalizeAiApiResult(await response.json(), fallbackResult);
+    const result = normalizeAiApiResult(await response.json(), fallbackResult);
+    aiApiStatus.lastSource = "AI Gateway";
+    aiApiStatus.model = result.model || aiApiStatus.model;
+    aiApiStatus.gateway = result.source || aiApiStatus.gateway;
+    aiApiStatus.configured = true;
+    aiApiStatus.checkedAt = new Date().toISOString();
+    renderAiApiStatus();
+    return result;
   } catch (error) {
+    aiApiStatus.lastSource = "ローカル分析";
+    aiApiStatus.checkedAt = new Date().toISOString();
+    renderAiApiStatus();
     showToast("AI APIに接続できないため、ローカル分析を表示しました");
     return fallbackResult;
   }
+}
+
+async function checkAiAnalysisApi() {
+  if (location.protocol === "file:") {
+    aiApiStatus = {
+      ...aiApiStatus,
+      checkedAt: new Date().toISOString(),
+      configured: false,
+      gateway: "file表示",
+      lastSource: "ローカル分析",
+    };
+    renderAiApiStatus();
+    showToast("Netlify環境でAI APIを確認してください");
+    return false;
+  }
+
+  try {
+    const response = await fetch(AI_ANALYSIS_ENDPOINT);
+    if (!response.ok) {
+      throw new Error(await response.text());
+    }
+
+    const data = await response.json();
+    aiApiStatus = {
+      ...aiApiStatus,
+      checkedAt: new Date().toISOString(),
+      configured: Boolean(data.configured),
+      model: data.model || "未確認",
+      gateway: data.gateway || "未確認",
+    };
+    renderAiApiStatus();
+    showToast(data.configured ? "AI API設定を確認しました" : "AI Gatewayが未設定です");
+    return Boolean(data.configured);
+  } catch (error) {
+    aiApiStatus = {
+      ...aiApiStatus,
+      checkedAt: new Date().toISOString(),
+      configured: false,
+      gateway: "確認失敗",
+    };
+    renderAiApiStatus();
+    showToast("AI API設定を確認できませんでした");
+    return false;
+  }
+}
+
+function renderAiApiStatus() {
+  if (!aiApiStatusGrid) {
+    return;
+  }
+
+  const configuredLabel = aiApiStatus.configured === null ? "未確認" : aiApiStatus.configured ? "OK" : "要確認";
+  const checkedAt = aiApiStatus.checkedAt ? formatFullDate(aiApiStatus.checkedAt) : "未確認";
+  const items = [
+    { label: "Gateway", value: aiApiStatus.gateway },
+    { label: "モデル", value: aiApiStatus.model },
+    { label: "設定", value: configuredLabel },
+    { label: "最終分析", value: aiApiStatus.lastSource },
+    { label: "確認日時", value: checkedAt },
+  ];
+
+  aiApiStatusGrid.innerHTML = items
+    .map(
+      (item) => `
+        <article>
+          <span>${escapeHtml(item.label)}</span>
+          <strong>${escapeHtml(item.value)}</strong>
+        </article>
+      `,
+    )
+    .join("");
 }
 
 function normalizeAiApiResult(result, fallbackResult) {
@@ -3834,6 +3928,8 @@ function normalizeAiApiResult(result, fallbackResult) {
     levelClass,
     summary: result?.summary ? String(result.summary) : fallbackResult.summary,
     items,
+    model: result?.model || null,
+    source: result?.source || null,
   };
 }
 

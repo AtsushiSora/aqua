@@ -28,6 +28,14 @@ type AnalysisRequest = {
 };
 
 export default async (request: Request) => {
+  if (request.method === "GET") {
+    return jsonResponse({
+      configured: Boolean(OPENAI_BASE_URL),
+      model: AI_ANALYSIS_MODEL,
+      gateway: OPENAI_BASE_URL ? "openai-compatible" : "not-configured",
+    });
+  }
+
   if (request.method !== "POST") {
     return jsonResponse({ error: "Method not allowed" }, 405);
   }
@@ -58,7 +66,11 @@ export default async (request: Request) => {
 
   const data = await response.json();
   const content = data?.choices?.[0]?.message?.content || "{}";
-  return jsonResponse(normalizeAnalysis(content));
+  return jsonResponse({
+    ...normalizeAnalysis(content),
+    model: AI_ANALYSIS_MODEL,
+    source: "netlify-ai-gateway",
+  });
 };
 
 export const config: Config = {

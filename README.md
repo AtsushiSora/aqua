@@ -49,6 +49,7 @@
 - コミュニティ投稿の水槽別フィルター
 - 状態選択からのAI分析デモ
 - Netlify Function経由のAI画像/ログ分析API入口
+- AI画面でのGateway/モデル検証ステータス表示
 - 飼育ガイドとPR枠の表示
 - スマホ幅対応のレスポンシブUI
 - アカウントプロフィールのプロトタイプ
@@ -83,7 +84,7 @@
 
 - 本物のAI画像分析
 - 通知配信ワーカーの本番環境変数設定
-- AI分析APIの本番モデル検証
+- AI分析プロンプトの実写真チューニング
 - ネイティブスマホアプリ、またはPWAの本番化
 
 ## 通知配信ワーカー
@@ -124,6 +125,7 @@ VAPID鍵は `node scripts/generate-vapid-keys.mjs` で生成できます。
 ## AI分析API
 
 `netlify/functions/ai-analysis.mts` は `/api/ai-analysis` で画像と水槽ログを受け取り、Netlify AI GatewayのOpenAI互換エンドポイントへ送ります。Gatewayが未設定、またはローカルで `index.html` を直接開いている場合は、アプリ側で既存のローカル分析にフォールバックします。
+AI画面の「AI API検証」からGateway設定、モデル名、最後の分析経路を確認できます。
 
 主な環境変数:
 
