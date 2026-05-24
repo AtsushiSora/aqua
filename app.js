@@ -47,6 +47,7 @@ const aiPromptImprovementNote = document.querySelector("#ai-prompt-improvement-n
 const aiPromptNoteSaveButton = document.querySelector("#ai-prompt-note-save-button");
 const aiPromptNoteHistory = document.querySelector("#ai-prompt-note-history");
 const aiEvaluationSummary = document.querySelector("#ai-evaluation-summary");
+const aiImageValidationSummary = document.querySelector("#ai-image-validation-summary");
 const aiReviewExportCsvButton = document.querySelector("#ai-review-export-csv-button");
 const aiReviewExportJsonButton = document.querySelector("#ai-review-export-json-button");
 const logDateInput = document.querySelector("#log-date");
@@ -4385,6 +4386,7 @@ function renderAiEvaluationLog() {
   renderAiPromptNoteHistory();
   const entries = Array.isArray(state.aiEvaluationLog) ? state.aiEvaluationLog : [];
   renderAiEvaluationSummary(entries);
+  renderAiImageValidationSummary(entries);
   const visibleEntries = getVisibleAiEvaluationEntries(entries);
 
   if (!visibleEntries.length) {
@@ -4519,6 +4521,68 @@ function renderAiEvaluationSummary(entries) {
     </article>
     <p>${escapeHtml(suggestion)}</p>
   `;
+}
+
+function renderAiImageValidationSummary(entries) {
+  if (!aiImageValidationSummary) {
+    return;
+  }
+
+  const photoEntries = entries.filter((entry) => entry.target === "投稿写真");
+  const gatewayPhotoEntries = photoEntries.filter((entry) => entry.source === "AI Gateway");
+  const needsFixCount = gatewayPhotoEntries.filter((entry) => entry.reviewLabel === "needs_fix").length;
+  const goodCount = gatewayPhotoEntries.filter((entry) => entry.reviewLabel === "good").length;
+  const latestGatewayPhoto = gatewayPhotoEntries[0] || null;
+  const suggestion = getAiImageValidationSuggestion({ photoEntries, gatewayPhotoEntries, needsFixCount, goodCount });
+
+  aiImageValidationSummary.innerHTML = `
+    <article>
+      <div>
+        <span>実写真検証</span>
+        <strong>${gatewayPhotoEntries.length ? "検証中" : "未実施"}</strong>
+      </div>
+      <dl>
+        <div>
+          <dt>Gateway写真</dt>
+          <dd>${gatewayPhotoEntries.length}</dd>
+        </div>
+        <div>
+          <dt>良い例</dt>
+          <dd>${goodCount}</dd>
+        </div>
+        <div>
+          <dt>要修正</dt>
+          <dd>${needsFixCount}</dd>
+        </div>
+      </dl>
+      <p>${escapeHtml(suggestion)}</p>
+      ${
+        latestGatewayPhoto
+          ? `<small>最新: ${escapeHtml(formatFullDate(latestGatewayPhoto.createdAt))} / ${escapeHtml(latestGatewayPhoto.status)} / ${escapeHtml(latestGatewayPhoto.difference)}</small>`
+          : `<small>投稿写真の詳細から「AI分析へ」を実行すると、Gateway写真検証として記録されます。</small>`
+      }
+    </article>
+  `;
+}
+
+function getAiImageValidationSuggestion({ photoEntries, gatewayPhotoEntries, needsFixCount, goodCount }) {
+  if (!photoEntries.length) {
+    return "まず投稿写真からAI分析を実行して、ローカル分析との差分を確認します。";
+  }
+
+  if (!gatewayPhotoEntries.length) {
+    return "写真分析はありますがGateway結果がまだありません。Netlify AI Gateway設定後に同じ写真で再検証してください。";
+  }
+
+  if (needsFixCount > 0) {
+    return "要修正の写真があります。評価メモとCSV/JSON書き出しを使って、プロンプトv3の修正点を整理してください。";
+  }
+
+  if (goodCount >= 3) {
+    return "良い例が複数あります。暗い写真、魚が小さい写真、コケが目立つ写真でも追加検証してください。";
+  }
+
+  return "Gateway写真検証を継続中です。良い例と要修正を分類して、実写真での安定性を見ます。";
 }
 
 function getAiEvaluationSuggestion(counts, entries) {

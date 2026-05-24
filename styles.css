@@ -2144,6 +2144,61 @@ textarea {
   font-weight: 900;
 }
 
+.ai-image-validation-summary {
+  margin: 10px 0 12px;
+}
+
+.ai-image-validation-summary article {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--glass-border);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.66);
+}
+
+.ai-image-validation-summary span,
+.ai-image-validation-summary dt,
+.ai-image-validation-summary small {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 900;
+}
+
+.ai-image-validation-summary strong {
+  display: block;
+  margin-top: 3px;
+  color: var(--aqua-dark);
+  font-size: 1.05rem;
+}
+
+.ai-image-validation-summary dl {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+}
+
+.ai-image-validation-summary dl div {
+  padding: 8px;
+  border-radius: 8px;
+  background: rgba(231, 247, 243, 0.72);
+}
+
+.ai-image-validation-summary dd {
+  margin: 3px 0 0;
+  color: var(--ink);
+  font-size: 1.15rem;
+  font-weight: 900;
+}
+
+.ai-image-validation-summary p {
+  margin: 0;
+  color: var(--ink);
+  font-size: 0.82rem;
+  font-weight: 850;
+}
+
 .ai-evaluation-log {
   display: grid;
   gap: 10px;
@@ -3025,6 +3080,7 @@ textarea {
   .ai-evaluation-actions,
   .ai-evaluation-summary,
   .ai-production-flow,
+  .ai-image-validation-summary dl,
   .schema-grid,
   .post-grid,
   .ranking-list,
