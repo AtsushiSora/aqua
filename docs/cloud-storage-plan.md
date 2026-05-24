@@ -108,14 +108,15 @@ PWA Push subscription scaffold:
 - Save weak-condition prompt improvements directly to prompt-note history. Done in the prototype.
 - Draft prompt v4 candidates from reviewed v3 notes. Done in the prototype.
 - Export prompt v4 draft items with AI review CSV/JSON. Done in the prototype.
+- Apply prompt v4 guidance to the AI analysis function. Done in the prototype.
 - Keep the optional `WEB_PUSH_ENDPOINT` provider path for hosted push gateways.
 - Keep in-app reminder checks as a fallback while notification delivery is tested.
 
 ## Next implementation slice
 
-Apply prompt v4:
+Validate prompt v4 against real photos:
 
 - Enable Netlify AI Gateway and confirm `OPENAI_BASE_URL`.
 - Test `gpt-4o-mini` against real aquarium photos.
-- Update the AI analysis function prompt with reviewed v4 guidance.
+- Compare prompt v4 output against saved prompt v3 review labels.
 - Keep JSON export/import as a recovery path while the sync model is being tested.

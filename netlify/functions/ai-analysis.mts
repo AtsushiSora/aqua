@@ -3,7 +3,7 @@ import type { Config } from "@netlify/functions";
 const OPENAI_BASE_URL = Netlify.env.get("OPENAI_BASE_URL") || "";
 const OPENAI_API_KEY = Netlify.env.get("OPENAI_API_KEY") || "";
 const AI_ANALYSIS_MODEL = Netlify.env.get("AI_ANALYSIS_MODEL") || "gpt-4o-mini";
-const PROMPT_VERSION = "aquanote-care-v3";
+const PROMPT_VERSION = "aquanote-care-v4";
 
 type AnalysisRequest = {
   tank?: {
@@ -88,6 +88,12 @@ function buildMessages(payload: AnalysisRequest) {
     "写真に写っている範囲だけを根拠にし、見えない魚病・水質値・原因を断定しないでください。",
     "病名や死亡リスクを診断せず、管理者が次に確認する観察項目として書いてください。",
     "暗い写真、魚が小さい写真、反射が強い写真、コケや水面が一部しか見えない写真では、観察できた範囲と見えない範囲を分けてください。",
+    "暗い写真では、見える範囲の限定、ライト点灯、正面からの再撮影をretakeTipsへ入れてください。",
+    "魚が小さい写真では、魚の体表や泳ぎを断定せず、拡大写真や短い動画での追加確認をretakeTipsへ入れてください。",
+    "コケが目立つ写真では、水質値を断定せず、コケの位置、水換え履歴、照明時間の確認をitemsへ入れてください。",
+    "反射が強い写真では、反射で見えない範囲をobservationsに含めず、角度を変えた撮影をretakeTipsへ入れてください。",
+    "observationsは写真に見える根拠だけに限定し、推測はitems側の確認行動へ移してください。",
+    "retakeTipsは、暗さ・反射・魚の小ささ・コケの見え方を分けて具体化してください。",
     "写真品質が低い場合でも無理に判定せず、retakeTipsに撮り直しや追加撮影の観点を返してください。",
     "水の透明度、コケ、魚の泳ぎ・体表、餌の残り、底床の汚れ、機材まわりの異常のうち、写真で見えるものだけをobservationsに入れてください。",
     "必ず 今日やること / 数日見ること / 危険サイン の3種類をitemsに含めてください。",
