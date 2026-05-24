@@ -268,6 +268,30 @@ body[data-ui-mode="simple"] .eyebrow {
   font-size: 0.78rem;
 }
 
+body[data-ui-mode="simple"] .home-controls {
+  gap: 12px;
+}
+
+body[data-ui-mode="simple"] .ui-mode-switch,
+body[data-ui-mode="simple"] .design-cycle-button,
+body[data-ui-mode="simple"] .app-status-pill {
+  border-width: 2px;
+}
+
+body[data-ui-mode="simple"] .design-cycle-button {
+  background: linear-gradient(135deg, #0c9fb0, #4ca66f);
+  font-size: 0.9rem;
+}
+
+body[data-ui-mode="simple"] .quick-dock span {
+  border-radius: 50%;
+  background: linear-gradient(135deg, rgba(12, 159, 176, 0.18), rgba(76, 166, 111, 0.18));
+}
+
+body[data-ui-mode="simple"] .metric-card strong {
+  font-size: 1.62rem;
+}
+
 body[data-ui-mode="simple"] .panel,
 body[data-ui-mode="simple"] .metric-card,
 body[data-ui-mode="simple"] .rail-card,
@@ -307,6 +331,28 @@ body[data-ui-mode="adult"] .hero-copy h2,
 body[data-ui-mode="adult"] .view-head h1,
 body[data-ui-mode="adult"] .section-head h2 {
   font-weight: 800;
+}
+
+body[data-ui-mode="adult"] .home-controls {
+  gap: 8px;
+}
+
+body[data-ui-mode="adult"] .ui-mode-switch,
+body[data-ui-mode="adult"] .design-cycle-button,
+body[data-ui-mode="adult"] .app-status-pill {
+  min-height: 42px;
+}
+
+body[data-ui-mode="adult"] .design-cycle-button {
+  background: #1d5558;
+  box-shadow: none;
+}
+
+body[data-ui-mode="adult"] .quick-dock button,
+body[data-ui-mode="adult"] .metric-card {
+  background:
+    linear-gradient(180deg, rgba(251, 252, 250, 0.5), transparent),
+    rgba(251, 252, 250, 0.9);
 }
 
 body[data-ui-mode="glance"] .sidebar,
