@@ -3201,6 +3201,7 @@ function exportAiReviewData(format) {
       promptValidationStatusLabel: getAiPromptValidationStatusLabel(getAiPromptValidationStatus(entry)),
     })),
     promptValidation: getAiPromptValidationExportSummary(entries),
+    promptV4ProductionCheck: getAiPromptV4ProductionExport(entries),
     promptImprovementNote: state.aiPromptImprovementNote || "",
     promptNotes: notes,
     promptV4Draft: {
@@ -4872,6 +4873,49 @@ function getAiPromptV4ProductionChecklist({ gatewayPhotoEntries, v4Entries, prom
       label: "撮り直し観点と改善メモから合否判断できる",
     },
   ];
+}
+
+function getAiPromptV4ProductionExport(entries) {
+  const photoEntries = entries.filter((entry) => entry.target === "投稿写真");
+  const gatewayPhotoEntries = photoEntries.filter((entry) => entry.source === "AI Gateway");
+  const v4Entries = gatewayPhotoEntries.filter((entry) => getAiPromptGeneration(entry.promptVersion) === "v4");
+  const promptComparison = getAiPromptGenerationComparison(gatewayPhotoEntries);
+  const conditionCounts = getAiPhotoConditionCounts(gatewayPhotoEntries);
+  const items = getAiPromptV4ProductionChecklist({
+    gatewayPhotoEntries,
+    v4Entries,
+    promptComparison,
+    conditionCounts,
+  }).map((item, index) => ({
+    id: `v4-production-${index + 1}`,
+    status: item.done ? "ok" : "todo",
+    done: item.done,
+    label: item.label,
+  }));
+  const completed = items.filter((item) => item.done).length;
+  const requiredConditions = ["dark", "small_fish", "algae", "reflection"];
+
+  return {
+    promptVersion: aiApiStatus.promptVersion,
+    gatewayConfigured: aiApiStatus.configured,
+    lastCheckedAt: aiApiStatus.checkedAt || null,
+    v4Entries: v4Entries.length,
+    v4Reviewed: v4Entries.filter((entry) => ["good", "needs_fix", "watch"].includes(entry.reviewLabel)).length,
+    completed,
+    total: items.length,
+    ready: items.length > 0 && completed === items.length,
+    items,
+    conditionCoverage: requiredConditions.map((key) => ({
+      condition: key,
+      label: getAiPhotoConditionLabel(key),
+      total: conditionCounts[key].total,
+      needsFix: conditionCounts[key].needsFix,
+      v4Reviewed: v4Entries.filter(
+        (entry) => entry.photoCondition === key && ["good", "needs_fix", "watch"].includes(entry.reviewLabel),
+      ).length,
+    })),
+    comparison: promptComparison,
+  };
 }
 
 function getAiImageValidationSuggestion({ photoEntries, gatewayPhotoEntries, needsFixCount, goodCount, conditionCounts, weakCondition }) {
