@@ -2214,7 +2214,7 @@ textarea {
 
 .ai-image-validation-summary dl {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 8px;
   margin: 0;
 }
@@ -2258,6 +2258,25 @@ textarea {
   color: var(--ink);
   font-size: 0.76rem;
   font-weight: 900;
+}
+
+.ai-version-comparison {
+  padding: 10px;
+  border: 1px solid var(--glass-border);
+  border-radius: 8px;
+  background: rgba(231, 247, 243, 0.72);
+}
+
+.ai-version-comparison strong {
+  display: block;
+  margin-top: 3px;
+  color: var(--aqua-dark);
+  font-size: 0.95rem;
+}
+
+.ai-version-comparison p {
+  margin-top: 6px;
+  font-size: 0.78rem;
 }
 
 .ai-condition-risk {

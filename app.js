@@ -4661,6 +4661,9 @@ function renderAiImageValidationSummary(entries) {
   const gatewayPhotoEntries = photoEntries.filter((entry) => entry.source === "AI Gateway");
   const needsFixCount = gatewayPhotoEntries.filter((entry) => entry.reviewLabel === "needs_fix").length;
   const goodCount = gatewayPhotoEntries.filter((entry) => entry.reviewLabel === "good").length;
+  const v4Entries = gatewayPhotoEntries.filter((entry) => getAiPromptGeneration(entry.promptVersion) === "v4");
+  const v4NeedsFixCount = v4Entries.filter((entry) => entry.reviewLabel === "needs_fix").length;
+  const promptComparison = getAiPromptGenerationComparison(gatewayPhotoEntries);
   const conditionCounts = getAiPhotoConditionCounts(gatewayPhotoEntries);
   const weakCondition = getAiWeakPhotoCondition(conditionCounts);
   const latestGatewayPhoto = gatewayPhotoEntries[0] || null;
@@ -4692,8 +4695,17 @@ function renderAiImageValidationSummary(entries) {
           <dt>要修正</dt>
           <dd>${needsFixCount}</dd>
         </div>
+        <div>
+          <dt>v4写真</dt>
+          <dd>${v4Entries.length}</dd>
+        </div>
       </dl>
       <p>${escapeHtml(suggestion)}</p>
+      <div class="ai-version-comparison">
+        <span>v4評価</span>
+        <strong>${v4Entries.length ? `${v4Entries.length}件 / 要修正${v4NeedsFixCount}件` : "未評価"}</strong>
+        <p>${escapeHtml(getAiPromptGenerationSuggestion(promptComparison, v4Entries.length))}</p>
+      </div>
       <div class="ai-condition-coverage">
         <span>条件別サンプル</span>
         <ul>
@@ -4771,6 +4783,57 @@ function getAiPhotoConditionCounts(entries) {
       reflection: { total: 0, needsFix: 0 },
     },
   );
+}
+
+function getAiPromptGeneration(promptVersion) {
+  const value = String(promptVersion || "").toLowerCase();
+  if (value.includes("v4")) {
+    return "v4";
+  }
+  if (value.includes("v3")) {
+    return "v3";
+  }
+  return "other";
+}
+
+function getAiPromptGenerationComparison(entries) {
+  const conditions = ["dark", "small_fish", "algae", "reflection"];
+  return conditions.map((condition) => {
+    const v3 = entries.filter(
+      (entry) => getAiPromptGeneration(entry.promptVersion) === "v3" && entry.photoCondition === condition,
+    );
+    const v4 = entries.filter(
+      (entry) => getAiPromptGeneration(entry.promptVersion) === "v4" && entry.photoCondition === condition,
+    );
+    const v3NeedsFix = v3.filter((entry) => entry.reviewLabel === "needs_fix").length;
+    const v4NeedsFix = v4.filter((entry) => entry.reviewLabel === "needs_fix").length;
+    return {
+      condition,
+      v3Total: v3.length,
+      v3NeedsFix,
+      v4Total: v4.length,
+      v4NeedsFix,
+      improved: v3NeedsFix > 0 && v4.length > 0 && v4NeedsFix === 0,
+    };
+  });
+}
+
+function getAiPromptGenerationSuggestion(comparison, v4Total) {
+  if (!v4Total) {
+    return "v4の実写真評価はまだありません。同じ撮影条件でGateway分析を実行し、良い例/要修正を分類してください。";
+  }
+
+  const improved = comparison.find((item) => item.improved);
+  if (improved) {
+    return `${getAiPhotoConditionLabel(improved.condition)}はv4で要修正が減っています。他の条件でも同じ流れで評価してください。`;
+  }
+
+  const weak = comparison.find((item) => item.v4NeedsFix > 0);
+  if (weak) {
+    return `${getAiPhotoConditionLabel(weak.condition)}はv4でも要修正があります。評価メモを保存して次の改善候補へ回してください。`;
+  }
+
+  return "v4の初期評価は安定しています。暗い写真、魚が小さい写真、コケ多め、反射ありを一通り追加してください。";
 }
 
 function getAiWeakPhotoCondition(conditionCounts) {
