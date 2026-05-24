@@ -89,14 +89,15 @@ PWA Push subscription scaffold:
 - Surface a production notification rehearsal flow in the account view. Done in the prototype.
 - Add a Netlify Function entrypoint for AI image/log analysis. Done in the prototype.
 - Show AI Gateway/model verification status in the AI view. Done in the prototype.
+- Tune the AI prompt to return visible evidence, confidence, and non-diagnostic care guidance. Done in the prototype.
 - Keep the optional `WEB_PUSH_ENDPOINT` provider path for hosted push gateways.
 - Keep in-app reminder checks as a fallback while notification delivery is tested.
 
 ## Next implementation slice
 
-Tune real AI analysis:
+Evaluate real AI analysis:
 
 - Enable Netlify AI Gateway and confirm `OPENAI_BASE_URL`.
 - Test `gpt-4o-mini` against real aquarium photos.
-- Tune the prompt so results stay as care guidance, not diagnosis.
+- Compare AI Gateway output with local fallback results and capture review notes.
 - Keep JSON export/import as a recovery path while the sync model is being tested.

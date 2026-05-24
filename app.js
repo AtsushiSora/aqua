@@ -283,6 +283,7 @@ let aiApiStatus = {
   checkedAt: null,
   configured: null,
   model: "未確認",
+  promptVersion: "未確認",
   gateway: "未確認",
   lastSource: "ローカル分析",
 };
@@ -3829,6 +3830,7 @@ async function requestAiAnalysis(payload, fallbackResult) {
     const result = normalizeAiApiResult(await response.json(), fallbackResult);
     aiApiStatus.lastSource = "AI Gateway";
     aiApiStatus.model = result.model || aiApiStatus.model;
+    aiApiStatus.promptVersion = result.promptVersion || aiApiStatus.promptVersion;
     aiApiStatus.gateway = result.source || aiApiStatus.gateway;
     aiApiStatus.configured = true;
     aiApiStatus.checkedAt = new Date().toISOString();
@@ -3869,6 +3871,7 @@ async function checkAiAnalysisApi() {
       checkedAt: new Date().toISOString(),
       configured: Boolean(data.configured),
       model: data.model || "未確認",
+      promptVersion: data.promptVersion || "未確認",
       gateway: data.gateway || "未確認",
     };
     renderAiApiStatus();
@@ -3897,6 +3900,7 @@ function renderAiApiStatus() {
   const items = [
     { label: "Gateway", value: aiApiStatus.gateway },
     { label: "モデル", value: aiApiStatus.model },
+    { label: "プロンプト", value: aiApiStatus.promptVersion },
     { label: "設定", value: configuredLabel },
     { label: "最終分析", value: aiApiStatus.lastSource },
     { label: "確認日時", value: checkedAt },
@@ -3922,13 +3926,20 @@ function normalizeAiApiResult(result, fallbackResult) {
   const items = Array.isArray(result?.items) && result.items.length
     ? result.items.map((item) => String(item)).slice(0, 5)
     : fallbackResult.items;
+  const observations = Array.isArray(result?.observations)
+    ? result.observations.map((item) => String(item)).slice(0, 4)
+    : [];
+  const confidence = Number.isFinite(Number(result?.confidence)) ? Math.min(1, Math.max(0, Number(result.confidence))) : null;
 
   return {
     status,
     levelClass,
     summary: result?.summary ? String(result.summary) : fallbackResult.summary,
     items,
+    observations,
+    confidence,
     model: result?.model || null,
+    promptVersion: result?.promptVersion || null,
     source: result?.source || null,
   };
 }
@@ -4582,6 +4593,13 @@ function renderAiResult(result, post = null) {
   const resultBox = document.querySelector("#ai-result");
   const videoSrc = post ? getPostVideoSrc(post) : null;
   const imageSrc = post ? getPostImageSrc(post) : null;
+  const metaItems = [
+    result.source ? `分析: ${result.source}` : "",
+    result.model ? `モデル: ${result.model}` : "",
+    result.promptVersion ? `プロンプト: ${result.promptVersion}` : "",
+    Number.isFinite(Number(result.confidence)) ? `信頼度: ${Math.round(Number(result.confidence) * 100)}%` : "",
+  ].filter(Boolean);
+  const observations = Array.isArray(result.observations) ? result.observations : [];
   const mediaMarkup = videoSrc
     ? `
       <div class="ai-photo-preview has-video">
@@ -4598,7 +4616,20 @@ function renderAiResult(result, post = null) {
     ${mediaMarkup}
     <p class="status-label">状態</p>
     <strong>${escapeHtml(result.status)}</strong>
+    ${metaItems.length ? `<p class="ai-result-meta">${metaItems.map(escapeHtml).join(" / ")}</p>` : ""}
     <p>${escapeHtml(result.summary)}</p>
+    ${
+      observations.length
+        ? `
+          <div class="ai-observations">
+            <span>見える根拠</span>
+            <ul>
+              ${observations.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}
+            </ul>
+          </div>
+        `
+        : ""
+    }
     <ul>
       ${result.items.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}
     </ul>
@@ -4611,6 +4642,11 @@ function createAiResultState(result) {
     summary: result.summary,
     levelClass: result.levelClass,
     items: Array.isArray(result.items) ? result.items : [],
+    observations: Array.isArray(result.observations) ? result.observations : [],
+    confidence: result.confidence ?? null,
+    model: result.model || null,
+    promptVersion: result.promptVersion || null,
+    source: result.source || null,
     checkedAt: new Date().toISOString(),
   };
 }
@@ -4940,6 +4976,11 @@ function normalizeAiResult(result) {
     summary: result.summary || "",
     levelClass: result.levelClass || result.level || "",
     items: Array.isArray(result.items) ? result.items : [],
+    observations: Array.isArray(result.observations) ? result.observations : [],
+    confidence: result.confidence ?? null,
+    model: result.model || null,
+    promptVersion: result.promptVersion || null,
+    source: result.source || null,
     checkedAt: result.checkedAt || result.checked_at || new Date().toISOString(),
   };
 }
