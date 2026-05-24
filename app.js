@@ -40,6 +40,9 @@ const aiApiStatusGrid = document.querySelector("#ai-api-status-grid");
 const aiEvaluationLog = document.querySelector("#ai-evaluation-log");
 const aiEvaluationSourceFilter = document.querySelector("#ai-evaluation-source-filter");
 const aiEvaluationStatusFilter = document.querySelector("#ai-evaluation-status-filter");
+const aiEvaluationReviewFilter = document.querySelector("#ai-evaluation-review-filter");
+const aiEvaluationFromFilter = document.querySelector("#ai-evaluation-from-filter");
+const aiEvaluationToFilter = document.querySelector("#ai-evaluation-to-filter");
 const aiPromptImprovementNote = document.querySelector("#ai-prompt-improvement-note");
 const aiPromptNoteSaveButton = document.querySelector("#ai-prompt-note-save-button");
 const aiPromptNoteHistory = document.querySelector("#ai-prompt-note-history");
@@ -294,6 +297,9 @@ let activeNotificationDeliveryDetailId = null;
 let aiEvaluationSyncTimer = null;
 let activeAiEvaluationSourceFilter = "all";
 let activeAiEvaluationStatusFilter = "all";
+let activeAiEvaluationReviewFilter = "all";
+let activeAiEvaluationFromFilter = "";
+let activeAiEvaluationToFilter = "";
 let aiApiStatus = {
   checkedAt: null,
   configured: null,
@@ -490,6 +496,18 @@ aiEvaluationSourceFilter.addEventListener("change", () => {
 });
 aiEvaluationStatusFilter.addEventListener("change", () => {
   activeAiEvaluationStatusFilter = aiEvaluationStatusFilter.value;
+  renderAiEvaluationLog();
+});
+aiEvaluationReviewFilter.addEventListener("change", () => {
+  activeAiEvaluationReviewFilter = aiEvaluationReviewFilter.value;
+  renderAiEvaluationLog();
+});
+aiEvaluationFromFilter.addEventListener("change", () => {
+  activeAiEvaluationFromFilter = aiEvaluationFromFilter.value;
+  renderAiEvaluationLog();
+});
+aiEvaluationToFilter.addEventListener("change", () => {
+  activeAiEvaluationToFilter = aiEvaluationToFilter.value;
   renderAiEvaluationLog();
 });
 aiPromptImprovementNote.addEventListener("input", () => {
@@ -3004,7 +3022,7 @@ function escapeCsvCell(value) {
 
 function exportAiReviewData(format) {
   const entries = getVisibleAiEvaluationEntries();
-  const notes = Array.isArray(state.aiPromptNotes) ? state.aiPromptNotes : [];
+  const notes = getVisibleAiPromptNotes();
   if (!entries.length && !notes.length) {
     showToast("書き出すAI評価レビューがありません");
     return;
@@ -3054,6 +3072,9 @@ function exportAiReviewData(format) {
     filters: {
       source: activeAiEvaluationSourceFilter,
       status: activeAiEvaluationStatusFilter,
+      reviewLabel: activeAiEvaluationReviewFilter,
+      from: activeAiEvaluationFromFilter,
+      to: activeAiEvaluationToFilter,
     },
     evaluations: entries,
     promptImprovementNote: state.aiPromptImprovementNote || "",
@@ -4357,6 +4378,9 @@ function renderAiEvaluationLog() {
 
   aiEvaluationSourceFilter.value = activeAiEvaluationSourceFilter;
   aiEvaluationStatusFilter.value = activeAiEvaluationStatusFilter;
+  aiEvaluationReviewFilter.value = activeAiEvaluationReviewFilter;
+  aiEvaluationFromFilter.value = activeAiEvaluationFromFilter;
+  aiEvaluationToFilter.value = activeAiEvaluationToFilter;
   aiPromptImprovementNote.value = state.aiPromptImprovementNote || "";
   renderAiPromptNoteHistory();
   const entries = Array.isArray(state.aiEvaluationLog) ? state.aiEvaluationLog : [];
@@ -4401,7 +4425,37 @@ function getVisibleAiEvaluationEntries(entries = state.aiEvaluationLog || []) {
   return entries.filter((entry) => {
     const sourceMatch = activeAiEvaluationSourceFilter === "all" || entry.source === activeAiEvaluationSourceFilter;
     const statusMatch = activeAiEvaluationStatusFilter === "all" || entry.status === activeAiEvaluationStatusFilter;
-    return sourceMatch && statusMatch;
+    const reviewLabel = ["good", "needs_fix", "watch", "unreviewed"].includes(entry.reviewLabel)
+      ? entry.reviewLabel
+      : "unreviewed";
+    const reviewMatch = activeAiEvaluationReviewFilter === "all" || reviewLabel === activeAiEvaluationReviewFilter;
+    const createdAt = new Date(entry.createdAt);
+    const fromDate = activeAiEvaluationFromFilter ? parseDateKey(activeAiEvaluationFromFilter) : null;
+    const toDate = activeAiEvaluationToFilter ? parseDateKey(activeAiEvaluationToFilter) : null;
+
+    if (toDate) {
+      toDate.setHours(23, 59, 59, 999);
+    }
+
+    const fromMatch = !fromDate || createdAt >= fromDate;
+    const toMatch = !toDate || createdAt <= toDate;
+    return sourceMatch && statusMatch && reviewMatch && fromMatch && toMatch;
+  });
+}
+
+function getVisibleAiPromptNotes(notes = state.aiPromptNotes || []) {
+  return notes.filter((note) => {
+    const createdAt = new Date(note.createdAt);
+    const fromDate = activeAiEvaluationFromFilter ? parseDateKey(activeAiEvaluationFromFilter) : null;
+    const toDate = activeAiEvaluationToFilter ? parseDateKey(activeAiEvaluationToFilter) : null;
+
+    if (toDate) {
+      toDate.setHours(23, 59, 59, 999);
+    }
+
+    const fromMatch = !fromDate || createdAt >= fromDate;
+    const toMatch = !toDate || createdAt <= toDate;
+    return fromMatch && toMatch;
   });
 }
 

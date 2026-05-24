@@ -635,6 +635,15 @@
                     <option value="注意">注意</option>
                     <option value="要確認">要確認</option>
                   </select>
+                  <select id="ai-evaluation-review-filter" aria-label="AI比較ログの分類">
+                    <option value="all">全分類</option>
+                    <option value="unreviewed">未評価</option>
+                    <option value="good">良い例</option>
+                    <option value="needs_fix">要修正</option>
+                    <option value="watch">保留</option>
+                  </select>
+                  <input id="ai-evaluation-from-filter" type="date" aria-label="AI比較ログの開始日">
+                  <input id="ai-evaluation-to-filter" type="date" aria-label="AI比較ログの終了日">
                   <button class="ghost-button" id="ai-review-export-csv-button" type="button">CSV</button>
                   <button class="ghost-button" id="ai-review-export-json-button" type="button">JSON</button>
                 </div>

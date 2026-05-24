@@ -2017,6 +2017,11 @@ textarea {
   min-width: 110px;
 }
 
+.ai-evaluation-actions input {
+  min-height: 38px;
+  min-width: 132px;
+}
+
 .prompt-improvement-note {
   display: grid;
   gap: 6px;
