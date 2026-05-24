@@ -1996,6 +1996,58 @@ textarea {
   overflow-wrap: anywhere;
 }
 
+.ai-evaluation-panel {
+  display: grid;
+  align-content: start;
+}
+
+.ai-evaluation-log {
+  display: grid;
+  gap: 10px;
+}
+
+.ai-evaluation-item {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--glass-border);
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.5), transparent),
+    rgba(248, 252, 251, 0.78);
+}
+
+.ai-evaluation-head {
+  display: grid;
+  gap: 3px;
+}
+
+.ai-evaluation-head span,
+.ai-evaluation-head small,
+.ai-evaluation-item label span {
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 900;
+}
+
+.ai-evaluation-head strong {
+  color: var(--aqua-dark);
+  font-family: var(--font-jp);
+  font-size: 0.94rem;
+}
+
+.ai-evaluation-item p {
+  margin: 0;
+  color: var(--ink);
+  font-size: 0.84rem;
+  font-weight: 800;
+}
+
+.ai-evaluation-item textarea {
+  min-height: 74px;
+  resize: vertical;
+}
+
 .ai-result {
   padding: clamp(20px, 3vw, 30px);
   border-left: 4px solid var(--green);

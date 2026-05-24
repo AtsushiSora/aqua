@@ -37,6 +37,7 @@ const mediaDetailBody = document.querySelector("#media-detail-body");
 const aiForm = document.querySelector("#ai-form");
 const aiApiCheckButton = document.querySelector("#ai-api-check-button");
 const aiApiStatusGrid = document.querySelector("#ai-api-status-grid");
+const aiEvaluationLog = document.querySelector("#ai-evaluation-log");
 const logDateInput = document.querySelector("#log-date");
 const heroPhoto = document.querySelector("#hero-photo");
 const heroPhotoButton = document.querySelector("#hero-photo-button");
@@ -256,6 +257,7 @@ const defaultState = {
   },
   taskDate: getDateKey(new Date()),
   reminders: cloneState(defaultReminders),
+  aiEvaluationLog: [],
 };
 
 const persistenceAdapter = {
@@ -469,6 +471,21 @@ authForm.addEventListener("submit", async (event) => {
 
 authSignOutButton.addEventListener("click", signOutSupabase);
 aiApiCheckButton.addEventListener("click", () => checkAiAnalysisApi());
+aiEvaluationLog.addEventListener("input", (event) => {
+  const field = event.target.closest("[data-ai-evaluation-note]");
+  if (!field) {
+    return;
+  }
+
+  const item = state.aiEvaluationLog.find((entry) => entry.id === field.dataset.aiEvaluationNote);
+  if (!item) {
+    return;
+  }
+
+  item.note = field.value;
+  saveState();
+});
+
 notificationDeliveryRefreshButton.addEventListener("click", () => loadNotificationDeliveryHistory());
 notificationDeliveryFilter.addEventListener("change", () => {
   activeNotificationDeliveryFilter = notificationDeliveryFilter.value;
@@ -836,6 +853,7 @@ function renderApp() {
   renderDashboard();
   renderAccount();
   renderAiApiStatus();
+  renderAiEvaluationLog();
 }
 
 function renderPostControls() {
@@ -3835,14 +3853,59 @@ async function requestAiAnalysis(payload, fallbackResult) {
     aiApiStatus.configured = true;
     aiApiStatus.checkedAt = new Date().toISOString();
     renderAiApiStatus();
+    recordAiEvaluation({ payload, result, fallbackResult, source: "AI Gateway" });
     return result;
   } catch (error) {
     aiApiStatus.lastSource = "ローカル分析";
     aiApiStatus.checkedAt = new Date().toISOString();
     renderAiApiStatus();
+    recordAiEvaluation({ payload, result: fallbackResult, fallbackResult, source: "ローカル分析", error: error.message });
     showToast("AI APIに接続できないため、ローカル分析を表示しました");
     return fallbackResult;
   }
+}
+
+function recordAiEvaluation({ payload, result, fallbackResult, source, error = "" }) {
+  const entry = {
+    id: createId("ai-review"),
+    createdAt: new Date().toISOString(),
+    source,
+    target: payload.post ? "投稿写真" : "水槽ログ",
+    model: result.model || aiApiStatus.model || "未確認",
+    promptVersion: result.promptVersion || aiApiStatus.promptVersion || "未確認",
+    status: result.status,
+    fallbackStatus: fallbackResult.status,
+    summary: result.summary,
+    fallbackSummary: fallbackResult.summary,
+    difference: getAiResultDifference(result, fallbackResult, error),
+    note: "",
+  };
+
+  state.aiEvaluationLog = [entry, ...(state.aiEvaluationLog || [])].slice(0, 8);
+  saveState();
+  renderAiEvaluationLog();
+}
+
+function getAiResultDifference(result, fallbackResult, error = "") {
+  if (error) {
+    return `API未使用: ${error.slice(0, 120)}`;
+  }
+
+  const changes = [];
+  if (result.status !== fallbackResult.status) {
+    changes.push(`状態 ${fallbackResult.status} -> ${result.status}`);
+  }
+  if (result.summary !== fallbackResult.summary) {
+    changes.push("要約が変化");
+  }
+  if (Array.isArray(result.observations) && result.observations.length) {
+    changes.push("見える根拠あり");
+  }
+  if (Number.isFinite(Number(result.confidence))) {
+    changes.push(`信頼度 ${Math.round(Number(result.confidence) * 100)}%`);
+  }
+
+  return changes.length ? changes.join(" / ") : "大きな差分なし";
 }
 
 async function checkAiAnalysisApi() {
@@ -3912,6 +3975,37 @@ function renderAiApiStatus() {
         <article>
           <span>${escapeHtml(item.label)}</span>
           <strong>${escapeHtml(item.value)}</strong>
+        </article>
+      `,
+    )
+    .join("");
+}
+
+function renderAiEvaluationLog() {
+  if (!aiEvaluationLog) {
+    return;
+  }
+
+  const entries = Array.isArray(state.aiEvaluationLog) ? state.aiEvaluationLog : [];
+  if (!entries.length) {
+    aiEvaluationLog.innerHTML = `<p class="empty-state">AI分析を実行すると、Gateway結果とローカル分析の比較ログが残ります。</p>`;
+    return;
+  }
+
+  aiEvaluationLog.innerHTML = entries
+    .map(
+      (entry) => `
+        <article class="ai-evaluation-item">
+          <div class="ai-evaluation-head">
+            <span>${escapeHtml(entry.target)} / ${escapeHtml(entry.source)}</span>
+            <strong>${escapeHtml(entry.status)} / ${escapeHtml(entry.difference)}</strong>
+            <small>${escapeHtml(formatFullDate(entry.createdAt))} / ${escapeHtml(entry.model)} / ${escapeHtml(entry.promptVersion)}</small>
+          </div>
+          <p>${escapeHtml(entry.summary)}</p>
+          <label>
+            <span>評価メモ</span>
+            <textarea data-ai-evaluation-note="${escapeHtml(entry.id)}" rows="3" placeholder="実写真で気になった点、過不足、次に直すプロンプトを書きます">${escapeHtml(entry.note || "")}</textarea>
+          </label>
         </article>
       `,
     )
@@ -4884,6 +4978,7 @@ function normalizeState(saved) {
     tasks: { ...defaultState.tasks, ...saved.tasks },
     taskDate: saved.taskDate || getDateKey(new Date()),
     reminders: normalizeReminders(saved.reminders),
+    aiEvaluationLog: Array.isArray(saved.aiEvaluationLog) ? saved.aiEvaluationLog.map(normalizeAiEvaluationEntry) : [],
   };
 
   if (!normalized.tanks.length) {
@@ -4982,6 +5077,23 @@ function normalizeAiResult(result) {
     promptVersion: result.promptVersion || null,
     source: result.source || null,
     checkedAt: result.checkedAt || result.checked_at || new Date().toISOString(),
+  };
+}
+
+function normalizeAiEvaluationEntry(entry) {
+  return {
+    id: entry.id || createId("ai-review"),
+    createdAt: entry.createdAt || new Date().toISOString(),
+    source: entry.source || "未確認",
+    target: entry.target || "AI分析",
+    model: entry.model || "未確認",
+    promptVersion: entry.promptVersion || "未確認",
+    status: entry.status || "未記録",
+    fallbackStatus: entry.fallbackStatus || "未記録",
+    summary: entry.summary || "",
+    fallbackSummary: entry.fallbackSummary || "",
+    difference: entry.difference || "未比較",
+    note: entry.note || "",
   };
 }
 
