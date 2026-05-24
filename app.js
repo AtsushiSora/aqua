@@ -43,6 +43,7 @@ const aiEvaluationStatusFilter = document.querySelector("#ai-evaluation-status-f
 const aiPromptImprovementNote = document.querySelector("#ai-prompt-improvement-note");
 const aiPromptNoteSaveButton = document.querySelector("#ai-prompt-note-save-button");
 const aiPromptNoteHistory = document.querySelector("#ai-prompt-note-history");
+const aiEvaluationSummary = document.querySelector("#ai-evaluation-summary");
 const logDateInput = document.querySelector("#log-date");
 const heroPhoto = document.querySelector("#hero-photo");
 const heroPhotoButton = document.querySelector("#hero-photo-button");
@@ -4269,6 +4270,7 @@ function renderAiEvaluationLog() {
   aiPromptImprovementNote.value = state.aiPromptImprovementNote || "";
   renderAiPromptNoteHistory();
   const entries = Array.isArray(state.aiEvaluationLog) ? state.aiEvaluationLog : [];
+  renderAiEvaluationSummary(entries);
   const visibleEntries = entries.filter((entry) => {
     const sourceMatch = activeAiEvaluationSourceFilter === "all" || entry.source === activeAiEvaluationSourceFilter;
     const statusMatch = activeAiEvaluationStatusFilter === "all" || entry.status === activeAiEvaluationStatusFilter;
@@ -4331,6 +4333,64 @@ function renderAiPromptNoteHistory() {
       `,
     )
     .join("");
+}
+
+function renderAiEvaluationSummary(entries) {
+  if (!aiEvaluationSummary) {
+    return;
+  }
+
+  const counts = entries.reduce(
+    (summary, entry) => {
+      const key = ["good", "needs_fix", "watch", "unreviewed"].includes(entry.reviewLabel)
+        ? entry.reviewLabel
+        : "unreviewed";
+      summary[key] += 1;
+      return summary;
+    },
+    { good: 0, needs_fix: 0, watch: 0, unreviewed: 0 },
+  );
+  const suggestion = getAiEvaluationSuggestion(counts, entries);
+
+  aiEvaluationSummary.innerHTML = `
+    <article>
+      <span>良い例</span>
+      <strong>${counts.good}</strong>
+    </article>
+    <article>
+      <span>要修正</span>
+      <strong>${counts.needs_fix}</strong>
+    </article>
+    <article>
+      <span>保留</span>
+      <strong>${counts.watch}</strong>
+    </article>
+    <article>
+      <span>未評価</span>
+      <strong>${counts.unreviewed}</strong>
+    </article>
+    <p>${escapeHtml(suggestion)}</p>
+  `;
+}
+
+function getAiEvaluationSuggestion(counts, entries) {
+  if (!entries.length) {
+    return "実写真でAI分析を実行し、出力を分類すると改善候補が見えてきます。";
+  }
+
+  if (counts.needs_fix >= Math.max(2, counts.good)) {
+    return "要修正が多めです。言い過ぎた表現、見えていない推測、撮り直し案の不足を改善メモへ残してください。";
+  }
+
+  if (counts.unreviewed > counts.good + counts.needs_fix + counts.watch) {
+    return "未評価が多めです。まず良い例と要修正を分けて、プロンプトの改善点を絞り込みます。";
+  }
+
+  if (counts.good > 0 && counts.needs_fix === 0) {
+    return "良い例が安定しています。次は写真条件を変えて、暗い写真や魚が小さい写真でも確認してください。";
+  }
+
+  return "分類バランスは確認中です。要修正の評価メモをもとに次のプロンプト案を作ります。";
 }
 
 function getAiReviewOptions(currentValue = "unreviewed") {

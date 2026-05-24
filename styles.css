@@ -2061,6 +2061,47 @@ textarea {
   font-weight: 800;
 }
 
+.ai-evaluation-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin: 10px 0 12px;
+}
+
+.ai-evaluation-summary article {
+  padding: 10px;
+  border: 1px solid var(--glass-border);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.62);
+}
+
+.ai-evaluation-summary span {
+  display: block;
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 900;
+}
+
+.ai-evaluation-summary strong {
+  display: block;
+  margin-top: 3px;
+  color: var(--aqua-dark);
+  font-family: var(--font-jp);
+  font-size: 1.35rem;
+}
+
+.ai-evaluation-summary p {
+  grid-column: 1 / -1;
+  margin: 0;
+  padding: 10px;
+  border: 1px solid var(--glass-border);
+  border-radius: 8px;
+  background: rgba(231, 247, 243, 0.72);
+  color: var(--aqua-dark);
+  font-size: 0.82rem;
+  font-weight: 900;
+}
+
 .ai-production-flow {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -2977,6 +3018,7 @@ textarea {
   .quiet-hours,
   .ai-api-status-grid,
   .ai-evaluation-actions,
+  .ai-evaluation-summary,
   .ai-production-flow,
   .schema-grid,
   .post-grid,
