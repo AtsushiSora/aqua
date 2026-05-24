@@ -2034,6 +2034,33 @@ textarea {
   resize: vertical;
 }
 
+.ai-prompt-note-history {
+  display: grid;
+  gap: 8px;
+  margin: 10px 0 12px;
+}
+
+.ai-prompt-note-history article {
+  padding: 10px;
+  border: 1px solid var(--glass-border);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.58);
+}
+
+.ai-prompt-note-history span {
+  display: block;
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 900;
+}
+
+.ai-prompt-note-history p {
+  margin: 4px 0 0;
+  color: var(--ink);
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
 .ai-evaluation-log {
   display: grid;
   gap: 10px;

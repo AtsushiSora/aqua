@@ -35,6 +35,7 @@ Reason:
 | `push_subscriptions` | Browser Push endpoints and encryption keys |
 | `ai_results` | Saved analysis summaries for tanks and posts |
 | `ai_evaluations` | AI Gateway/fallback comparison logs and review notes |
+| `ai_prompt_notes` | Prompt-improvement notes for AI model tuning |
 
 ## Migration order
 
@@ -94,14 +95,15 @@ PWA Push subscription scaffold:
 - Keep local comparison logs and review notes for AI Gateway versus fallback results. Done in the prototype.
 - Sync AI comparison logs and review notes to `ai_evaluations`. Done in the prototype.
 - Filter AI evaluation logs and keep prompt-improvement notes in the AI view. Done in the prototype.
+- Sync prompt-improvement notes to `ai_prompt_notes`. Done in the prototype.
 - Keep the optional `WEB_PUSH_ENDPOINT` provider path for hosted push gateways.
 - Keep in-app reminder checks as a fallback while notification delivery is tested.
 
 ## Next implementation slice
 
-Persist prompt improvement history:
+Organize AI production evaluation:
 
 - Enable Netlify AI Gateway and confirm `OPENAI_BASE_URL`.
 - Test `gpt-4o-mini` against real aquarium photos.
-- Add a cloud-backed prompt improvement history for AI evaluation work.
+- Turn the AI evaluation logs into a production model review workflow.
 - Keep JSON export/import as a recovery path while the sync model is being tested.

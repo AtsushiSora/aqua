@@ -41,6 +41,8 @@ const aiEvaluationLog = document.querySelector("#ai-evaluation-log");
 const aiEvaluationSourceFilter = document.querySelector("#ai-evaluation-source-filter");
 const aiEvaluationStatusFilter = document.querySelector("#ai-evaluation-status-filter");
 const aiPromptImprovementNote = document.querySelector("#ai-prompt-improvement-note");
+const aiPromptNoteSaveButton = document.querySelector("#ai-prompt-note-save-button");
+const aiPromptNoteHistory = document.querySelector("#ai-prompt-note-history");
 const logDateInput = document.querySelector("#log-date");
 const heroPhoto = document.querySelector("#hero-photo");
 const heroPhotoButton = document.querySelector("#hero-photo-button");
@@ -262,6 +264,7 @@ const defaultState = {
   reminders: cloneState(defaultReminders),
   aiEvaluationLog: [],
   aiPromptImprovementNote: "",
+  aiPromptNotes: [],
 };
 
 const persistenceAdapter = {
@@ -490,6 +493,7 @@ aiPromptImprovementNote.addEventListener("input", () => {
   state.aiPromptImprovementNote = aiPromptImprovementNote.value;
   saveState();
 });
+aiPromptNoteSaveButton.addEventListener("click", () => saveAiPromptNote());
 aiEvaluationLog.addEventListener("input", (event) => {
   const field = event.target.closest("[data-ai-evaluation-note]");
   if (!field) {
@@ -1276,6 +1280,14 @@ async function syncCloudState(options = {}) {
     return false;
   }
 
+  const aiPromptNotesSynced = await syncAiPromptNotesToSupabase({ silent: true });
+  if (!aiPromptNotesSynced) {
+    if (!options.silent) {
+      showToast("プロンプト改善メモの同期に失敗しました");
+    }
+    return false;
+  }
+
   state.account.syncStatus = "synced";
   state.account.lastSyncedAt = new Date().toISOString();
   saveState({ keepSyncStatus: true });
@@ -1544,6 +1556,29 @@ async function loadAiEvaluationsFromSupabase() {
   }
 
   applyRemoteAiEvaluations(data || []);
+  saveState({ keepSyncStatus: true });
+  renderAiEvaluationLog();
+  return data || [];
+}
+
+async function loadAiPromptNotesFromSupabase() {
+  if (!supabaseClient || !authSession?.user) {
+    return [];
+  }
+
+  const { data, error } = await supabaseClient
+    .from("ai_prompt_notes")
+    .select("id, local_id, prompt_version, note, created_at, updated_at")
+    .eq("owner_id", authSession.user.id)
+    .order("created_at", { ascending: false })
+    .limit(20);
+
+  if (error) {
+    showToast(error.message || "プロンプト改善メモを読み込めませんでした");
+    return [];
+  }
+
+  applyRemoteAiPromptNotes(data || []);
   saveState({ keepSyncStatus: true });
   renderAiEvaluationLog();
   return data || [];
@@ -2090,6 +2125,45 @@ async function syncAiEvaluationsToSupabase(options = {}) {
   return true;
 }
 
+async function syncAiPromptNotesToSupabase(options = {}) {
+  if (!supabaseClient || !authSession?.user) {
+    if (!options.silent) {
+      showToast("Supabaseにログインしてください");
+    }
+    return false;
+  }
+
+  const payloads = getAiPromptNotePayloads(authSession.user);
+  if (!payloads.length) {
+    return true;
+  }
+
+  const { data, error } = await supabaseClient
+    .from("ai_prompt_notes")
+    .upsert(payloads, { onConflict: "owner_id,local_id" })
+    .select("id, local_id, prompt_version, note, created_at, updated_at");
+
+  if (error) {
+    state.account.syncStatus = "local";
+    saveState({ keepSyncStatus: true });
+    renderAccount();
+    if (!options.silent) {
+      showToast(error.message || "プロンプト改善メモの同期に失敗しました");
+    }
+    return false;
+  }
+
+  applyRemoteAiPromptNotes(data || []);
+  saveState({ keepSyncStatus: true });
+  renderAiEvaluationLog();
+
+  if (!options.silent) {
+    showToast("プロンプト改善メモをSupabaseに同期しました");
+  }
+
+  return true;
+}
+
 function scheduleAiEvaluationSync() {
   window.clearTimeout(aiEvaluationSyncTimer);
   aiEvaluationSyncTimer = window.setTimeout(() => {
@@ -2292,6 +2366,17 @@ function getAiEvaluationPayloads(user) {
     difference: entry.difference || "",
     note: entry.note || "",
     evaluated_at: entry.createdAt || new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  }));
+}
+
+function getAiPromptNotePayloads(user) {
+  return (state.aiPromptNotes || []).map((note) => ({
+    owner_id: user.id,
+    local_id: note.id,
+    prompt_version: note.promptVersion || null,
+    note: note.note || "",
+    created_at: note.createdAt || new Date().toISOString(),
     updated_at: new Date().toISOString(),
   }));
 }
@@ -2649,6 +2734,24 @@ function applyRemoteAiEvaluations(remoteEntries) {
     .slice(0, 20);
 }
 
+function applyRemoteAiPromptNotes(remoteNotes) {
+  const localById = new Map((state.aiPromptNotes || []).map((note) => [note.id, note]));
+  remoteNotes.forEach((remoteNote) => {
+    const nextNote = normalizeAiPromptNote({
+      id: remoteNote.local_id,
+      cloudId: remoteNote.id,
+      promptVersion: remoteNote.prompt_version,
+      note: remoteNote.note,
+      createdAt: remoteNote.created_at || remoteNote.updated_at,
+    });
+    localById.set(nextNote.id, nextNote);
+  });
+
+  state.aiPromptNotes = [...localById.values()]
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    .slice(0, 20);
+}
+
 function isNewerAiResult(nextResult, currentResult) {
   if (!currentResult?.checkedAt) {
     return true;
@@ -2802,6 +2905,7 @@ async function initSupabaseAuth() {
       await loadCommunityFromSupabase();
       await loadAiResultsFromSupabase();
       await loadAiEvaluationsFromSupabase();
+      await loadAiPromptNotesFromSupabase();
     } else {
       state.account.signedIn = false;
       notificationDeliveryHistory = [];
@@ -2823,6 +2927,7 @@ async function initSupabaseAuth() {
     await loadCommunityFromSupabase();
     await loadAiResultsFromSupabase();
     await loadAiEvaluationsFromSupabase();
+    await loadAiPromptNotesFromSupabase();
   } else {
     state.account.signedIn = false;
     notificationDeliveryHistory = [];
@@ -4142,6 +4247,7 @@ function renderAiEvaluationLog() {
   aiEvaluationSourceFilter.value = activeAiEvaluationSourceFilter;
   aiEvaluationStatusFilter.value = activeAiEvaluationStatusFilter;
   aiPromptImprovementNote.value = state.aiPromptImprovementNote || "";
+  renderAiPromptNoteHistory();
   const entries = Array.isArray(state.aiEvaluationLog) ? state.aiEvaluationLog : [];
   const visibleEntries = entries.filter((entry) => {
     const sourceMatch = activeAiEvaluationSourceFilter === "all" || entry.source === activeAiEvaluationSourceFilter;
@@ -4175,6 +4281,57 @@ function renderAiEvaluationLog() {
       `,
     )
     .join("");
+}
+
+function renderAiPromptNoteHistory() {
+  if (!aiPromptNoteHistory) {
+    return;
+  }
+
+  const notes = Array.isArray(state.aiPromptNotes) ? state.aiPromptNotes : [];
+  if (!notes.length) {
+    aiPromptNoteHistory.innerHTML = `<p class="empty-state">保存したプロンプト改善メモはまだありません。</p>`;
+    return;
+  }
+
+  aiPromptNoteHistory.innerHTML = notes
+    .slice(0, 5)
+    .map(
+      (note) => `
+        <article>
+          <span>${escapeHtml(formatFullDate(note.createdAt))} / ${escapeHtml(note.promptVersion || "未確認")}</span>
+          <p>${escapeHtml(note.note)}</p>
+        </article>
+      `,
+    )
+    .join("");
+}
+
+function saveAiPromptNote() {
+  const note = aiPromptImprovementNote.value.trim();
+  if (!note) {
+    showToast("改善メモを入力してください");
+    return;
+  }
+
+  state.aiPromptNotes = [
+    normalizeAiPromptNote({
+      id: createId("prompt-note"),
+      promptVersion: aiApiStatus.promptVersion,
+      note,
+      createdAt: new Date().toISOString(),
+    }),
+    ...(state.aiPromptNotes || []),
+  ].slice(0, 20);
+  state.aiPromptImprovementNote = "";
+  saveState();
+  renderAiEvaluationLog();
+
+  if (authSession?.user) {
+    syncAiPromptNotesToSupabase({ silent: true });
+  }
+
+  showToast("プロンプト改善メモを履歴に保存しました");
 }
 
 function normalizeAiApiResult(result, fallbackResult) {
@@ -5145,6 +5302,7 @@ function normalizeState(saved) {
     reminders: normalizeReminders(saved.reminders),
     aiEvaluationLog: Array.isArray(saved.aiEvaluationLog) ? saved.aiEvaluationLog.map(normalizeAiEvaluationEntry) : [],
     aiPromptImprovementNote: saved.aiPromptImprovementNote || "",
+    aiPromptNotes: Array.isArray(saved.aiPromptNotes) ? saved.aiPromptNotes.map(normalizeAiPromptNote) : [],
   };
 
   if (!normalized.tanks.length) {
@@ -5261,6 +5419,16 @@ function normalizeAiEvaluationEntry(entry) {
     fallbackSummary: entry.fallbackSummary || "",
     difference: entry.difference || "未比較",
     note: entry.note || "",
+  };
+}
+
+function normalizeAiPromptNote(note) {
+  return {
+    id: note.id || createId("prompt-note"),
+    cloudId: note.cloudId || null,
+    promptVersion: note.promptVersion || "未確認",
+    note: note.note || "",
+    createdAt: note.createdAt || new Date().toISOString(),
   };
 }
 
