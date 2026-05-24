@@ -3044,7 +3044,11 @@ function escapeCsvCell(value) {
 function exportAiReviewData(format) {
   const entries = getVisibleAiEvaluationEntries();
   const notes = getVisibleAiPromptNotes();
-  if (!entries.length && !notes.length) {
+  const promptDraftItems = getAiPromptV4DraftItems({
+    notes,
+    needsFixEntries: entries.filter((entry) => entry.reviewLabel === "needs_fix"),
+  });
+  if (!entries.length && !notes.length && !promptDraftItems.length) {
     showToast("書き出すAI評価レビューがありません");
     return;
   }
@@ -3084,6 +3088,21 @@ function exportAiReviewData(format) {
         "",
         note.note,
       ]),
+      ...promptDraftItems.map((item) => [
+        "prompt_v4_draft",
+        new Date().toISOString(),
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "aquanote-care-v4-draft",
+        item,
+        "",
+        "",
+      ]),
     ];
     downloadFile(`aquanote-ai-reviews-${dateKey}.csv`, toCsv(rows), "text/csv;charset=utf-8");
     showToast("AI評価レビューをCSVで書き出しました");
@@ -3104,6 +3123,10 @@ function exportAiReviewData(format) {
     evaluations: entries,
     promptImprovementNote: state.aiPromptImprovementNote || "",
     promptNotes: notes,
+    promptV4Draft: {
+      version: "aquanote-care-v4-draft",
+      items: promptDraftItems,
+    },
   };
   downloadFile(
     `aquanote-ai-reviews-${dateKey}.json`,
