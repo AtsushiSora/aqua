@@ -65,6 +65,7 @@ const authPasswordInput = document.querySelector("#auth-password-input");
 const authSignOutButton = document.querySelector("#auth-sign-out-button");
 const authNote = document.querySelector("#auth-note");
 const notificationPreferenceSummary = document.querySelector("#notification-preference-summary");
+const notificationDeliveryFilter = document.querySelector("#notification-delivery-filter");
 const notificationDeliveryRefreshButton = document.querySelector("#notification-delivery-refresh-button");
 const notificationDeliveryLog = document.querySelector("#notification-delivery-log");
 const supabaseConfig = window.AQUANOTE_SUPABASE_CONFIG || {};
@@ -272,6 +273,7 @@ let highlightedSearchResult = null;
 let supabaseClient = createSupabaseClient();
 let authSession = null;
 let notificationDeliveryHistory = [];
+let activeNotificationDeliveryFilter = "all";
 
 function showView(id) {
   views.forEach((view) => {
@@ -454,6 +456,19 @@ authForm.addEventListener("submit", async (event) => {
 
 authSignOutButton.addEventListener("click", signOutSupabase);
 notificationDeliveryRefreshButton.addEventListener("click", () => loadNotificationDeliveryHistory());
+notificationDeliveryFilter.addEventListener("change", () => {
+  activeNotificationDeliveryFilter = notificationDeliveryFilter.value;
+  renderNotificationDeliveryLog();
+});
+
+notificationDeliveryLog.addEventListener("click", async (event) => {
+  const button = event.target.closest("[data-retry-delivery]");
+  if (!button) {
+    return;
+  }
+
+  await retryNotificationDelivery(button.dataset.retryDelivery);
+});
 
 postImageInput.addEventListener("change", async () => {
   const file = postImageInput.files[0];
@@ -900,28 +915,43 @@ function renderNotificationDeliveryLog() {
 
   if (!supabaseClient) {
     notificationDeliveryLog.innerHTML = `<p class="empty-state">Supabase設定後に通知配信ログを表示します。</p>`;
+    notificationDeliveryFilter.disabled = true;
     notificationDeliveryRefreshButton.disabled = true;
     return;
   }
 
   if (!authSession?.user) {
     notificationDeliveryLog.innerHTML = `<p class="empty-state">ログインするとPush/メール配信の予約と結果を確認できます。</p>`;
+    notificationDeliveryFilter.disabled = true;
     notificationDeliveryRefreshButton.disabled = true;
     return;
   }
 
+  notificationDeliveryFilter.disabled = false;
+  notificationDeliveryFilter.value = activeNotificationDeliveryFilter;
   notificationDeliveryRefreshButton.disabled = false;
+  const visibleDeliveries =
+    activeNotificationDeliveryFilter === "all"
+      ? notificationDeliveryHistory
+      : notificationDeliveryHistory.filter((delivery) => delivery.status === activeNotificationDeliveryFilter);
 
-  if (!notificationDeliveryHistory.length) {
-    notificationDeliveryLog.innerHTML = `<p class="empty-state">通知配信ログはまだありません。</p>`;
+  if (!visibleDeliveries.length) {
+    const message = notificationDeliveryHistory.length
+      ? "条件に合う通知配信ログはありません。"
+      : "通知配信ログはまだありません。";
+    notificationDeliveryLog.innerHTML = `<p class="empty-state">${message}</p>`;
     return;
   }
 
-  notificationDeliveryLog.innerHTML = notificationDeliveryHistory
+  notificationDeliveryLog.innerHTML = visibleDeliveries
     .map((delivery) => {
       const status = getDeliveryStatusLabel(delivery.status);
       const channel = delivery.channel === "email" ? "メール" : "Push";
       const lastError = delivery.last_error ? `<small>${escapeHtml(delivery.last_error)}</small>` : "";
+      const retryButton =
+        delivery.status === "failed"
+          ? `<button class="text-button" type="button" data-retry-delivery="${escapeHtml(delivery.id)}">再送予約</button>`
+          : "";
       return `
         <article class="notification-delivery-item">
           <div>
@@ -932,6 +962,7 @@ function renderNotificationDeliveryLog() {
           <div class="delivery-meta">
             <span class="delivery-status ${escapeHtml(delivery.status || "pending")}">${escapeHtml(status)}</span>
             <small>試行 ${Number(delivery.attempt_count || 0)}回</small>
+            ${retryButton}
           </div>
         </article>
       `;
@@ -1525,6 +1556,34 @@ async function loadNotificationDeliveryHistory(options = {}) {
     showToast("通知配信ログを更新しました");
   }
 
+  return true;
+}
+
+async function retryNotificationDelivery(deliveryId) {
+  if (!supabaseClient || !authSession?.user) {
+    showToast("Supabaseにログインしてください");
+    return false;
+  }
+
+  const { error } = await supabaseClient
+    .from("notification_deliveries")
+    .update({
+      status: "pending",
+      scheduled_for: new Date().toISOString(),
+      attempt_count: 0,
+      last_error: null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", deliveryId)
+    .eq("owner_id", authSession.user.id);
+
+  if (error) {
+    showToast(error.message || "通知配信の再送予約に失敗しました");
+    return false;
+  }
+
+  await loadNotificationDeliveryHistory({ silent: true });
+  showToast("通知配信を再送予約しました");
   return true;
 }
 

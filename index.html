@@ -752,7 +752,16 @@
                   <p class="eyebrow">Delivery log</p>
                   <h2>通知配信ログ</h2>
                 </div>
-                <button class="ghost-button" id="notification-delivery-refresh-button" type="button">更新</button>
+                <div class="notification-log-actions">
+                  <select id="notification-delivery-filter" aria-label="通知配信ログの絞り込み">
+                    <option value="all">すべて</option>
+                    <option value="pending">予約中</option>
+                    <option value="sent">送信済み</option>
+                    <option value="failed">失敗</option>
+                    <option value="skipped">スキップ</option>
+                  </select>
+                  <button class="ghost-button" id="notification-delivery-refresh-button" type="button">更新</button>
+                </div>
               </div>
               <div class="notification-delivery-log" id="notification-delivery-log"></div>
             </section>

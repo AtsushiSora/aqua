@@ -2094,6 +2094,18 @@ textarea {
   align-items: center;
 }
 
+.notification-log-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.notification-log-actions select {
+  min-height: 38px;
+  min-width: 116px;
+}
+
 .notification-delivery-log {
   display: grid;
   gap: 10px;
@@ -2638,6 +2650,15 @@ textarea {
 
   .delivery-meta {
     justify-items: start;
+  }
+
+  .notification-log-actions {
+    justify-content: stretch;
+  }
+
+  .notification-log-actions select,
+  .notification-log-actions button {
+    flex: 1 1 120px;
   }
 
   .profile-actions {
