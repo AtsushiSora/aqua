@@ -74,13 +74,14 @@
 - アカウント画面でのPush/メール配信ログ表示
 - 通知配信ログの状態絞り込みと失敗配信の再送予約
 - 通知配信ログの詳細表示と運用メモ
+- アカウント画面での通知本番検証チェックリスト
 - PWA用の `manifest.webmanifest` と `sw.js`
 
 ## 次に作るとよいもの
 
 - 本物のAI画像分析
 - 通知配信ワーカーの本番環境変数設定
-- 通知配信ワーカーの本番検証チェックリスト
+- 通知配信ワーカーの本番リハーサル
 - ネイティブスマホアプリ、またはPWAの本番化
 
 ## 通知配信ワーカー
@@ -102,3 +103,10 @@
 外部のPush中継サービスを使う場合は、VAPID環境変数の代わりに `WEB_PUSH_ENDPOINT` と `WEB_PUSH_TOKEN` を設定できます。
 `WEB_PUSH_VAPID_PUBLIC_KEY` は `supabase-config.js` の `window.AQUANOTE_PUSH_CONFIG.publicKey` と同じ値にします。
 VAPID鍵は `node scripts/generate-vapid-keys.mjs` で生成できます。
+
+本番前チェック:
+
+- `supabase-config.js` にSupabase接続情報と `AQUANOTE_PUSH_CONFIG.publicKey` を設定
+- Netlifyに `SUPABASE_SERVICE_ROLE_KEY` とVAPID秘密鍵を設定
+- `NOTIFICATION_DELIVERY_DRY_RUN=false` で送信を有効化
+- アカウント画面の通知本番チェックと配信ログで `sent` / `failed` / `skipped` を確認

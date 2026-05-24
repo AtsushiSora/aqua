@@ -68,6 +68,7 @@ const notificationPreferenceSummary = document.querySelector("#notification-pref
 const notificationDeliveryFilter = document.querySelector("#notification-delivery-filter");
 const notificationDeliveryRefreshButton = document.querySelector("#notification-delivery-refresh-button");
 const notificationDeliveryLog = document.querySelector("#notification-delivery-log");
+const notificationVerificationList = document.querySelector("#notification-verification-list");
 const supabaseConfig = window.AQUANOTE_SUPABASE_CONFIG || {};
 const pushConfig = window.AQUANOTE_PUSH_CONFIG || {};
 
@@ -871,6 +872,7 @@ function renderAccount() {
   document.querySelector("#account-quiet-end-input").value = account.quietHoursEnd;
   notificationPreferenceSummary.textContent = getNotificationPreferenceSummary();
   renderNotificationDeliveryLog();
+  renderNotificationVerificationChecklist();
 
   const mediaCount = state.posts.filter((post) => hasPostMedia(post)).length;
   const commentCount = state.posts.reduce((total, post) => total + getDisplayCommentCount(post), 0);
@@ -1018,6 +1020,70 @@ function getNotificationDeliveryDetailMarkup(delivery, channel, status) {
       </div>
     </dl>
   `;
+}
+
+function renderNotificationVerificationChecklist() {
+  if (!notificationVerificationList) {
+    return;
+  }
+
+  const hasNotificationApi = canUseNotifications();
+  const hasPushKey = Boolean(getPushApplicationServerKey());
+  const hasPushSupport = canUsePushNotifications();
+  const items = [
+    {
+      label: "Supabase接続",
+      note: supabaseClient ? "接続設定あり" : "supabase-config.jsを確認",
+      status: supabaseClient ? "ready" : "missing",
+    },
+    {
+      label: "ログイン状態",
+      note: authSession?.user ? "ユーザー確認済み" : "Authログインが必要",
+      status: authSession?.user ? "ready" : "missing",
+    },
+    {
+      label: "PWA Push公開鍵",
+      note: hasPushKey ? "ブラウザ設定済み" : "AQUANOTE_PUSH_CONFIG.publicKeyが必要",
+      status: hasPushKey ? "ready" : "missing",
+    },
+    {
+      label: "Service Worker / Push API",
+      note: hasPushSupport ? "このブラウザで利用可能" : "対応ブラウザとHTTPSで確認",
+      status: hasPushSupport ? "ready" : "missing",
+    },
+    {
+      label: "通知権限",
+      note: hasNotificationApi ? getNotificationPermissionLabel() : "通知API非対応",
+      status: hasNotificationApi && Notification.permission === "granted" ? "ready" : "missing",
+    },
+    {
+      label: "配信ログ",
+      note: notificationDeliveryHistory.length ? `${notificationDeliveryHistory.length}件読み込み済み` : "ログイン後に予約を同期",
+      status: notificationDeliveryHistory.length ? "ready" : "missing",
+    },
+    {
+      label: "Netlify環境変数",
+      note: "SUPABASE_SERVICE_ROLE_KEY / VAPID / Resendを本番で確認",
+      status: "manual",
+    },
+    {
+      label: "dry-run解除",
+      note: "NOTIFICATION_DELIVERY_DRY_RUN=falseで本番送信を確認",
+      status: "manual",
+    },
+  ];
+
+  notificationVerificationList.innerHTML = items
+    .map(
+      (item) => `
+        <article class="verification-item ${escapeHtml(item.status)}">
+          <span>${escapeHtml(getVerificationStatusLabel(item.status))}</span>
+          <strong>${escapeHtml(item.label)}</strong>
+          <small>${escapeHtml(item.note)}</small>
+        </article>
+      `,
+    )
+    .join("");
 }
 
 async function handleAuthSubmit(action) {
@@ -4196,6 +4262,30 @@ function getDeliveryStatusLabel(status) {
   };
 
   return labels[status] || "未確認";
+}
+
+function getVerificationStatusLabel(status) {
+  const labels = {
+    ready: "OK",
+    missing: "確認",
+    manual: "本番",
+  };
+
+  return labels[status] || "確認";
+}
+
+function getNotificationPermissionLabel() {
+  if (!canUseNotifications()) {
+    return "通知API非対応";
+  }
+
+  const labels = {
+    granted: "許可済み",
+    denied: "ブロック中",
+    default: "未許可",
+  };
+
+  return labels[Notification.permission] || "未確認";
 }
 
 function getDeliveryOperationNote(delivery) {
