@@ -2241,6 +2241,32 @@ textarea {
   font-weight: 800;
 }
 
+.ai-evaluation-tips {
+  padding: 10px;
+  border: 1px solid var(--glass-border);
+  border-radius: 8px;
+  background: rgba(231, 247, 243, 0.72);
+}
+
+.ai-evaluation-tips span {
+  display: block;
+  color: var(--aqua-dark);
+  font-size: 0.76rem;
+  font-weight: 900;
+}
+
+.ai-evaluation-tips ul {
+  margin: 6px 0 0;
+  padding-left: 18px;
+}
+
+.ai-evaluation-tips li {
+  margin: 4px 0;
+  color: var(--ink);
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+
 .ai-evaluation-item textarea {
   min-height: 74px;
   resize: vertical;

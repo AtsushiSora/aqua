@@ -1586,7 +1586,7 @@ async function loadAiEvaluationsFromSupabase() {
 
   const { data, error } = await supabaseClient
     .from("ai_evaluations")
-    .select("id, local_id, target, source, model, prompt_version, status, fallback_status, summary, fallback_summary, difference, review_label, note, evaluated_at, updated_at")
+    .select("id, local_id, target, source, model, prompt_version, status, fallback_status, summary, fallback_summary, difference, retake_tips, review_label, note, evaluated_at, updated_at")
     .eq("owner_id", authSession.user.id)
     .order("evaluated_at", { ascending: false })
     .limit(20);
@@ -2141,7 +2141,7 @@ async function syncAiEvaluationsToSupabase(options = {}) {
   const { data, error } = await supabaseClient
     .from("ai_evaluations")
     .upsert(payloads, { onConflict: "owner_id,local_id" })
-    .select("id, local_id, target, source, model, prompt_version, status, fallback_status, summary, fallback_summary, difference, review_label, note, evaluated_at, updated_at");
+    .select("id, local_id, target, source, model, prompt_version, status, fallback_status, summary, fallback_summary, difference, retake_tips, review_label, note, evaluated_at, updated_at");
 
   if (error) {
     state.account.syncStatus = "local";
@@ -2405,6 +2405,7 @@ function getAiEvaluationPayloads(user) {
     summary: entry.summary || "",
     fallback_summary: entry.fallbackSummary || "",
     difference: entry.difference || "",
+    retake_tips: Array.isArray(entry.retakeTips) ? entry.retakeTips : [],
     review_label: entry.reviewLabel || "unreviewed",
     note: entry.note || "",
     evaluated_at: entry.createdAt || new Date().toISOString(),
@@ -2762,6 +2763,7 @@ function applyRemoteAiEvaluations(remoteEntries) {
       summary: remoteEntry.summary,
       fallbackSummary: remoteEntry.fallback_summary,
       difference: remoteEntry.difference,
+      retakeTips: remoteEntry.retake_tips,
       reviewLabel: remoteEntry.review_label,
       note: remoteEntry.note,
     });
@@ -3033,7 +3035,7 @@ function exportAiReviewData(format) {
 
   if (format === "csv") {
     const rows = [
-      ["type", "createdAt", "target", "source", "status", "difference", "reviewLabel", "model", "promptVersion", "summary", "note"],
+      ["type", "createdAt", "target", "source", "status", "difference", "reviewLabel", "model", "promptVersion", "summary", "retakeTips", "note"],
       ...entries.map((entry) => [
         "evaluation",
         entry.createdAt,
@@ -3045,6 +3047,7 @@ function exportAiReviewData(format) {
         entry.model,
         entry.promptVersion,
         entry.summary,
+        Array.isArray(entry.retakeTips) ? entry.retakeTips.join(" / ") : "",
         entry.note || "",
       ]),
       ...notes.map((note) => [
@@ -3057,6 +3060,7 @@ function exportAiReviewData(format) {
         "",
         "",
         note.promptVersion || "",
+        "",
         "",
         note.note,
       ]),
@@ -4268,6 +4272,7 @@ function recordAiEvaluation({ payload, result, fallbackResult, source, error = "
     summary: result.summary,
     fallbackSummary: fallbackResult.summary,
     difference: getAiResultDifference(result, fallbackResult, error),
+    retakeTips: Array.isArray(result.retakeTips) ? result.retakeTips : [],
     reviewLabel: "unreviewed",
     note: "",
   };
@@ -4410,6 +4415,18 @@ function renderAiEvaluationLog() {
             <small>${escapeHtml(formatFullDate(entry.createdAt))} / ${escapeHtml(entry.model)} / ${escapeHtml(entry.promptVersion)}</small>
           </div>
           <p>${escapeHtml(entry.summary)}</p>
+          ${
+            Array.isArray(entry.retakeTips) && entry.retakeTips.length
+              ? `
+                <div class="ai-evaluation-tips">
+                  <span>撮り直し・追加確認</span>
+                  <ul>
+                    ${entry.retakeTips.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}
+                  </ul>
+                </div>
+              `
+              : ""
+          }
           <label>
             <span>出力例の分類</span>
             <select data-ai-evaluation-review="${escapeHtml(entry.id)}">
@@ -5761,6 +5778,7 @@ function normalizeAiEvaluationEntry(entry) {
     summary: entry.summary || "",
     fallbackSummary: entry.fallbackSummary || "",
     difference: entry.difference || "未比較",
+    retakeTips: Array.isArray(entry.retakeTips) ? entry.retakeTips.map((item) => String(item)).slice(0, 4) : [],
     reviewLabel: ["unreviewed", "good", "needs_fix", "watch"].includes(entry.reviewLabel)
       ? entry.reviewLabel
       : "unreviewed",
