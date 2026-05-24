@@ -178,6 +178,7 @@ create table public.ai_evaluations (
   fallback_summary text not null default '',
   difference text not null default '',
   retake_tips text[] not null default '{}',
+  photo_condition text not null default 'unspecified' check (photo_condition in ('unspecified', 'normal', 'dark', 'small_fish', 'algae', 'reflection')),
   review_label text not null default 'unreviewed' check (review_label in ('unreviewed', 'good', 'needs_fix', 'watch')),
   note text not null default '',
   evaluated_at timestamptz not null default now(),

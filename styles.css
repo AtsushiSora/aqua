@@ -2199,6 +2199,27 @@ textarea {
   font-weight: 850;
 }
 
+.ai-condition-coverage {
+  padding: 10px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.58);
+}
+
+.ai-condition-coverage ul {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+  margin: 6px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ai-condition-coverage li {
+  color: var(--ink);
+  font-size: 0.76rem;
+  font-weight: 900;
+}
+
 .ai-evaluation-log {
   display: grid;
   gap: 10px;
@@ -3107,6 +3128,7 @@ textarea {
   .ai-evaluation-summary,
   .ai-production-flow,
   .ai-image-validation-summary dl,
+  .ai-condition-coverage ul,
   .schema-grid,
   .post-grid,
   .ranking-list,

@@ -102,14 +102,15 @@ PWA Push subscription scaffold:
 - Filter AI review exports by date range and review label. Done in the prototype.
 - Summarize real-photo Gateway validation progress in the AI view. Done in the prototype.
 - Store prompt v3 retake tips in AI evaluation logs and exports. Done in the prototype.
+- Tag prompt v3 evaluation samples by photo condition. Done in the prototype.
 - Keep the optional `WEB_PUSH_ENDPOINT` provider path for hosted push gateways.
 - Keep in-app reminder checks as a fallback while notification delivery is tested.
 
 ## Next implementation slice
 
-Validate prompt v3 against real photos:
+Summarize prompt v3 weak photo conditions:
 
 - Enable Netlify AI Gateway and confirm `OPENAI_BASE_URL`.
 - Test `gpt-4o-mini` against real aquarium photos.
-- Add more reviewed prompt v3 samples for dark, small-fish, and algae-heavy photos.
+- Aggregate needs-fix review labels by photo condition.
 - Keep JSON export/import as a recovery path while the sync model is being tested.

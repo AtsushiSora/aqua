@@ -536,17 +536,24 @@ aiEvaluationLog.addEventListener("input", (event) => {
   }
 });
 aiEvaluationLog.addEventListener("change", (event) => {
-  const field = event.target.closest("[data-ai-evaluation-review]");
+  const reviewField = event.target.closest("[data-ai-evaluation-review]");
+  const conditionField = event.target.closest("[data-ai-evaluation-condition]");
+  const field = reviewField || conditionField;
   if (!field) {
     return;
   }
 
-  const item = state.aiEvaluationLog.find((entry) => entry.id === field.dataset.aiEvaluationReview);
+  const itemId = reviewField ? reviewField.dataset.aiEvaluationReview : conditionField.dataset.aiEvaluationCondition;
+  const item = state.aiEvaluationLog.find((entry) => entry.id === itemId);
   if (!item) {
     return;
   }
 
-  item.reviewLabel = field.value;
+  if (reviewField) {
+    item.reviewLabel = reviewField.value;
+  } else {
+    item.photoCondition = conditionField.value;
+  }
   saveState();
   if (authSession?.user) {
     scheduleAiEvaluationSync();
@@ -1586,7 +1593,7 @@ async function loadAiEvaluationsFromSupabase() {
 
   const { data, error } = await supabaseClient
     .from("ai_evaluations")
-    .select("id, local_id, target, source, model, prompt_version, status, fallback_status, summary, fallback_summary, difference, retake_tips, review_label, note, evaluated_at, updated_at")
+    .select("id, local_id, target, source, model, prompt_version, status, fallback_status, summary, fallback_summary, difference, retake_tips, photo_condition, review_label, note, evaluated_at, updated_at")
     .eq("owner_id", authSession.user.id)
     .order("evaluated_at", { ascending: false })
     .limit(20);
@@ -2141,7 +2148,7 @@ async function syncAiEvaluationsToSupabase(options = {}) {
   const { data, error } = await supabaseClient
     .from("ai_evaluations")
     .upsert(payloads, { onConflict: "owner_id,local_id" })
-    .select("id, local_id, target, source, model, prompt_version, status, fallback_status, summary, fallback_summary, difference, retake_tips, review_label, note, evaluated_at, updated_at");
+    .select("id, local_id, target, source, model, prompt_version, status, fallback_status, summary, fallback_summary, difference, retake_tips, photo_condition, review_label, note, evaluated_at, updated_at");
 
   if (error) {
     state.account.syncStatus = "local";
@@ -2406,6 +2413,7 @@ function getAiEvaluationPayloads(user) {
     fallback_summary: entry.fallbackSummary || "",
     difference: entry.difference || "",
     retake_tips: Array.isArray(entry.retakeTips) ? entry.retakeTips : [],
+    photo_condition: entry.photoCondition || "unspecified",
     review_label: entry.reviewLabel || "unreviewed",
     note: entry.note || "",
     evaluated_at: entry.createdAt || new Date().toISOString(),
@@ -2764,6 +2772,7 @@ function applyRemoteAiEvaluations(remoteEntries) {
       fallbackSummary: remoteEntry.fallback_summary,
       difference: remoteEntry.difference,
       retakeTips: remoteEntry.retake_tips,
+      photoCondition: remoteEntry.photo_condition,
       reviewLabel: remoteEntry.review_label,
       note: remoteEntry.note,
     });
@@ -3035,7 +3044,7 @@ function exportAiReviewData(format) {
 
   if (format === "csv") {
     const rows = [
-      ["type", "createdAt", "target", "source", "status", "difference", "reviewLabel", "model", "promptVersion", "summary", "retakeTips", "note"],
+      ["type", "createdAt", "target", "source", "status", "difference", "reviewLabel", "photoCondition", "model", "promptVersion", "summary", "retakeTips", "note"],
       ...entries.map((entry) => [
         "evaluation",
         entry.createdAt,
@@ -3044,6 +3053,7 @@ function exportAiReviewData(format) {
         entry.status,
         entry.difference,
         getAiReviewLabel(entry.reviewLabel),
+        getAiPhotoConditionLabel(entry.photoCondition),
         entry.model,
         entry.promptVersion,
         entry.summary,
@@ -3053,6 +3063,7 @@ function exportAiReviewData(format) {
       ...notes.map((note) => [
         "prompt_note",
         note.createdAt,
+        "",
         "",
         "",
         "",
@@ -4273,6 +4284,7 @@ function recordAiEvaluation({ payload, result, fallbackResult, source, error = "
     fallbackSummary: fallbackResult.summary,
     difference: getAiResultDifference(result, fallbackResult, error),
     retakeTips: Array.isArray(result.retakeTips) ? result.retakeTips : [],
+    photoCondition: "unspecified",
     reviewLabel: "unreviewed",
     note: "",
   };
@@ -4434,6 +4446,12 @@ function renderAiEvaluationLog() {
             </select>
           </label>
           <label>
+            <span>撮影条件</span>
+            <select data-ai-evaluation-condition="${escapeHtml(entry.id)}">
+              ${getAiPhotoConditionOptions(entry.photoCondition)}
+            </select>
+          </label>
+          <label>
             <span>評価メモ</span>
             <textarea data-ai-evaluation-note="${escapeHtml(entry.id)}" rows="3" placeholder="実写真で気になった点、過不足、次に直すプロンプトを書きます">${escapeHtml(entry.note || "")}</textarea>
           </label>
@@ -4552,8 +4570,9 @@ function renderAiImageValidationSummary(entries) {
   const gatewayPhotoEntries = photoEntries.filter((entry) => entry.source === "AI Gateway");
   const needsFixCount = gatewayPhotoEntries.filter((entry) => entry.reviewLabel === "needs_fix").length;
   const goodCount = gatewayPhotoEntries.filter((entry) => entry.reviewLabel === "good").length;
+  const conditionCounts = getAiPhotoConditionCounts(gatewayPhotoEntries);
   const latestGatewayPhoto = gatewayPhotoEntries[0] || null;
-  const suggestion = getAiImageValidationSuggestion({ photoEntries, gatewayPhotoEntries, needsFixCount, goodCount });
+  const suggestion = getAiImageValidationSuggestion({ photoEntries, gatewayPhotoEntries, needsFixCount, goodCount, conditionCounts });
 
   aiImageValidationSummary.innerHTML = `
     <article>
@@ -4576,6 +4595,14 @@ function renderAiImageValidationSummary(entries) {
         </div>
       </dl>
       <p>${escapeHtml(suggestion)}</p>
+      <div class="ai-condition-coverage">
+        <span>条件別サンプル</span>
+        <ul>
+          ${["dark", "small_fish", "algae", "reflection"]
+            .map((key) => `<li>${escapeHtml(getAiPhotoConditionLabel(key))}: ${conditionCounts[key]}</li>`)
+            .join("")}
+        </ul>
+      </div>
       ${
         latestGatewayPhoto
           ? `<small>最新: ${escapeHtml(formatFullDate(latestGatewayPhoto.createdAt))} / ${escapeHtml(latestGatewayPhoto.status)} / ${escapeHtml(latestGatewayPhoto.difference)}</small>`
@@ -4585,7 +4612,7 @@ function renderAiImageValidationSummary(entries) {
   `;
 }
 
-function getAiImageValidationSuggestion({ photoEntries, gatewayPhotoEntries, needsFixCount, goodCount }) {
+function getAiImageValidationSuggestion({ photoEntries, gatewayPhotoEntries, needsFixCount, goodCount, conditionCounts }) {
   if (!photoEntries.length) {
     return "まず投稿写真からAI分析を実行して、ローカル分析との差分を確認します。";
   }
@@ -4598,11 +4625,31 @@ function getAiImageValidationSuggestion({ photoEntries, gatewayPhotoEntries, nee
     return "要修正の写真があります。評価メモとCSV/JSON書き出しを使って、プロンプトv3の修正点を整理してください。";
   }
 
+  const missingCondition = ["dark", "small_fish", "algae", "reflection"].find((key) => !conditionCounts[key]);
+  if (missingCondition) {
+    return `${getAiPhotoConditionLabel(missingCondition)}の評価サンプルが不足しています。次の投稿写真で条件タグを付けて検証してください。`;
+  }
+
   if (goodCount >= 3) {
     return "良い例が複数あります。暗い写真、魚が小さい写真、コケが目立つ写真でも追加検証してください。";
   }
 
   return "Gateway写真検証を継続中です。良い例と要修正を分類して、実写真での安定性を見ます。";
+}
+
+function getAiPhotoConditionCounts(entries) {
+  return entries.reduce(
+    (counts, entry) => {
+      const key = getAllowedValue(
+        entry.photoCondition,
+        ["unspecified", "normal", "dark", "small_fish", "algae", "reflection"],
+        "unspecified",
+      );
+      counts[key] += 1;
+      return counts;
+    },
+    { unspecified: 0, normal: 0, dark: 0, small_fish: 0, algae: 0, reflection: 0 },
+  );
 }
 
 function getAiEvaluationSuggestion(counts, entries) {
@@ -4646,6 +4693,33 @@ function getAiReviewLabel(value) {
     watch: "保留",
   };
   return labels[value] || labels.unreviewed;
+}
+
+function getAiPhotoConditionOptions(currentValue = "unspecified") {
+  const options = [
+    ["unspecified", "未指定"],
+    ["normal", "通常写真"],
+    ["dark", "暗い写真"],
+    ["small_fish", "魚が小さい"],
+    ["algae", "コケ多め"],
+    ["reflection", "反射あり"],
+  ];
+
+  return options
+    .map(([value, label]) => `<option value="${value}" ${value === currentValue ? "selected" : ""}>${label}</option>`)
+    .join("");
+}
+
+function getAiPhotoConditionLabel(value) {
+  const labels = {
+    unspecified: "未指定",
+    normal: "通常写真",
+    dark: "暗い写真",
+    small_fish: "魚が小さい",
+    algae: "コケ多め",
+    reflection: "反射あり",
+  };
+  return labels[value] || labels.unspecified;
 }
 
 function saveAiPromptNote() {
@@ -5779,6 +5853,11 @@ function normalizeAiEvaluationEntry(entry) {
     fallbackSummary: entry.fallbackSummary || "",
     difference: entry.difference || "未比較",
     retakeTips: Array.isArray(entry.retakeTips) ? entry.retakeTips.map((item) => String(item)).slice(0, 4) : [],
+    photoCondition: getAllowedValue(
+      entry.photoCondition,
+      ["unspecified", "normal", "dark", "small_fish", "algae", "reflection"],
+      "unspecified",
+    ),
     reviewLabel: ["unreviewed", "good", "needs_fix", "watch"].includes(entry.reviewLabel)
       ? entry.reviewLabel
       : "unreviewed",
