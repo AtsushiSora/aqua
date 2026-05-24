@@ -623,7 +623,24 @@
                   <p class="eyebrow">Review log</p>
                   <h2>AI比較ログ</h2>
                 </div>
+                <div class="ai-evaluation-actions">
+                  <select id="ai-evaluation-source-filter" aria-label="AI比較ログの分析経路">
+                    <option value="all">すべて</option>
+                    <option value="AI Gateway">Gateway</option>
+                    <option value="ローカル分析">ローカル</option>
+                  </select>
+                  <select id="ai-evaluation-status-filter" aria-label="AI比較ログの状態">
+                    <option value="all">全状態</option>
+                    <option value="良好">良好</option>
+                    <option value="注意">注意</option>
+                    <option value="要確認">要確認</option>
+                  </select>
+                </div>
               </div>
+              <label class="prompt-improvement-note">
+                <span>プロンプト改善メモ</span>
+                <textarea id="ai-prompt-improvement-note" rows="3" placeholder="実写真で足りなかった観点、言い過ぎた表現、次に試すプロンプトを書きます"></textarea>
+              </label>
               <div class="ai-evaluation-log" id="ai-evaluation-log"></div>
             </section>
 

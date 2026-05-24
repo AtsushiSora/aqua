@@ -38,6 +38,9 @@ const aiForm = document.querySelector("#ai-form");
 const aiApiCheckButton = document.querySelector("#ai-api-check-button");
 const aiApiStatusGrid = document.querySelector("#ai-api-status-grid");
 const aiEvaluationLog = document.querySelector("#ai-evaluation-log");
+const aiEvaluationSourceFilter = document.querySelector("#ai-evaluation-source-filter");
+const aiEvaluationStatusFilter = document.querySelector("#ai-evaluation-status-filter");
+const aiPromptImprovementNote = document.querySelector("#ai-prompt-improvement-note");
 const logDateInput = document.querySelector("#log-date");
 const heroPhoto = document.querySelector("#hero-photo");
 const heroPhotoButton = document.querySelector("#hero-photo-button");
@@ -258,6 +261,7 @@ const defaultState = {
   taskDate: getDateKey(new Date()),
   reminders: cloneState(defaultReminders),
   aiEvaluationLog: [],
+  aiPromptImprovementNote: "",
 };
 
 const persistenceAdapter = {
@@ -282,6 +286,8 @@ let notificationDeliveryHistory = [];
 let activeNotificationDeliveryFilter = "all";
 let activeNotificationDeliveryDetailId = null;
 let aiEvaluationSyncTimer = null;
+let activeAiEvaluationSourceFilter = "all";
+let activeAiEvaluationStatusFilter = "all";
 let aiApiStatus = {
   checkedAt: null,
   configured: null,
@@ -472,6 +478,18 @@ authForm.addEventListener("submit", async (event) => {
 
 authSignOutButton.addEventListener("click", signOutSupabase);
 aiApiCheckButton.addEventListener("click", () => checkAiAnalysisApi());
+aiEvaluationSourceFilter.addEventListener("change", () => {
+  activeAiEvaluationSourceFilter = aiEvaluationSourceFilter.value;
+  renderAiEvaluationLog();
+});
+aiEvaluationStatusFilter.addEventListener("change", () => {
+  activeAiEvaluationStatusFilter = aiEvaluationStatusFilter.value;
+  renderAiEvaluationLog();
+});
+aiPromptImprovementNote.addEventListener("input", () => {
+  state.aiPromptImprovementNote = aiPromptImprovementNote.value;
+  saveState();
+});
 aiEvaluationLog.addEventListener("input", (event) => {
   const field = event.target.closest("[data-ai-evaluation-note]");
   if (!field) {
@@ -4121,13 +4139,25 @@ function renderAiEvaluationLog() {
     return;
   }
 
+  aiEvaluationSourceFilter.value = activeAiEvaluationSourceFilter;
+  aiEvaluationStatusFilter.value = activeAiEvaluationStatusFilter;
+  aiPromptImprovementNote.value = state.aiPromptImprovementNote || "";
   const entries = Array.isArray(state.aiEvaluationLog) ? state.aiEvaluationLog : [];
-  if (!entries.length) {
-    aiEvaluationLog.innerHTML = `<p class="empty-state">AI分析を実行すると、Gateway結果とローカル分析の比較ログが残ります。</p>`;
+  const visibleEntries = entries.filter((entry) => {
+    const sourceMatch = activeAiEvaluationSourceFilter === "all" || entry.source === activeAiEvaluationSourceFilter;
+    const statusMatch = activeAiEvaluationStatusFilter === "all" || entry.status === activeAiEvaluationStatusFilter;
+    return sourceMatch && statusMatch;
+  });
+
+  if (!visibleEntries.length) {
+    const message = entries.length
+      ? "条件に合うAI比較ログはありません。"
+      : "AI分析を実行すると、Gateway結果とローカル分析の比較ログが残ります。";
+    aiEvaluationLog.innerHTML = `<p class="empty-state">${message}</p>`;
     return;
   }
 
-  aiEvaluationLog.innerHTML = entries
+  aiEvaluationLog.innerHTML = visibleEntries
     .map(
       (entry) => `
         <article class="ai-evaluation-item">
@@ -5114,6 +5144,7 @@ function normalizeState(saved) {
     taskDate: saved.taskDate || getDateKey(new Date()),
     reminders: normalizeReminders(saved.reminders),
     aiEvaluationLog: Array.isArray(saved.aiEvaluationLog) ? saved.aiEvaluationLog.map(normalizeAiEvaluationEntry) : [],
+    aiPromptImprovementNote: saved.aiPromptImprovementNote || "",
   };
 
   if (!normalized.tanks.length) {

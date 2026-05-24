@@ -93,14 +93,15 @@ PWA Push subscription scaffold:
 - Tune the AI prompt to return visible evidence, confidence, and non-diagnostic care guidance. Done in the prototype.
 - Keep local comparison logs and review notes for AI Gateway versus fallback results. Done in the prototype.
 - Sync AI comparison logs and review notes to `ai_evaluations`. Done in the prototype.
+- Filter AI evaluation logs and keep prompt-improvement notes in the AI view. Done in the prototype.
 - Keep the optional `WEB_PUSH_ENDPOINT` provider path for hosted push gateways.
 - Keep in-app reminder checks as a fallback while notification delivery is tested.
 
 ## Next implementation slice
 
-Improve AI evaluation workflow:
+Persist prompt improvement history:
 
 - Enable Netlify AI Gateway and confirm `OPENAI_BASE_URL`.
 - Test `gpt-4o-mini` against real aquarium photos.
-- Add filters and prompt-improvement notes for AI evaluations.
+- Add a cloud-backed prompt improvement history for AI evaluation work.
 - Keep JSON export/import as a recovery path while the sync model is being tested.

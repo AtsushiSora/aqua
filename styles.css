@@ -2001,6 +2001,39 @@ textarea {
   align-content: start;
 }
 
+.ai-evaluation-panel .section-head {
+  align-items: center;
+}
+
+.ai-evaluation-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.ai-evaluation-actions select {
+  min-height: 38px;
+  min-width: 110px;
+}
+
+.prompt-improvement-note {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.prompt-improvement-note span {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
+.prompt-improvement-note textarea {
+  min-height: 82px;
+  resize: vertical;
+}
+
 .ai-evaluation-log {
   display: grid;
   gap: 10px;
@@ -2875,6 +2908,7 @@ textarea {
   .preference-toggles,
   .quiet-hours,
   .ai-api-status-grid,
+  .ai-evaluation-actions,
   .schema-grid,
   .post-grid,
   .ranking-list,
