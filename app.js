@@ -281,6 +281,7 @@ let authSession = null;
 let notificationDeliveryHistory = [];
 let activeNotificationDeliveryFilter = "all";
 let activeNotificationDeliveryDetailId = null;
+let aiEvaluationSyncTimer = null;
 let aiApiStatus = {
   checkedAt: null,
   configured: null,
@@ -484,6 +485,9 @@ aiEvaluationLog.addEventListener("input", (event) => {
 
   item.note = field.value;
   saveState();
+  if (authSession?.user) {
+    scheduleAiEvaluationSync();
+  }
 });
 
 notificationDeliveryRefreshButton.addEventListener("click", () => loadNotificationDeliveryHistory());
@@ -1246,6 +1250,14 @@ async function syncCloudState(options = {}) {
     return false;
   }
 
+  const aiEvaluationsSynced = await syncAiEvaluationsToSupabase({ silent: true });
+  if (!aiEvaluationsSynced) {
+    if (!options.silent) {
+      showToast("AI評価メモの同期に失敗しました");
+    }
+    return false;
+  }
+
   state.account.syncStatus = "synced";
   state.account.lastSyncedAt = new Date().toISOString();
   saveState({ keepSyncStatus: true });
@@ -1493,6 +1505,29 @@ async function loadAiResultsFromSupabase() {
 
   applyRemoteAiResults(data || []);
   saveState({ keepSyncStatus: true });
+  return data || [];
+}
+
+async function loadAiEvaluationsFromSupabase() {
+  if (!supabaseClient || !authSession?.user) {
+    return [];
+  }
+
+  const { data, error } = await supabaseClient
+    .from("ai_evaluations")
+    .select("id, local_id, target, source, model, prompt_version, status, fallback_status, summary, fallback_summary, difference, note, evaluated_at, updated_at")
+    .eq("owner_id", authSession.user.id)
+    .order("evaluated_at", { ascending: false })
+    .limit(20);
+
+  if (error) {
+    showToast(error.message || "AI評価メモを読み込めませんでした");
+    return [];
+  }
+
+  applyRemoteAiEvaluations(data || []);
+  saveState({ keepSyncStatus: true });
+  renderAiEvaluationLog();
   return data || [];
 }
 
@@ -1996,6 +2031,54 @@ async function syncAiResultsToSupabase(options = {}) {
   return true;
 }
 
+async function syncAiEvaluationsToSupabase(options = {}) {
+  if (!supabaseClient || !authSession?.user) {
+    if (!options.silent) {
+      showToast("Supabaseにログインしてください");
+    }
+    return false;
+  }
+
+  const payloads = getAiEvaluationPayloads(authSession.user);
+  if (!payloads.length) {
+    return true;
+  }
+
+  const { data, error } = await supabaseClient
+    .from("ai_evaluations")
+    .upsert(payloads, { onConflict: "owner_id,local_id" })
+    .select("id, local_id, target, source, model, prompt_version, status, fallback_status, summary, fallback_summary, difference, note, evaluated_at, updated_at");
+
+  if (error) {
+    state.account.syncStatus = "local";
+    saveState({ keepSyncStatus: true });
+    renderAccount();
+    if (!options.silent) {
+      showToast(error.message || "AI評価メモの同期に失敗しました");
+    }
+    return false;
+  }
+
+  applyRemoteAiEvaluations(data || []);
+  state.account.syncStatus = "synced";
+  state.account.lastSyncedAt = new Date().toISOString();
+  saveState({ keepSyncStatus: true });
+  renderAiEvaluationLog();
+
+  if (!options.silent) {
+    showToast("AI評価メモをSupabaseに同期しました");
+  }
+
+  return true;
+}
+
+function scheduleAiEvaluationSync() {
+  window.clearTimeout(aiEvaluationSyncTimer);
+  aiEvaluationSyncTimer = window.setTimeout(() => {
+    syncAiEvaluationsToSupabase({ silent: true });
+  }, 700);
+}
+
 function getTankPayload(tank, user) {
   return {
     owner_id: user.id,
@@ -2174,6 +2257,25 @@ function getAiResultPayload({ user, localId, tankCloudId, postCloudId, result })
     checked_at: result.checkedAt || new Date().toISOString(),
     updated_at: new Date().toISOString(),
   };
+}
+
+function getAiEvaluationPayloads(user) {
+  return (state.aiEvaluationLog || []).map((entry) => ({
+    owner_id: user.id,
+    local_id: entry.id,
+    target: entry.target || "AI分析",
+    source: entry.source || "未確認",
+    model: entry.model || null,
+    prompt_version: entry.promptVersion || null,
+    status: entry.status || "未記録",
+    fallback_status: entry.fallbackStatus || null,
+    summary: entry.summary || "",
+    fallback_summary: entry.fallbackSummary || "",
+    difference: entry.difference || "",
+    note: entry.note || "",
+    evaluated_at: entry.createdAt || new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  }));
 }
 
 async function uploadPostMediaToStorage(post, user) {
@@ -2498,6 +2600,37 @@ function applyRemoteAiResults(remoteResults) {
   });
 }
 
+function applyRemoteAiEvaluations(remoteEntries) {
+  const localById = new Map((state.aiEvaluationLog || []).map((entry) => [entry.id, entry]));
+  remoteEntries.forEach((remoteEntry) => {
+    const localId = remoteEntry.local_id;
+    const nextEntry = normalizeAiEvaluationEntry({
+      id: localId,
+      cloudId: remoteEntry.id,
+      createdAt: remoteEntry.evaluated_at || remoteEntry.updated_at,
+      source: remoteEntry.source,
+      target: remoteEntry.target,
+      model: remoteEntry.model,
+      promptVersion: remoteEntry.prompt_version,
+      status: remoteEntry.status,
+      fallbackStatus: remoteEntry.fallback_status,
+      summary: remoteEntry.summary,
+      fallbackSummary: remoteEntry.fallback_summary,
+      difference: remoteEntry.difference,
+      note: remoteEntry.note,
+    });
+    const current = localById.get(localId);
+    localById.set(localId, {
+      ...nextEntry,
+      note: current?.note && current.note !== nextEntry.note ? current.note : nextEntry.note,
+    });
+  });
+
+  state.aiEvaluationLog = [...localById.values()]
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    .slice(0, 20);
+}
+
 function isNewerAiResult(nextResult, currentResult) {
   if (!currentResult?.checkedAt) {
     return true;
@@ -2650,6 +2783,7 @@ async function initSupabaseAuth() {
       await loadNotificationDeliveryHistory({ silent: true });
       await loadCommunityFromSupabase();
       await loadAiResultsFromSupabase();
+      await loadAiEvaluationsFromSupabase();
     } else {
       state.account.signedIn = false;
       notificationDeliveryHistory = [];
@@ -2670,6 +2804,7 @@ async function initSupabaseAuth() {
     await loadNotificationDeliveryHistory({ silent: true });
     await loadCommunityFromSupabase();
     await loadAiResultsFromSupabase();
+    await loadAiEvaluationsFromSupabase();
   } else {
     state.account.signedIn = false;
     notificationDeliveryHistory = [];
@@ -5083,6 +5218,7 @@ function normalizeAiResult(result) {
 function normalizeAiEvaluationEntry(entry) {
   return {
     id: entry.id || createId("ai-review"),
+    cloudId: entry.cloudId || null,
     createdAt: entry.createdAt || new Date().toISOString(),
     source: entry.source || "未確認",
     target: entry.target || "AI分析",

@@ -34,6 +34,7 @@ Reason:
 | `notification_deliveries` | Pending Push/email delivery jobs and retry state |
 | `push_subscriptions` | Browser Push endpoints and encryption keys |
 | `ai_results` | Saved analysis summaries for tanks and posts |
+| `ai_evaluations` | AI Gateway/fallback comparison logs and review notes |
 
 ## Migration order
 
@@ -91,14 +92,15 @@ PWA Push subscription scaffold:
 - Show AI Gateway/model verification status in the AI view. Done in the prototype.
 - Tune the AI prompt to return visible evidence, confidence, and non-diagnostic care guidance. Done in the prototype.
 - Keep local comparison logs and review notes for AI Gateway versus fallback results. Done in the prototype.
+- Sync AI comparison logs and review notes to `ai_evaluations`. Done in the prototype.
 - Keep the optional `WEB_PUSH_ENDPOINT` provider path for hosted push gateways.
 - Keep in-app reminder checks as a fallback while notification delivery is tested.
 
 ## Next implementation slice
 
-Persist AI evaluation notes:
+Improve AI evaluation workflow:
 
 - Enable Netlify AI Gateway and confirm `OPENAI_BASE_URL`.
 - Test `gpt-4o-mini` against real aquarium photos.
-- Add a cloud table for AI evaluation notes when model tuning starts in production.
+- Add filters and prompt-improvement notes for AI evaluations.
 - Keep JSON export/import as a recovery path while the sync model is being tested.

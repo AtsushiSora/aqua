@@ -164,6 +164,25 @@ create table public.ai_results (
   unique (owner_id, local_id)
 );
 
+create table public.ai_evaluations (
+  id uuid primary key default gen_random_uuid(),
+  owner_id uuid not null references public.profiles(id) on delete cascade,
+  local_id text not null,
+  target text not null,
+  source text not null,
+  model text,
+  prompt_version text,
+  status text not null,
+  fallback_status text,
+  summary text not null default '',
+  fallback_summary text not null default '',
+  difference text not null default '',
+  note text not null default '',
+  evaluated_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (owner_id, local_id)
+);
+
 create view public.post_stats
 with (security_invoker = true) as
 select
@@ -188,6 +207,7 @@ where status = 'pending';
 create index push_subscriptions_owner_enabled_idx on public.push_subscriptions(owner_id)
 where enabled = true;
 create index ai_results_tank_checked_idx on public.ai_results(tank_id, checked_at desc);
+create index ai_evaluations_owner_evaluated_idx on public.ai_evaluations(owner_id, evaluated_at desc);
 
 alter table public.profiles enable row level security;
 alter table public.tanks enable row level security;
@@ -200,6 +220,7 @@ alter table public.reminders enable row level security;
 alter table public.notification_deliveries enable row level security;
 alter table public.push_subscriptions enable row level security;
 alter table public.ai_results enable row level security;
+alter table public.ai_evaluations enable row level security;
 
 create policy "Public profiles are readable"
 on public.profiles for select
@@ -330,6 +351,12 @@ using (owner_id = (select auth.uid()));
 
 create policy "Users manage own ai results"
 on public.ai_results for all
+to authenticated
+using (owner_id = (select auth.uid()))
+with check (owner_id = (select auth.uid()));
+
+create policy "Users manage own ai evaluations"
+on public.ai_evaluations for all
 to authenticated
 using (owner_id = (select auth.uid()))
 with check (owner_id = (select auth.uid()));
