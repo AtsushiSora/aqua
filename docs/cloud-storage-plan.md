@@ -104,14 +104,15 @@ PWA Push subscription scaffold:
 - Store prompt v3 retake tips in AI evaluation logs and exports. Done in the prototype.
 - Tag prompt v3 evaluation samples by photo condition. Done in the prototype.
 - Summarize needs-fix rates by prompt v3 photo condition. Done in the prototype.
+- Fill prompt-improvement notes from weak-condition suggestions. Done in the prototype.
 - Keep the optional `WEB_PUSH_ENDPOINT` provider path for hosted push gateways.
 - Keep in-app reminder checks as a fallback while notification delivery is tested.
 
 ## Next implementation slice
 
-Persist prompt v3 improvement candidates:
+Persist prompt v3 improvement candidates automatically:
 
 - Enable Netlify AI Gateway and confirm `OPENAI_BASE_URL`.
 - Test `gpt-4o-mini` against real aquarium photos.
-- Save condition-specific prompt improvement candidates for future tuning.
+- Save weak-condition improvement candidates directly to prompt-note history.
 - Keep JSON export/import as a recovery path while the sync model is being tested.

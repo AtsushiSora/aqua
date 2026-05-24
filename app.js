@@ -516,6 +516,14 @@ aiPromptImprovementNote.addEventListener("input", () => {
   saveState();
 });
 aiPromptNoteSaveButton.addEventListener("click", () => saveAiPromptNote());
+aiImageValidationSummary.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-ai-weak-condition-note]");
+  if (!button) {
+    return;
+  }
+
+  applyAiWeakConditionNote(button.dataset.aiWeakConditionNote);
+});
 aiReviewExportCsvButton.addEventListener("click", () => exportAiReviewData("csv"));
 aiReviewExportJsonButton.addEventListener("click", () => exportAiReviewData("json"));
 aiEvaluationLog.addEventListener("input", (event) => {
@@ -4615,6 +4623,11 @@ function renderAiImageValidationSummary(entries) {
         <span>弱点候補</span>
         <strong>${escapeHtml(weakCondition ? getAiPhotoConditionLabel(weakCondition.key) : "未検出")}</strong>
         <p>${escapeHtml(getAiWeakConditionSuggestion(weakCondition))}</p>
+        ${
+          weakCondition
+            ? `<button class="ghost-button" type="button" data-ai-weak-condition-note="${escapeHtml(weakCondition.key)}">改善メモへ反映</button>`
+            : ""
+        }
       </div>
       ${
         latestGatewayPhoto
@@ -4702,6 +4715,21 @@ function getAiWeakConditionSuggestion(weakCondition) {
   };
 
   return suggestions[weakCondition.key] || "要修正の多い条件に合わせて、観察できた範囲と見えない範囲の分離を強めます。";
+}
+
+function applyAiWeakConditionNote(conditionKey) {
+  const condition = getAllowedValue(conditionKey, ["dark", "small_fish", "algae", "reflection"], "");
+  if (!condition) {
+    return;
+  }
+
+  const label = getAiPhotoConditionLabel(condition);
+  const suggestion = getAiWeakConditionSuggestion({ key: condition });
+  const nextNote = `プロンプトv3改善候補: ${label}\n${suggestion}\n評価ログで要修正が多い実写真を確認し、見える範囲と見えない範囲の分離を強める。`;
+  aiPromptImprovementNote.value = nextNote;
+  state.aiPromptImprovementNote = nextNote;
+  saveState();
+  showToast("弱点候補を改善メモへ反映しました");
 }
 
 function getAiEvaluationSuggestion(counts, entries) {

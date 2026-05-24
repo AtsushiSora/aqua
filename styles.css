@@ -2244,6 +2244,11 @@ textarea {
   font-size: 0.78rem;
 }
 
+.ai-condition-risk button {
+  width: fit-content;
+  margin-top: 8px;
+}
+
 .ai-evaluation-log {
   display: grid;
   gap: 10px;
