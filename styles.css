@@ -2268,6 +2268,62 @@ textarea {
   overflow-wrap: anywhere;
 }
 
+.notification-rehearsal-panel {
+  display: grid;
+  align-content: start;
+}
+
+.notification-rehearsal-list {
+  counter-reset: rehearsal;
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.notification-rehearsal-list li {
+  counter-increment: rehearsal;
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr);
+  column-gap: 10px;
+  row-gap: 2px;
+  padding: 12px;
+  border: 1px solid var(--glass-border);
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.5), transparent),
+    var(--waterline),
+    rgba(248, 252, 251, 0.78);
+}
+
+.notification-rehearsal-list li::before {
+  content: counter(rehearsal);
+  width: 30px;
+  height: 30px;
+  display: inline-grid;
+  place-items: center;
+  grid-row: 1 / span 2;
+  border-radius: 50%;
+  background: var(--aqua-dark);
+  color: white;
+  font-size: 0.82rem;
+  font-weight: 900;
+}
+
+.notification-rehearsal-list strong {
+  color: var(--aqua-dark);
+  font-family: var(--font-jp);
+  font-size: 0.94rem;
+}
+
+.notification-rehearsal-list span {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+
 .sync-summary {
   display: grid;
   gap: 10px;

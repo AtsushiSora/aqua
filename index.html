@@ -776,6 +776,33 @@
               <div class="notification-verification-list" id="notification-verification-list"></div>
             </section>
 
+            <section class="panel notification-rehearsal-panel">
+              <div class="section-head">
+                <div>
+                  <p class="eyebrow">Rehearsal</p>
+                  <h2>通知リハーサル手順</h2>
+                </div>
+              </div>
+              <ol class="notification-rehearsal-list">
+                <li>
+                  <strong>鍵と環境変数</strong>
+                  <span>VAPID公開鍵をブラウザ設定、秘密鍵をNetlify環境変数に入れる</span>
+                </li>
+                <li>
+                  <strong>dry-run確認</strong>
+                  <span>まずdry-runのまま通知予約が作られることを配信ログで確認する</span>
+                </li>
+                <li>
+                  <strong>送信有効化</strong>
+                  <span>NOTIFICATION_DELIVERY_DRY_RUN=falseにして、直近のリマインダーを同期する</span>
+                </li>
+                <li>
+                  <strong>結果確認</strong>
+                  <span>配信ログのsent / failed / skippedを確認し、failedは詳細を見て再送予約する</span>
+                </li>
+              </ol>
+            </section>
+
             <section class="panel account-sync-panel">
               <div class="section-head">
                 <div>

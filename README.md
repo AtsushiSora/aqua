@@ -75,13 +75,14 @@
 - 通知配信ログの状態絞り込みと失敗配信の再送予約
 - 通知配信ログの詳細表示と運用メモ
 - アカウント画面での通知本番検証チェックリスト
+- アカウント画面での通知本番リハーサル手順
 - PWA用の `manifest.webmanifest` と `sw.js`
 
 ## 次に作るとよいもの
 
 - 本物のAI画像分析
 - 通知配信ワーカーの本番環境変数設定
-- 通知配信ワーカーの本番リハーサル
+- 本物のAI画像分析API接続
 - ネイティブスマホアプリ、またはPWAの本番化
 
 ## 通知配信ワーカー
@@ -110,3 +111,11 @@ VAPID鍵は `node scripts/generate-vapid-keys.mjs` で生成できます。
 - Netlifyに `SUPABASE_SERVICE_ROLE_KEY` とVAPID秘密鍵を設定
 - `NOTIFICATION_DELIVERY_DRY_RUN=false` で送信を有効化
 - アカウント画面の通知本番チェックと配信ログで `sent` / `failed` / `skipped` を確認
+
+本番リハーサル:
+
+1. `node scripts/generate-vapid-keys.mjs` でVAPID鍵を生成する。
+2. 公開鍵を `supabase-config.js`、秘密鍵をNetlify環境変数に設定する。
+3. dry-runのまま通知予約が `notification_deliveries` に作られることを確認する。
+4. `NOTIFICATION_DELIVERY_DRY_RUN=false` にして直近リマインダーを同期する。
+5. アカウント画面の配信ログで `sent` / `failed` / `skipped` を確認し、失敗時は詳細を見て再送予約する。

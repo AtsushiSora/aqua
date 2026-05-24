@@ -86,6 +86,7 @@ PWA Push subscription scaffold:
 - Filter delivery history by status and retry failed deliveries. Done in the prototype.
 - Expand delivery history rows with error context and operational notes. Done in the prototype.
 - Surface a production notification verification checklist in the account view. Done in the prototype.
+- Surface a production notification rehearsal flow in the account view. Done in the prototype.
 - Keep the optional `WEB_PUSH_ENDPOINT` provider path for hosted push gateways.
 - Keep in-app reminder checks as a fallback while notification delivery is tested.
 
@@ -96,5 +97,5 @@ Harden production notification delivery:
 - Configure the Scheduled Function environment variables.
 - Generate and install the VAPID key pair for both Netlify and `supabase-config.js`.
 - Validate delivery logs against `sent`, `failed`, `skipped`, and retry behavior.
-- Run a production notification rehearsal with dry-run disabled.
+- Connect a real AI image analysis API.
 - Keep JSON export/import as a recovery path while the sync model is being tested.
