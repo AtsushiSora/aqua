@@ -111,14 +111,15 @@ PWA Push subscription scaffold:
 - Apply prompt v4 guidance to the AI analysis function. Done in the prototype.
 - Summarize prompt v4 real-photo validation against prompt v3. Done in the prototype.
 - Export prompt generation and v4 validation status with AI review CSV/JSON. Done in the prototype.
+- Show a prompt v4 production validation checklist in the AI view. Done in the prototype.
 - Keep the optional `WEB_PUSH_ENDPOINT` provider path for hosted push gateways.
 - Keep in-app reminder checks as a fallback while notification delivery is tested.
 
 ## Next implementation slice
 
-Prepare prompt v4 production validation:
+Export prompt v4 production validation:
 
 - Enable Netlify AI Gateway and confirm `OPENAI_BASE_URL`.
 - Test `gpt-4o-mini` against real aquarium photos.
-- Create a production checklist for required v4 photo samples and pass/fail criteria.
+- Include production checklist status in AI review JSON exports.
 - Keep JSON export/import as a recovery path while the sync model is being tested.

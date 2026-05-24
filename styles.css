@@ -2308,6 +2308,61 @@ textarea {
   margin-top: 8px;
 }
 
+.ai-production-checklist {
+  padding: 10px;
+  border: 1px solid var(--glass-border);
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.64), transparent),
+    rgba(248, 252, 251, 0.8);
+}
+
+.ai-production-checklist ul {
+  display: grid;
+  gap: 6px;
+  margin: 7px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ai-production-checklist li {
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr);
+  gap: 8px;
+  align-items: center;
+  padding: 8px;
+  border-radius: 8px;
+  background: rgba(255, 247, 232, 0.76);
+}
+
+.ai-production-checklist li.is-done {
+  background: rgba(231, 247, 243, 0.82);
+}
+
+.ai-production-checklist li strong {
+  min-height: 26px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: rgba(217, 145, 45, 0.14);
+  color: var(--amber);
+  font-size: 0.7rem;
+  font-weight: 900;
+}
+
+.ai-production-checklist li.is-done strong {
+  background: rgba(14, 143, 150, 0.12);
+  color: var(--aqua-dark);
+}
+
+.ai-production-checklist p {
+  margin: 0;
+  color: var(--ink);
+  font-size: 0.78rem;
+  font-weight: 850;
+}
+
 .ai-evaluation-log {
   display: grid;
   gap: 10px;

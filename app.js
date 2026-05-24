@@ -4695,6 +4695,12 @@ function renderAiImageValidationSummary(entries) {
   const conditionCounts = getAiPhotoConditionCounts(gatewayPhotoEntries);
   const weakCondition = getAiWeakPhotoCondition(conditionCounts);
   const latestGatewayPhoto = gatewayPhotoEntries[0] || null;
+  const productionChecklist = getAiPromptV4ProductionChecklist({
+    gatewayPhotoEntries,
+    v4Entries,
+    promptComparison,
+    conditionCounts,
+  });
   const suggestion = getAiImageValidationSuggestion({
     photoEntries,
     gatewayPhotoEntries,
@@ -4752,6 +4758,21 @@ function renderAiImageValidationSummary(entries) {
             : ""
         }
       </div>
+      <div class="ai-production-checklist">
+        <span>v4本番チェック</span>
+        <ul>
+          ${productionChecklist
+            .map(
+              (item) => `
+                <li class="${item.done ? "is-done" : ""}">
+                  <strong>${item.done ? "OK" : "未完了"}</strong>
+                  <p>${escapeHtml(item.label)}</p>
+                </li>
+              `,
+            )
+            .join("")}
+        </ul>
+      </div>
       ${
         latestGatewayPhoto
           ? `<small>最新: ${escapeHtml(formatFullDate(latestGatewayPhoto.createdAt))} / ${escapeHtml(latestGatewayPhoto.status)} / ${escapeHtml(latestGatewayPhoto.difference)}</small>`
@@ -4759,6 +4780,46 @@ function renderAiImageValidationSummary(entries) {
       }
     </article>
   `;
+}
+
+function getAiPromptV4ProductionChecklist({ gatewayPhotoEntries, v4Entries, promptComparison, conditionCounts }) {
+  const requiredConditions = ["dark", "small_fish", "algae", "reflection"];
+  const coveredConditions = requiredConditions.filter((key) =>
+    v4Entries.some((entry) => entry.photoCondition === key && ["good", "needs_fix", "watch"].includes(entry.reviewLabel)),
+  );
+  const reviewedV4 = v4Entries.filter((entry) => ["good", "needs_fix", "watch"].includes(entry.reviewLabel));
+  const goodV4 = v4Entries.filter((entry) => entry.reviewLabel === "good");
+  const hasNeedsFixNote = v4Entries.some((entry) => entry.reviewLabel === "needs_fix" && entry.note);
+  const hasRetakeTips = v4Entries.some((entry) => Array.isArray(entry.retakeTips) && entry.retakeTips.length);
+  const unresolvedCondition = requiredConditions.find((key) => conditionCounts[key].needsFix > 0);
+  const improvedConditions = promptComparison.filter((item) => item.improved).length;
+
+  return [
+    {
+      done: aiApiStatus.configured === true && getAiPromptGeneration(aiApiStatus.promptVersion) === "v4",
+      label: "Gateway設定とプロンプトv4が確認済み",
+    },
+    {
+      done: gatewayPhotoEntries.length >= 3 && v4Entries.length >= 3,
+      label: "実写真のGateway分析を3件以上記録",
+    },
+    {
+      done: coveredConditions.length === requiredConditions.length,
+      label: "暗い写真、魚が小さい写真、コケ多め、反射ありを分類済み",
+    },
+    {
+      done: reviewedV4.length >= v4Entries.length && v4Entries.length > 0 && goodV4.length > 0,
+      label: "v4結果を良い例/要修正/保留でレビュー済み",
+    },
+    {
+      done: !unresolvedCondition && v4Entries.length > 0,
+      label: "条件別の要修正が残っていない、または再評価済み",
+    },
+    {
+      done: hasRetakeTips && (hasNeedsFixNote || improvedConditions > 0),
+      label: "撮り直し観点と改善メモから合否判断できる",
+    },
+  ];
 }
 
 function getAiImageValidationSuggestion({ photoEntries, gatewayPhotoEntries, needsFixCount, goodCount, conditionCounts, weakCondition }) {
