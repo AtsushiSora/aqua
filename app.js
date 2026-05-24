@@ -47,6 +47,7 @@ const aiPromptImprovementNote = document.querySelector("#ai-prompt-improvement-n
 const aiPromptNoteSaveButton = document.querySelector("#ai-prompt-note-save-button");
 const aiPromptNoteHistory = document.querySelector("#ai-prompt-note-history");
 const aiEvaluationSummary = document.querySelector("#ai-evaluation-summary");
+const aiPromptDraft = document.querySelector("#ai-prompt-draft");
 const aiImageValidationSummary = document.querySelector("#ai-image-validation-summary");
 const aiReviewExportCsvButton = document.querySelector("#ai-review-export-csv-button");
 const aiReviewExportJsonButton = document.querySelector("#ai-review-export-json-button");
@@ -4414,6 +4415,7 @@ function renderAiEvaluationLog() {
   renderAiPromptNoteHistory();
   const entries = Array.isArray(state.aiEvaluationLog) ? state.aiEvaluationLog : [];
   renderAiEvaluationSummary(entries);
+  renderAiPromptDraft(entries);
   renderAiImageValidationSummary(entries);
   const visibleEntries = getVisibleAiEvaluationEntries(entries);
 
@@ -4567,6 +4569,64 @@ function renderAiEvaluationSummary(entries) {
     </article>
     <p>${escapeHtml(suggestion)}</p>
   `;
+}
+
+function renderAiPromptDraft(entries) {
+  if (!aiPromptDraft) {
+    return;
+  }
+
+  const notes = Array.isArray(state.aiPromptNotes) ? state.aiPromptNotes : [];
+  const needsFixEntries = entries.filter((entry) => entry.reviewLabel === "needs_fix");
+  const draftItems = getAiPromptV4DraftItems({ notes, needsFixEntries });
+
+  aiPromptDraft.innerHTML = `
+    <article>
+      <div>
+        <span>Prompt v4 draft</span>
+        <strong>${draftItems.length ? "草案あり" : "材料不足"}</strong>
+      </div>
+      ${
+        draftItems.length
+          ? `
+            <ul>
+              ${draftItems.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}
+            </ul>
+          `
+          : `<p>要修正レビューとプロンプト改善メモを保存すると、次のプロンプト草案がここに出ます。</p>`
+      }
+      <small>要修正 ${needsFixEntries.length}件 / 改善メモ ${notes.length}件</small>
+    </article>
+  `;
+}
+
+function getAiPromptV4DraftItems({ notes, needsFixEntries }) {
+  const items = [];
+  const conditionCounts = getAiPhotoConditionCounts(needsFixEntries);
+  const weakCondition = getAiWeakPhotoCondition(conditionCounts);
+  const latestNote = notes[0]?.note || "";
+
+  if (weakCondition) {
+    items.push(`${getAiPhotoConditionLabel(weakCondition.key)}では、${getAiWeakConditionSuggestion(weakCondition)}`);
+  }
+
+  if (latestNote) {
+    items.push(`直近の改善メモを反映: ${latestNote.replace(/\s+/g, " ").slice(0, 120)}`);
+  }
+
+  if (needsFixEntries.some((entry) => entry.difference.includes("撮り直し観点あり"))) {
+    items.push("retakeTipsは、暗さ・反射・魚の小ささ・コケの見え方を分けて具体化する。");
+  }
+
+  if (needsFixEntries.some((entry) => entry.difference.includes("見える根拠あり"))) {
+    items.push("observationsは写真に見える根拠だけに限定し、推測はitems側の確認行動へ移す。");
+  }
+
+  if (needsFixEntries.length && !items.length) {
+    items.push("要修正レビューの評価メモを増やし、言い過ぎた表現と不足した撮影条件を分けて整理する。");
+  }
+
+  return [...new Set(items)].slice(0, 4);
 }
 
 function renderAiImageValidationSummary(entries) {

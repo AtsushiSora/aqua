@@ -2107,6 +2107,46 @@ textarea {
   font-weight: 900;
 }
 
+.ai-prompt-draft {
+  margin: 10px 0 12px;
+}
+
+.ai-prompt-draft article {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--glass-border);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.64);
+}
+
+.ai-prompt-draft span,
+.ai-prompt-draft small {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 900;
+}
+
+.ai-prompt-draft strong {
+  display: block;
+  margin-top: 3px;
+  color: var(--aqua-dark);
+  font-size: 1.05rem;
+}
+
+.ai-prompt-draft ul {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.ai-prompt-draft li,
+.ai-prompt-draft p {
+  margin: 4px 0;
+  color: var(--ink);
+  font-size: 0.82rem;
+  font-weight: 850;
+}
+
 .ai-production-flow {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
