@@ -177,6 +177,7 @@ create table public.ai_evaluations (
   summary text not null default '',
   fallback_summary text not null default '',
   difference text not null default '',
+  review_label text not null default 'unreviewed' check (review_label in ('unreviewed', 'good', 'needs_fix', 'watch')),
   note text not null default '',
   evaluated_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),

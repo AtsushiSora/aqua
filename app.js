@@ -511,6 +511,23 @@ aiEvaluationLog.addEventListener("input", (event) => {
     scheduleAiEvaluationSync();
   }
 });
+aiEvaluationLog.addEventListener("change", (event) => {
+  const field = event.target.closest("[data-ai-evaluation-review]");
+  if (!field) {
+    return;
+  }
+
+  const item = state.aiEvaluationLog.find((entry) => entry.id === field.dataset.aiEvaluationReview);
+  if (!item) {
+    return;
+  }
+
+  item.reviewLabel = field.value;
+  saveState();
+  if (authSession?.user) {
+    scheduleAiEvaluationSync();
+  }
+});
 
 notificationDeliveryRefreshButton.addEventListener("click", () => loadNotificationDeliveryHistory());
 notificationDeliveryFilter.addEventListener("change", () => {
@@ -1545,7 +1562,7 @@ async function loadAiEvaluationsFromSupabase() {
 
   const { data, error } = await supabaseClient
     .from("ai_evaluations")
-    .select("id, local_id, target, source, model, prompt_version, status, fallback_status, summary, fallback_summary, difference, note, evaluated_at, updated_at")
+    .select("id, local_id, target, source, model, prompt_version, status, fallback_status, summary, fallback_summary, difference, review_label, note, evaluated_at, updated_at")
     .eq("owner_id", authSession.user.id)
     .order("evaluated_at", { ascending: false })
     .limit(20);
@@ -2100,7 +2117,7 @@ async function syncAiEvaluationsToSupabase(options = {}) {
   const { data, error } = await supabaseClient
     .from("ai_evaluations")
     .upsert(payloads, { onConflict: "owner_id,local_id" })
-    .select("id, local_id, target, source, model, prompt_version, status, fallback_status, summary, fallback_summary, difference, note, evaluated_at, updated_at");
+    .select("id, local_id, target, source, model, prompt_version, status, fallback_status, summary, fallback_summary, difference, review_label, note, evaluated_at, updated_at");
 
   if (error) {
     state.account.syncStatus = "local";
@@ -2364,6 +2381,7 @@ function getAiEvaluationPayloads(user) {
     summary: entry.summary || "",
     fallback_summary: entry.fallbackSummary || "",
     difference: entry.difference || "",
+    review_label: entry.reviewLabel || "unreviewed",
     note: entry.note || "",
     evaluated_at: entry.createdAt || new Date().toISOString(),
     updated_at: new Date().toISOString(),
@@ -2720,6 +2738,7 @@ function applyRemoteAiEvaluations(remoteEntries) {
       summary: remoteEntry.summary,
       fallbackSummary: remoteEntry.fallback_summary,
       difference: remoteEntry.difference,
+      reviewLabel: remoteEntry.review_label,
       note: remoteEntry.note,
     });
     const current = localById.get(localId);
@@ -4136,6 +4155,7 @@ function recordAiEvaluation({ payload, result, fallbackResult, source, error = "
     summary: result.summary,
     fallbackSummary: fallbackResult.summary,
     difference: getAiResultDifference(result, fallbackResult, error),
+    reviewLabel: "unreviewed",
     note: "",
   };
 
@@ -4274,6 +4294,12 @@ function renderAiEvaluationLog() {
           </div>
           <p>${escapeHtml(entry.summary)}</p>
           <label>
+            <span>出力例の分類</span>
+            <select data-ai-evaluation-review="${escapeHtml(entry.id)}">
+              ${getAiReviewOptions(entry.reviewLabel)}
+            </select>
+          </label>
+          <label>
             <span>評価メモ</span>
             <textarea data-ai-evaluation-note="${escapeHtml(entry.id)}" rows="3" placeholder="実写真で気になった点、過不足、次に直すプロンプトを書きます">${escapeHtml(entry.note || "")}</textarea>
           </label>
@@ -4304,6 +4330,19 @@ function renderAiPromptNoteHistory() {
         </article>
       `,
     )
+    .join("");
+}
+
+function getAiReviewOptions(currentValue = "unreviewed") {
+  const options = [
+    ["unreviewed", "未評価"],
+    ["good", "良い例"],
+    ["needs_fix", "要修正"],
+    ["watch", "保留"],
+  ];
+
+  return options
+    .map(([value, label]) => `<option value="${value}" ${value === currentValue ? "selected" : ""}>${label}</option>`)
     .join("");
 }
 
@@ -5418,6 +5457,9 @@ function normalizeAiEvaluationEntry(entry) {
     summary: entry.summary || "",
     fallbackSummary: entry.fallbackSummary || "",
     difference: entry.difference || "未比較",
+    reviewLabel: ["unreviewed", "good", "needs_fix", "watch"].includes(entry.reviewLabel)
+      ? entry.reviewLabel
+      : "unreviewed",
     note: entry.note || "",
   };
 }

@@ -2061,6 +2061,43 @@ textarea {
   font-weight: 800;
 }
 
+.ai-production-flow {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 10px 0 12px;
+}
+
+.ai-production-flow article {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr);
+  gap: 8px;
+  align-items: center;
+  padding: 9px;
+  border: 1px solid var(--glass-border);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.58);
+}
+
+.ai-production-flow span {
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--aqua-dark);
+  color: white;
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
+.ai-production-flow p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 900;
+}
+
 .ai-evaluation-log {
   display: grid;
   gap: 10px;
@@ -2106,6 +2143,10 @@ textarea {
 .ai-evaluation-item textarea {
   min-height: 74px;
   resize: vertical;
+}
+
+.ai-evaluation-item select {
+  min-height: 38px;
 }
 
 .ai-result {
@@ -2936,6 +2977,7 @@ textarea {
   .quiet-hours,
   .ai-api-status-grid,
   .ai-evaluation-actions,
+  .ai-production-flow,
   .schema-grid,
   .post-grid,
   .ranking-list,
