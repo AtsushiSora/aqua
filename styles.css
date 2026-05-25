@@ -3437,6 +3437,14 @@ textarea {
     rgba(248, 252, 251, 0.88);
 }
 
+.pwa-release-decision-summary article.pwa-release-qa.ready {
+  border-color: rgba(61, 173, 120, 0.42);
+}
+
+.pwa-release-decision-summary article.pwa-release-qa.pending {
+  border-color: rgba(226, 162, 72, 0.42);
+}
+
 .pwa-release-decision-summary article.hold {
   border-color: rgba(211, 93, 93, 0.38);
 }

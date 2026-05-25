@@ -118,13 +118,14 @@
 - PWA公開前レビューの操作ガイド
 - PWA最終リリース判定メモへの本番URL保存
 - PWA本番URLレビューJSONの書き出し日時保存
+- PWA公開前レビューの最終QA表示
 
 ## 次に作るとよいもの
 
 - 本物のAI画像分析
 - 実写真でのプロンプトv3評価
 - プロンプトv3評価サンプルの拡充
-- PWA公開前レビューの最終QA
+- PWA公開前レビューの実機実行
 
 ## 通知配信ワーカー
 
@@ -184,6 +185,7 @@ VAPID鍵は `node scripts/generate-vapid-keys.mjs` で生成できます。
 JSON書き出しには、必須項目カバレッジ、最終リリース判定、証跡サマリー、実機テスト結果が含まれます。
 未完了の証跡がある場合は次アクションが表示され、すべて揃うと公開前レビュー完了として表示されます。
 JSONを書き出すと、書き出し日時が最終リリース判定メモに保存されます。
+最終QAでは、本番URL、実機結果、最終判定、クラウド保存、レビューJSONが揃っているかを確認できます。
 
 既存のSupabase環境へ反映する場合は、`supabase/schema.sql` の `pwa_device_tests` と `pwa_release_decisions` のテーブル、インデックス、RLSポリシーを追加してください。既存の `pwa_release_decisions` には `production_url` と `review_exported_at` も追加してください。
 

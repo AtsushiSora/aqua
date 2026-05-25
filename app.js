@@ -1232,6 +1232,7 @@ function renderPwaReleaseDecision() {
   const coverage = getPwaReleaseCoverage();
   const evidenceItems = getPwaReleaseEvidenceItems(decision, coverage);
   const handoff = getPwaReleaseHandoffState(evidenceItems);
+  const qaState = getPwaReleaseQaState(evidenceItems);
   document.querySelector("#pwa-release-decision-status-input").value = decision.status;
   document.querySelector("#pwa-release-decision-reviewer-input").value = decision.reviewer || state.account.name || "";
   document.querySelector("#pwa-release-decision-url-input").value = decision.productionUrl;
@@ -1249,6 +1250,11 @@ function renderPwaReleaseDecision() {
       <span>${escapeHtml(handoff.ready ? "公開前レビュー完了" : "次アクション")}</span>
       <strong>${escapeHtml(handoff.title)}</strong>
       <small>${escapeHtml(handoff.note)}</small>
+    </article>
+    <article class="pwa-release-qa ${qaState.ready ? "ready" : "pending"}">
+      <span>最終QA</span>
+      <strong>${escapeHtml(qaState.title)}</strong>
+      <small>${escapeHtml(qaState.note)}</small>
     </article>
     <article class="${escapeHtml(decision.status)}">
       <span>判定状況</span>
@@ -1331,6 +1337,23 @@ function getPwaReleaseEvidenceItems(decision, coverage) {
       note: decision.reviewExportedAt ? `${formatFullDate(decision.reviewExportedAt)} に書き出し` : "レビューJSON未書き出し",
     },
   ];
+}
+
+function getPwaReleaseQaState(evidenceItems) {
+  const pendingItems = evidenceItems.filter((item) => !item.ready);
+  if (!pendingItems.length) {
+    return {
+      ready: true,
+      title: "全チェック完了",
+      note: "本番URL、実機結果、最終判定、クラウド保存、レビューJSONが揃っています。",
+    };
+  }
+
+  return {
+    ready: false,
+    title: `${pendingItems.length}件の未完了`,
+    note: pendingItems.map((item) => item.label).join(" / "),
+  };
 }
 
 function getPwaReleaseHandoffState(evidenceItems) {
