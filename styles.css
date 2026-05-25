@@ -3401,6 +3401,20 @@ textarea {
   border-color: rgba(61, 173, 120, 0.34);
 }
 
+.pwa-release-decision-summary article.pwa-release-handoff.ready {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.58), transparent),
+    linear-gradient(135deg, rgba(61, 173, 120, 0.14), rgba(137, 247, 255, 0.12)),
+    rgba(248, 252, 251, 0.88);
+}
+
+.pwa-release-decision-summary article.pwa-release-handoff.pending {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.58), transparent),
+    linear-gradient(135deg, rgba(226, 162, 72, 0.14), rgba(137, 247, 255, 0.1)),
+    rgba(248, 252, 251, 0.88);
+}
+
 .pwa-release-decision-summary article.hold {
   border-color: rgba(211, 93, 93, 0.38);
 }

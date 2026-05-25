@@ -1228,6 +1228,7 @@ function renderPwaReleaseDecision() {
   const decision = normalizePwaReleaseDecision(state.pwaReleaseDecision || {});
   const coverage = getPwaReleaseCoverage();
   const evidenceItems = getPwaReleaseEvidenceItems(decision, coverage);
+  const handoff = getPwaReleaseHandoffState(evidenceItems);
   document.querySelector("#pwa-release-decision-status-input").value = decision.status;
   document.querySelector("#pwa-release-decision-reviewer-input").value = decision.reviewer || state.account.name || "";
   document.querySelector("#pwa-release-decision-note-input").value = decision.note;
@@ -1240,6 +1241,11 @@ function renderPwaReleaseDecision() {
     : "公開OKにする前に、未OKまたはNGのPWA確認項目を解消します。";
 
   pwaReleaseDecisionSummary.innerHTML = `
+    <article class="pwa-release-handoff ${handoff.ready ? "ready" : "pending"}">
+      <span>${escapeHtml(handoff.ready ? "公開前レビュー完了" : "次アクション")}</span>
+      <strong>${escapeHtml(handoff.title)}</strong>
+      <small>${escapeHtml(handoff.note)}</small>
+    </article>
     <article class="${escapeHtml(decision.status)}">
       <span>判定状況</span>
       <strong>${escapeHtml(getPwaReleaseDecisionLabel(decision.status))}</strong>
@@ -1306,6 +1312,33 @@ function getPwaReleaseEvidenceItems(decision, coverage) {
       note: decision.cloudId ? "Supabase同期済み" : "ローカル保存のみ",
     },
   ];
+}
+
+function getPwaReleaseHandoffState(evidenceItems) {
+  const missingItems = evidenceItems.filter((item) => !item.ready);
+  if (!missingItems.length) {
+    return {
+      ready: true,
+      title: "公開前レビューは完了です",
+      note: "本番URLレビューJSONを書き出し、リリースノートや公開前チェックに添付できます。",
+    };
+  }
+
+  const actionLabels = {
+    実機記録: "本番URLを実機で確認し、PWA実機テスト結果を保存",
+    必須項目: "ログイン、ホーム追加、通知受信、オフライン復帰、4モード表示をOKにする",
+    NGなし: "NG記録の原因を解消し、再テスト結果を保存",
+    公開判断: "判定を公開OKに更新",
+    確認者: "確認者名を入力して判定メモを保存",
+    クラウド保存: "Supabaseログイン中に判定メモを保存して同期",
+  };
+  const nextActions = missingItems.map((item) => actionLabels[item.label] || `${item.label}を確認`);
+
+  return {
+    ready: false,
+    title: nextActions[0],
+    note: nextActions.length > 1 ? `残り ${nextActions.length}件: ${nextActions.slice(1).join(" / ")}` : "この項目が完了すると公開前レビューに近づきます。",
+  };
 }
 
 function getPwaReleaseDecisionLabel(status) {
