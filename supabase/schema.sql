@@ -212,6 +212,17 @@ create table public.pwa_device_tests (
   unique (owner_id, local_id)
 );
 
+create table public.pwa_release_decisions (
+  id uuid primary key default gen_random_uuid(),
+  owner_id uuid not null references public.profiles(id) on delete cascade,
+  status text not null default 'draft' check (status in ('draft', 'ready', 'hold')),
+  reviewer text not null default '',
+  note text not null default '',
+  decided_at timestamptz,
+  updated_at timestamptz not null default now(),
+  unique (owner_id)
+);
+
 create view public.post_stats
 with (security_invoker = true) as
 select
@@ -239,6 +250,7 @@ create index ai_results_tank_checked_idx on public.ai_results(tank_id, checked_a
 create index ai_evaluations_owner_evaluated_idx on public.ai_evaluations(owner_id, evaluated_at desc);
 create index ai_prompt_notes_owner_created_idx on public.ai_prompt_notes(owner_id, created_at desc);
 create index pwa_device_tests_owner_tested_idx on public.pwa_device_tests(owner_id, tested_at desc);
+create index pwa_release_decisions_owner_updated_idx on public.pwa_release_decisions(owner_id, updated_at desc);
 
 alter table public.profiles enable row level security;
 alter table public.tanks enable row level security;
@@ -254,6 +266,7 @@ alter table public.ai_results enable row level security;
 alter table public.ai_evaluations enable row level security;
 alter table public.ai_prompt_notes enable row level security;
 alter table public.pwa_device_tests enable row level security;
+alter table public.pwa_release_decisions enable row level security;
 
 create policy "Public profiles are readable"
 on public.profiles for select
@@ -402,6 +415,12 @@ with check (owner_id = (select auth.uid()));
 
 create policy "Users manage own pwa device tests"
 on public.pwa_device_tests for all
+to authenticated
+using (owner_id = (select auth.uid()))
+with check (owner_id = (select auth.uid()));
+
+create policy "Users manage own pwa release decisions"
+on public.pwa_release_decisions for all
 to authenticated
 using (owner_id = (select auth.uid()))
 with check (owner_id = (select auth.uid()));

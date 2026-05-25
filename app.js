@@ -1204,7 +1204,7 @@ function getPwaReleaseCoverage(results = state.pwaTestResults || []) {
   };
 }
 
-function handlePwaReleaseDecisionSubmit(event) {
+async function handlePwaReleaseDecisionSubmit(event) {
   event.preventDefault();
   state.pwaReleaseDecision = normalizePwaReleaseDecision({
     status: document.querySelector("#pwa-release-decision-status-input").value,
@@ -1214,6 +1214,9 @@ function handlePwaReleaseDecisionSubmit(event) {
   });
   saveState();
   renderPwaReleaseDecision();
+  if (authSession?.user) {
+    await syncPwaReleaseDecisionToSupabase({ silent: true });
+  }
   showToast("PWA最終リリース判定を保存しました");
 }
 
@@ -1573,6 +1576,7 @@ async function handleAuthSubmit(action) {
     await loadProfileFromSupabase();
     await loadNotificationDeliveryHistory({ silent: true });
     await loadPwaDeviceTestsFromSupabase();
+    await loadPwaReleaseDecisionFromSupabase();
     await syncProfileToSupabase({ silent: true });
   }
 
@@ -1686,6 +1690,14 @@ async function syncCloudState(options = {}) {
   if (!pwaDeviceTestsSynced) {
     if (!options.silent) {
       showToast("PWA実機テスト結果の同期に失敗しました");
+    }
+    return false;
+  }
+
+  const pwaReleaseDecisionSynced = await syncPwaReleaseDecisionToSupabase({ silent: true });
+  if (!pwaReleaseDecisionSynced) {
+    if (!options.silent) {
+      showToast("PWA最終リリース判定の同期に失敗しました");
     }
     return false;
   }
@@ -2007,6 +2019,31 @@ async function loadPwaDeviceTestsFromSupabase() {
   saveState({ keepSyncStatus: true });
   renderPwaTestResults();
   return data || [];
+}
+
+async function loadPwaReleaseDecisionFromSupabase() {
+  if (!supabaseClient || !authSession?.user) {
+    return null;
+  }
+
+  const { data, error } = await supabaseClient
+    .from("pwa_release_decisions")
+    .select("id, status, reviewer, note, decided_at, updated_at")
+    .eq("owner_id", authSession.user.id)
+    .maybeSingle();
+
+  if (error) {
+    showToast(error.message || "PWA最終リリース判定を読み込めませんでした");
+    return null;
+  }
+
+  if (data) {
+    applyRemotePwaReleaseDecision(data);
+    saveState({ keepSyncStatus: true });
+    renderPwaReleaseDecision();
+  }
+
+  return data || null;
 }
 
 async function syncTanksToSupabase(options = {}) {
@@ -2651,6 +2688,46 @@ async function deletePwaDeviceTestFromSupabase(cloudId, options = {}) {
   return true;
 }
 
+async function syncPwaReleaseDecisionToSupabase(options = {}) {
+  if (!supabaseClient || !authSession?.user) {
+    if (!options.silent) {
+      showToast("Supabaseにログインしてください");
+    }
+    return false;
+  }
+
+  const { data, error } = await supabaseClient
+    .from("pwa_release_decisions")
+    .upsert(getPwaReleaseDecisionPayload(authSession.user), { onConflict: "owner_id" })
+    .select("id, status, reviewer, note, decided_at, updated_at")
+    .maybeSingle();
+
+  if (error) {
+    state.account.syncStatus = "local";
+    saveState({ keepSyncStatus: true });
+    renderAccount();
+    if (!options.silent) {
+      showToast(error.message || "PWA最終リリース判定の同期に失敗しました");
+    }
+    return false;
+  }
+
+  if (data) {
+    applyRemotePwaReleaseDecision(data);
+  }
+
+  state.account.syncStatus = "synced";
+  state.account.lastSyncedAt = new Date().toISOString();
+  saveState({ keepSyncStatus: true });
+  renderPwaReleaseDecision();
+
+  if (!options.silent) {
+    showToast("PWA最終リリース判定をSupabaseに同期しました");
+  }
+
+  return true;
+}
+
 function scheduleAiEvaluationSync() {
   window.clearTimeout(aiEvaluationSyncTimer);
   aiEvaluationSyncTimer = window.setTimeout(() => {
@@ -2883,6 +2960,18 @@ function getPwaDeviceTestPayloads(user) {
     tested_at: result.createdAt || new Date().toISOString(),
     updated_at: new Date().toISOString(),
   }));
+}
+
+function getPwaReleaseDecisionPayload(user) {
+  const decision = normalizePwaReleaseDecision(state.pwaReleaseDecision || {});
+  return {
+    owner_id: user.id,
+    status: decision.status,
+    reviewer: decision.reviewer || "",
+    note: decision.note || "",
+    decided_at: decision.decidedAt || new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  };
 }
 
 async function uploadPostMediaToStorage(post, user) {
@@ -3280,6 +3369,16 @@ function applyRemotePwaDeviceTests(remoteResults) {
     .slice(0, 20);
 }
 
+function applyRemotePwaReleaseDecision(remoteDecision) {
+  state.pwaReleaseDecision = normalizePwaReleaseDecision({
+    cloudId: remoteDecision.id,
+    status: remoteDecision.status,
+    reviewer: remoteDecision.reviewer,
+    note: remoteDecision.note,
+    decidedAt: remoteDecision.decided_at || remoteDecision.updated_at,
+  });
+}
+
 function isNewerAiResult(nextResult, currentResult) {
   if (!currentResult?.checkedAt) {
     return true;
@@ -3437,6 +3536,7 @@ async function initSupabaseAuth() {
       await loadAiEvaluationsFromSupabase();
       await loadAiPromptNotesFromSupabase();
       await loadPwaDeviceTestsFromSupabase();
+      await loadPwaReleaseDecisionFromSupabase();
     } else {
       state.account.signedIn = false;
       notificationDeliveryHistory = [];
@@ -3460,6 +3560,7 @@ async function initSupabaseAuth() {
     await loadAiEvaluationsFromSupabase();
     await loadAiPromptNotesFromSupabase();
     await loadPwaDeviceTestsFromSupabase();
+    await loadPwaReleaseDecisionFromSupabase();
   } else {
     state.account.signedIn = false;
     notificationDeliveryHistory = [];
@@ -6819,6 +6920,7 @@ function normalizePwaTestResult(result) {
 
 function normalizePwaReleaseDecision(decision) {
   return {
+    cloudId: decision.cloudId || null,
     status: getAllowedValue(decision.status, ["draft", "ready", "hold"], "draft"),
     reviewer: String(decision.reviewer || "").trim(),
     note: String(decision.note || "").trim(),
