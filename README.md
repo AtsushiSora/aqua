@@ -109,13 +109,14 @@
 - アカウント画面でのPWA本番リハーサル手順
 - PWA本番URLでの実機テスト結果メモとJSON書き出し
 - PWA実機テスト結果のSupabase `pwa_device_tests` 同期
+- PWA本番URLテスト結果のOK/要確認/NGレビューサマリー
 
 ## 次に作るとよいもの
 
 - 本物のAI画像分析
 - 実写真でのプロンプトv3評価
 - プロンプトv3評価サンプルの拡充
-- PWA本番URLでの実機確認と結果レビュー
+- PWA本番URLでの最終リリース判定メモ
 
 ## 通知配信ワーカー
 
@@ -169,6 +170,7 @@ VAPID鍵は `node scripts/generate-vapid-keys.mjs` で生成できます。
 
 アカウント画面の「PWA実機テスト結果」には、端末、ブラウザ、確認項目、OK/要確認/NG、メモを保存できます。
 記録はローカル状態に保存され、JSONで書き出せます。Supabaseログイン中は `pwa_device_tests` に同期されます。
+ログイン、ホーム追加、通知受信、オフライン復帰、4モード表示のOK状況はレビューサマリーで確認できます。
 
 既存のSupabase環境へ反映する場合は、`supabase/schema.sql` の `pwa_device_tests` テーブル、インデックス、RLSポリシーを追加してください。
 

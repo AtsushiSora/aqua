@@ -88,6 +88,7 @@ const notificationDeliveryRefreshButton = document.querySelector("#notification-
 const notificationDeliveryLog = document.querySelector("#notification-delivery-log");
 const notificationVerificationList = document.querySelector("#notification-verification-list");
 const pwaTestForm = document.querySelector("#pwa-test-form");
+const pwaTestReview = document.querySelector("#pwa-test-review");
 const pwaTestLog = document.querySelector("#pwa-test-log");
 const pwaTestExportButton = document.querySelector("#pwa-test-export-button");
 const accountUiModeInput = document.querySelector("#account-ui-mode-input");
@@ -1102,6 +1103,7 @@ function renderPwaTestResults() {
   }
 
   const results = Array.isArray(state.pwaTestResults) ? state.pwaTestResults : [];
+  renderPwaTestReview(results);
   if (!results.length) {
     pwaTestLog.innerHTML = `
       <article class="pwa-test-empty">
@@ -1129,6 +1131,56 @@ function renderPwaTestResults() {
     .join("");
 }
 
+function renderPwaTestReview(results) {
+  if (!pwaTestReview) {
+    return;
+  }
+
+  const scopes = ["login", "install", "notification", "offline", "ui_modes"];
+  const passedScopes = new Set(results.filter((result) => result.status === "passed").map((result) => result.scope));
+  const watchCount = results.filter((result) => result.status === "watch").length;
+  const failedCount = results.filter((result) => result.status === "failed").length;
+  const passedCount = scopes.filter((scope) => passedScopes.has(scope)).length;
+  const totalCount = results.length;
+  const latestResult = results[0] || null;
+  const ready = passedCount === scopes.length && failedCount === 0;
+  const reviewLabel = ready ? "公開前OK" : totalCount ? "確認中" : "未記録";
+  const reviewNote = ready
+    ? "必須項目はOKです。最後に本番URLで再読み込みして、通知とオフライン復帰をもう一度確認します。"
+    : "本番URLでログイン、ホーム追加、通知受信、オフライン復帰、4モード表示を確認して記録します。";
+
+  pwaTestReview.innerHTML = `
+    <div class="pwa-test-score ${ready ? "ready" : "pending"}">
+      <span>${escapeHtml(reviewLabel)}</span>
+      <strong>${passedCount}/${scopes.length}</strong>
+      <small>${escapeHtml(reviewNote)}</small>
+    </div>
+    <div class="pwa-test-scope-grid">
+      ${scopes
+        .map((scope) => {
+          const entries = results.filter((result) => result.scope === scope);
+          const status = entries.some((result) => result.status === "failed")
+            ? "failed"
+            : entries.some((result) => result.status === "passed")
+              ? "passed"
+              : entries.some((result) => result.status === "watch")
+                ? "watch"
+                : "missing";
+          return `
+            <article class="${escapeHtml(status)}">
+              <span>${escapeHtml(getPwaTestScopeLabel(scope))}</span>
+              <strong>${escapeHtml(getPwaTestStatusLabel(status))}</strong>
+            </article>
+          `;
+        })
+        .join("")}
+    </div>
+    <p class="pwa-test-review-note">
+      ${escapeHtml(`記録 ${totalCount}件 / 要確認 ${watchCount}件 / NG ${failedCount}件${latestResult ? ` / 最新 ${formatFullDate(latestResult.createdAt)}` : ""}`)}
+    </p>
+  `;
+}
+
 function getPwaTestScopeLabel(scope) {
   const labels = {
     install: "ホーム追加",
@@ -1145,6 +1197,7 @@ function getPwaTestStatusLabel(status) {
     passed: "OK",
     watch: "要確認",
     failed: "NG",
+    missing: "未記録",
   };
   return labels[status] || labels.watch;
 }

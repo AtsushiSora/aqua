@@ -516,6 +516,8 @@ body[data-ui-mode="glance"] .pwa-release-grid article,
 body[data-ui-mode="glance"] .notification-rehearsal-list li,
 body[data-ui-mode="glance"] .pwa-test-item,
 body[data-ui-mode="glance"] .pwa-test-empty,
+body[data-ui-mode="glance"] .pwa-test-score,
+body[data-ui-mode="glance"] .pwa-test-scope-grid article,
 body[data-ui-mode="glance"] .ai-observations,
 body[data-ui-mode="glance"] .ai-condition-coverage,
 body[data-ui-mode="glance"] .ai-condition-risk,
@@ -3344,6 +3346,95 @@ textarea {
   margin-top: 14px;
 }
 
+.pwa-test-review {
+  display: grid;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.pwa-test-score {
+  display: grid;
+  gap: 5px;
+  padding: 14px;
+  border: 1px solid var(--glass-border);
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.54), transparent),
+    var(--waterline),
+    rgba(248, 252, 251, 0.84);
+}
+
+.pwa-test-score.ready {
+  border-color: rgba(61, 173, 120, 0.38);
+}
+
+.pwa-test-score.pending {
+  border-color: rgba(226, 162, 72, 0.34);
+}
+
+.pwa-test-score span,
+.pwa-test-review-note {
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-weight: 900;
+}
+
+.pwa-test-score strong {
+  color: var(--aqua-dark);
+  font-size: 1.7rem;
+  line-height: 1;
+}
+
+.pwa-test-score small {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.pwa-test-scope-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.pwa-test-scope-grid article {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+  padding: 10px;
+  border: 1px solid var(--glass-border);
+  border-radius: 8px;
+  background: rgba(248, 252, 251, 0.76);
+}
+
+.pwa-test-scope-grid article.passed {
+  border-color: rgba(61, 173, 120, 0.34);
+}
+
+.pwa-test-scope-grid article.watch,
+.pwa-test-scope-grid article.missing {
+  border-color: rgba(226, 162, 72, 0.34);
+}
+
+.pwa-test-scope-grid article.failed {
+  border-color: rgba(211, 93, 93, 0.38);
+}
+
+.pwa-test-scope-grid span {
+  color: var(--muted);
+  font-size: 0.7rem;
+  font-weight: 900;
+}
+
+.pwa-test-scope-grid strong {
+  color: var(--aqua-dark);
+  font-size: 0.84rem;
+}
+
+.pwa-test-review-note {
+  margin: 0;
+}
+
 .pwa-test-item,
 .pwa-test-empty {
   min-width: 0;
@@ -3996,6 +4087,7 @@ textarea {
   .notification-production-config ul,
   .pwa-release-grid,
   .pwa-test-form,
+  .pwa-test-scope-grid,
   .preference-toggles,
   .quiet-hours,
   .ai-api-status-grid,
