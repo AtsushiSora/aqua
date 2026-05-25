@@ -97,6 +97,16 @@ const pwaReleaseDecisionSummary = document.querySelector("#pwa-release-decision-
 const accountUiModeInput = document.querySelector("#account-ui-mode-input");
 const homeUiModeInput = document.querySelector("#home-ui-mode-input");
 const homeUiModeCycleButton = document.querySelector("#home-ui-mode-cycle-button");
+const accountBackgroundImageInput = document.querySelector("#account-background-image-input");
+const accountButtonImageInput = document.querySelector("#account-button-image-input");
+const accountBackgroundImageButton = document.querySelector("#account-background-image-button");
+const accountButtonImageButton = document.querySelector("#account-button-image-button");
+const accountBackgroundImageClearButton = document.querySelector("#account-background-image-clear-button");
+const accountButtonImageClearButton = document.querySelector("#account-button-image-clear-button");
+const accountBackgroundPreview = document.querySelector("#account-background-preview");
+const accountButtonPreview = document.querySelector("#account-button-preview");
+const accountBackgroundStatus = document.querySelector("#account-background-status");
+const accountButtonStatus = document.querySelector("#account-button-status");
 const supabaseConfig = window.AQUANOTE_SUPABASE_CONFIG || {};
 const pushConfig = window.AQUANOTE_PUSH_CONFIG || {};
 const UI_MODES = ["standard", "simple", "glance", "adult"];
@@ -174,6 +184,8 @@ const defaultState = {
     emailNotifications: false,
     quietHoursStart: "22:00",
     quietHoursEnd: "07:00",
+    backgroundImageDataUrl: null,
+    buttonImageDataUrl: null,
     syncStatus: "local",
     lastSyncedAt: null,
   },
@@ -514,6 +526,53 @@ homeUiModeInput.addEventListener("change", () => {
 homeUiModeCycleButton.addEventListener("click", () => {
   const currentIndex = UI_MODES.indexOf(getAllowedValue(state.account.uiMode, UI_MODES, "standard"));
   updateUiMode(UI_MODES[(currentIndex + 1) % UI_MODES.length]);
+});
+
+accountBackgroundImageButton.addEventListener("click", () => accountBackgroundImageInput.click());
+accountButtonImageButton.addEventListener("click", () => accountButtonImageInput.click());
+
+accountBackgroundImageInput.addEventListener("change", async () => {
+  const file = accountBackgroundImageInput.files?.[0];
+  if (!file) {
+    return;
+  }
+
+  state.account.backgroundImageDataUrl = await resizeImageFile(file, 1800, 0.82);
+  state.account.syncStatus = "local";
+  saveState({ keepSyncStatus: true });
+  renderAccount();
+  showToast("背景画像を変更しました");
+  accountBackgroundImageInput.value = "";
+});
+
+accountButtonImageInput.addEventListener("change", async () => {
+  const file = accountButtonImageInput.files?.[0];
+  if (!file) {
+    return;
+  }
+
+  state.account.buttonImageDataUrl = await resizeImageFile(file, 900, 0.78);
+  state.account.syncStatus = "local";
+  saveState({ keepSyncStatus: true });
+  renderAccount();
+  showToast("ボタン背面画像を変更しました");
+  accountButtonImageInput.value = "";
+});
+
+accountBackgroundImageClearButton.addEventListener("click", () => {
+  state.account.backgroundImageDataUrl = null;
+  state.account.syncStatus = "local";
+  saveState({ keepSyncStatus: true });
+  renderAccount();
+  showToast("背景画像をリセットしました");
+});
+
+accountButtonImageClearButton.addEventListener("click", () => {
+  state.account.buttonImageDataUrl = null;
+  state.account.syncStatus = "local";
+  saveState({ keepSyncStatus: true });
+  renderAccount();
+  showToast("ボタン背面画像をリセットしました");
 });
 
 mockSyncButton.addEventListener("click", async () => {
@@ -1056,6 +1115,7 @@ function renderAccount() {
   document.querySelector("#account-email-notifications-input").checked = Boolean(account.emailNotifications);
   document.querySelector("#account-quiet-start-input").value = account.quietHoursStart;
   document.querySelector("#account-quiet-end-input").value = account.quietHoursEnd;
+  renderCustomAppearance();
   notificationPreferenceSummary.textContent = getNotificationPreferenceSummary();
   renderNotificationDeliveryLog();
   renderNotificationVerificationChecklist();
@@ -1087,6 +1147,21 @@ function renderAccount() {
   `;
 
   renderAuthPanel();
+}
+
+function renderCustomAppearance() {
+  const backgroundImage = state.account.backgroundImageDataUrl;
+  const buttonImage = state.account.buttonImageDataUrl;
+
+  accountBackgroundPreview.style.backgroundImage = backgroundImage ? `url("${backgroundImage}")` : "";
+  accountButtonPreview.style.backgroundImage = buttonImage ? `url("${buttonImage}")` : "";
+  accountBackgroundPreview.classList.toggle("has-image", Boolean(backgroundImage));
+  accountButtonPreview.classList.toggle("has-image", Boolean(buttonImage));
+  accountBackgroundStatus.textContent = backgroundImage ? "背景に反映中" : "未設定";
+  accountButtonStatus.textContent = buttonImage ? "ボタン背面に反映中" : "未設定";
+  accountBackgroundImageClearButton.disabled = !backgroundImage;
+  accountButtonImageClearButton.disabled = !buttonImage;
+  applyCustomAppearance();
 }
 
 async function handlePwaTestSubmit(event) {
@@ -1447,6 +1522,17 @@ function applyUiMode() {
   if (homeUiModeInput) {
     homeUiModeInput.value = uiMode;
   }
+  applyCustomAppearance();
+}
+
+function applyCustomAppearance() {
+  const backgroundImage = state.account?.backgroundImageDataUrl || "";
+  const buttonImage = state.account?.buttonImageDataUrl || "";
+
+  document.body.dataset.customBackground = backgroundImage ? "true" : "false";
+  document.body.dataset.customButtons = buttonImage ? "true" : "false";
+  document.body.style.setProperty("--custom-background-image", backgroundImage ? `url("${backgroundImage}")` : "none");
+  document.body.style.setProperty("--custom-button-image", buttonImage ? `url("${buttonImage}")` : "none");
 }
 
 function updateUiMode(value) {
@@ -7312,10 +7398,16 @@ function normalizeAccount(account = {}) {
       account.emailNotifications === undefined ? defaultState.account.emailNotifications : Boolean(account.emailNotifications),
     quietHoursStart: normalizeTimeValue(account.quietHoursStart, defaultState.account.quietHoursStart),
     quietHoursEnd: normalizeTimeValue(account.quietHoursEnd, defaultState.account.quietHoursEnd),
+    backgroundImageDataUrl: isImageDataUrl(account.backgroundImageDataUrl) ? account.backgroundImageDataUrl : null,
+    buttonImageDataUrl: isImageDataUrl(account.buttonImageDataUrl) ? account.buttonImageDataUrl : null,
     syncStatus,
     signedIn: Boolean(account.signedIn),
     lastSyncedAt: account.lastSyncedAt || null,
   };
+}
+
+function isImageDataUrl(value) {
+  return typeof value === "string" && /^data:image\/(?:png|jpe?g|webp);base64,/i.test(value);
 }
 
 function getSyncStatusLabel(account) {

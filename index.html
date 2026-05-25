@@ -798,6 +798,36 @@
                     <option value="adult">大人モード</option>
                   </select>
                 </label>
+                <div class="custom-appearance-panel full-field">
+                  <div class="settings-head">
+                    <span>画像カスタム</span>
+                    <small>好きな写真を背景やボタン背面に反映できます</small>
+                  </div>
+                  <article>
+                    <div class="custom-appearance-preview" id="account-background-preview" aria-hidden="true"></div>
+                    <div>
+                      <strong>背景画像</strong>
+                      <span id="account-background-status">未設定</span>
+                    </div>
+                    <div class="custom-appearance-actions">
+                      <button class="ghost-button" id="account-background-image-button" type="button">画像を選ぶ</button>
+                      <button class="text-button" id="account-background-image-clear-button" type="button">リセット</button>
+                    </div>
+                    <input id="account-background-image-input" type="file" accept="image/*" hidden>
+                  </article>
+                  <article>
+                    <div class="custom-appearance-preview button-preview" id="account-button-preview" aria-hidden="true"></div>
+                    <div>
+                      <strong>ボタン背面</strong>
+                      <span id="account-button-status">未設定</span>
+                    </div>
+                    <div class="custom-appearance-actions">
+                      <button class="ghost-button" id="account-button-image-button" type="button">画像を選ぶ</button>
+                      <button class="text-button" id="account-button-image-clear-button" type="button">リセット</button>
+                    </div>
+                    <input id="account-button-image-input" type="file" accept="image/*" hidden>
+                  </article>
+                </div>
                 <div class="notification-settings full-field">
                   <div class="settings-head">
                     <span>通知設定</span>
