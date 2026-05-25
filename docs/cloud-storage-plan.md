@@ -36,6 +36,7 @@ Reason:
 | `ai_results` | Saved analysis summaries for tanks and posts |
 | `ai_evaluations` | AI Gateway/fallback comparison logs and review notes |
 | `ai_prompt_notes` | Prompt-improvement notes for AI model tuning |
+| `pwa_device_tests` | Production PWA device rehearsal results |
 
 ## Migration order
 
@@ -97,6 +98,7 @@ PWA Push subscription scaffold:
 - Surface a PWA release checklist in the account view. Done in the prototype.
 - Surface a production PWA rehearsal flow in the account view. Done in the prototype.
 - Store production PWA device test notes locally and export them as JSON. Done in the prototype.
+- Sync production PWA device test notes to `pwa_device_tests`. Done in the prototype.
 - Add a Netlify Function entrypoint for AI image/log analysis. Done in the prototype.
 - Show AI Gateway/model verification status in the AI view. Done in the prototype.
 - Tune the AI prompt to v3 with visible evidence, confidence, retake tips, and non-diagnostic care guidance. Done in the prototype.
@@ -126,9 +128,11 @@ PWA Push subscription scaffold:
 
 ## Next implementation slice
 
-Polish UI mode validation:
+Production release evidence:
 
 - Enable Netlify AI Gateway and confirm `OPENAI_BASE_URL`.
 - Test `gpt-4o-mini` against real aquarium photos.
+- Run PWA installation, notification, offline, and UI mode checks on the production URL.
+- Review synced `pwa_device_tests` rows before production launch.
 - Review basic, simple, glance, and adult modes across dashboard, posts, AI, and account views.
 - Keep JSON export/import as a recovery path while the sync model is being tested.

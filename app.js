@@ -522,15 +522,19 @@ importDataButton.addEventListener("click", () => importDataInput.click());
 importDataInput.addEventListener("change", importAppData);
 pwaTestForm.addEventListener("submit", handlePwaTestSubmit);
 pwaTestExportButton.addEventListener("click", exportPwaTestResults);
-pwaTestLog.addEventListener("click", (event) => {
+pwaTestLog.addEventListener("click", async (event) => {
   const button = event.target.closest("[data-pwa-test-delete]");
   if (!button) {
     return;
   }
 
+  const current = state.pwaTestResults.find((result) => result.id === button.dataset.pwaTestDelete);
   state.pwaTestResults = state.pwaTestResults.filter((result) => result.id !== button.dataset.pwaTestDelete);
   saveState();
   renderPwaTestResults();
+  if (current?.cloudId && authSession?.user) {
+    await deletePwaDeviceTestFromSupabase(current.cloudId, { silent: true });
+  }
   showToast("PWA実機テスト結果を削除しました");
 });
 
@@ -1046,6 +1050,7 @@ function renderAccount() {
   const mediaCount = state.posts.filter((post) => hasPostMedia(post)).length;
   const commentCount = state.posts.reduce((total, post) => total + getDisplayCommentCount(post), 0);
   const logCount = state.tanks.reduce((total, tank) => total + tank.logs.length, 0);
+  const pwaTestCount = Array.isArray(state.pwaTestResults) ? state.pwaTestResults.length : 0;
   const exportedSize = Math.ceil(JSON.stringify(state).length / 1024);
 
   syncSummary.innerHTML = `
@@ -1057,7 +1062,7 @@ function renderAccount() {
     <article>
       <span>データ量</span>
       <strong>${state.tanks.length}水槽 / ${state.posts.length}投稿</strong>
-      <small>ログ ${logCount}件、コメント ${commentCount}件、メディア ${mediaCount}件</small>
+      <small>ログ ${logCount}件、コメント ${commentCount}件、メディア ${mediaCount}件、PWA確認 ${pwaTestCount}件</small>
     </article>
     <article>
       <span>移行ファイル</span>
@@ -1069,7 +1074,7 @@ function renderAccount() {
   renderAuthPanel();
 }
 
-function handlePwaTestSubmit(event) {
+async function handlePwaTestSubmit(event) {
   event.preventDefault();
   const result = normalizePwaTestResult({
     id: createId("pwa-test"),
@@ -1085,6 +1090,9 @@ function handlePwaTestSubmit(event) {
   saveState();
   pwaTestForm.reset();
   renderPwaTestResults();
+  if (authSession?.user) {
+    await syncPwaDeviceTestsToSupabase({ silent: true });
+  }
   showToast("PWA実機テスト結果を保存しました");
 }
 
@@ -1429,6 +1437,7 @@ async function handleAuthSubmit(action) {
   if (authSession?.user) {
     await loadProfileFromSupabase();
     await loadNotificationDeliveryHistory({ silent: true });
+    await loadPwaDeviceTestsFromSupabase();
     await syncProfileToSupabase({ silent: true });
   }
 
@@ -1534,6 +1543,14 @@ async function syncCloudState(options = {}) {
   if (!aiPromptNotesSynced) {
     if (!options.silent) {
       showToast("プロンプト改善メモの同期に失敗しました");
+    }
+    return false;
+  }
+
+  const pwaDeviceTestsSynced = await syncPwaDeviceTestsToSupabase({ silent: true });
+  if (!pwaDeviceTestsSynced) {
+    if (!options.silent) {
+      showToast("PWA実機テスト結果の同期に失敗しました");
     }
     return false;
   }
@@ -1831,6 +1848,29 @@ async function loadAiPromptNotesFromSupabase() {
   applyRemoteAiPromptNotes(data || []);
   saveState({ keepSyncStatus: true });
   renderAiEvaluationLog();
+  return data || [];
+}
+
+async function loadPwaDeviceTestsFromSupabase() {
+  if (!supabaseClient || !authSession?.user) {
+    return [];
+  }
+
+  const { data, error } = await supabaseClient
+    .from("pwa_device_tests")
+    .select("id, local_id, device, browser, test_scope, status, note, tested_at, updated_at")
+    .eq("owner_id", authSession.user.id)
+    .order("tested_at", { ascending: false })
+    .limit(20);
+
+  if (error) {
+    showToast(error.message || "PWA実機テスト結果を読み込めませんでした");
+    return [];
+  }
+
+  applyRemotePwaDeviceTests(data || []);
+  saveState({ keepSyncStatus: true });
+  renderPwaTestResults();
   return data || [];
 }
 
@@ -2414,6 +2454,68 @@ async function syncAiPromptNotesToSupabase(options = {}) {
   return true;
 }
 
+async function syncPwaDeviceTestsToSupabase(options = {}) {
+  if (!supabaseClient || !authSession?.user) {
+    if (!options.silent) {
+      showToast("Supabaseにログインしてください");
+    }
+    return false;
+  }
+
+  const payloads = getPwaDeviceTestPayloads(authSession.user);
+  if (!payloads.length) {
+    return true;
+  }
+
+  const { data, error } = await supabaseClient
+    .from("pwa_device_tests")
+    .upsert(payloads, { onConflict: "owner_id,local_id" })
+    .select("id, local_id, device, browser, test_scope, status, note, tested_at, updated_at");
+
+  if (error) {
+    state.account.syncStatus = "local";
+    saveState({ keepSyncStatus: true });
+    renderAccount();
+    if (!options.silent) {
+      showToast(error.message || "PWA実機テスト結果の同期に失敗しました");
+    }
+    return false;
+  }
+
+  applyRemotePwaDeviceTests(data || []);
+  state.account.syncStatus = "synced";
+  state.account.lastSyncedAt = new Date().toISOString();
+  saveState({ keepSyncStatus: true });
+  renderPwaTestResults();
+
+  if (!options.silent) {
+    showToast("PWA実機テスト結果をSupabaseに同期しました");
+  }
+
+  return true;
+}
+
+async function deletePwaDeviceTestFromSupabase(cloudId, options = {}) {
+  if (!supabaseClient || !authSession?.user || !cloudId) {
+    return false;
+  }
+
+  const { error } = await supabaseClient
+    .from("pwa_device_tests")
+    .delete()
+    .eq("id", cloudId)
+    .eq("owner_id", authSession.user.id);
+
+  if (error) {
+    if (!options.silent) {
+      showToast(error.message || "PWA実機テスト結果の削除同期に失敗しました");
+    }
+    return false;
+  }
+
+  return true;
+}
+
 function scheduleAiEvaluationSync() {
   window.clearTimeout(aiEvaluationSyncTimer);
   aiEvaluationSyncTimer = window.setTimeout(() => {
@@ -2630,6 +2732,20 @@ function getAiPromptNotePayloads(user) {
     prompt_version: note.promptVersion || null,
     note: note.note || "",
     created_at: note.createdAt || new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  }));
+}
+
+function getPwaDeviceTestPayloads(user) {
+  return (state.pwaTestResults || []).map((result) => ({
+    owner_id: user.id,
+    local_id: result.id,
+    device: result.device || "未記録",
+    browser: result.browser || "未記録",
+    test_scope: result.scope || "install",
+    status: result.status || "watch",
+    note: result.note || "",
+    tested_at: result.createdAt || new Date().toISOString(),
     updated_at: new Date().toISOString(),
   }));
 }
@@ -3008,6 +3124,27 @@ function applyRemoteAiPromptNotes(remoteNotes) {
     .slice(0, 20);
 }
 
+function applyRemotePwaDeviceTests(remoteResults) {
+  const localById = new Map((state.pwaTestResults || []).map((result) => [result.id, result]));
+  remoteResults.forEach((remoteResult) => {
+    const nextResult = normalizePwaTestResult({
+      id: remoteResult.local_id,
+      cloudId: remoteResult.id,
+      device: remoteResult.device,
+      browser: remoteResult.browser,
+      scope: remoteResult.test_scope,
+      status: remoteResult.status,
+      note: remoteResult.note,
+      createdAt: remoteResult.tested_at || remoteResult.updated_at,
+    });
+    localById.set(nextResult.id, nextResult);
+  });
+
+  state.pwaTestResults = [...localById.values()]
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    .slice(0, 20);
+}
+
 function isNewerAiResult(nextResult, currentResult) {
   if (!currentResult?.checkedAt) {
     return true;
@@ -3164,6 +3301,7 @@ async function initSupabaseAuth() {
       await loadAiResultsFromSupabase();
       await loadAiEvaluationsFromSupabase();
       await loadAiPromptNotesFromSupabase();
+      await loadPwaDeviceTestsFromSupabase();
     } else {
       state.account.signedIn = false;
       notificationDeliveryHistory = [];
@@ -3186,6 +3324,7 @@ async function initSupabaseAuth() {
     await loadAiResultsFromSupabase();
     await loadAiEvaluationsFromSupabase();
     await loadAiPromptNotesFromSupabase();
+    await loadPwaDeviceTestsFromSupabase();
   } else {
     state.account.signedIn = false;
     notificationDeliveryHistory = [];
@@ -6531,6 +6670,7 @@ function normalizeAiPromptNote(note) {
 function normalizePwaTestResult(result) {
   return {
     id: result.id || createId("pwa-test"),
+    cloudId: result.cloudId || null,
     createdAt: result.createdAt || new Date().toISOString(),
     device: String(result.device || "未記録").trim() || "未記録",
     browser: String(result.browser || "未記録").trim() || "未記録",
