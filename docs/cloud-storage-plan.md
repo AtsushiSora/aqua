@@ -94,6 +94,7 @@ PWA Push subscription scaffold:
 - Surface a production notification verification checklist in the account view. Done in the prototype.
 - Surface a production notification rehearsal flow in the account view. Done in the prototype.
 - Surface production notification environment variables and dry-run release notes in the account view. Done in the prototype.
+- Store production notification environment, dry-run, and send-result confirmation notes locally. Done in the prototype.
 - Store the selected UI mode on the local profile and Supabase profile payload. Done in the prototype.
 - Add PWA install assets, app shortcuts, and offline fallback page. Done in the prototype.
 - Surface a PWA release checklist in the account view. Done in the prototype.

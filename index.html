@@ -896,6 +896,42 @@
                 </div>
               </div>
               <div class="notification-verification-list" id="notification-verification-list"></div>
+              <form class="notification-production-check-form" id="notification-production-check-form">
+                <label>
+                  <span>環境変数</span>
+                  <select id="notification-env-status-input">
+                    <option value="unchecked">未確認</option>
+                    <option value="confirmed">確認済み</option>
+                    <option value="issues">要対応あり</option>
+                  </select>
+                </label>
+                <label>
+                  <span>dry-run解除</span>
+                  <select id="notification-dry-run-status-input">
+                    <option value="unchecked">未確認</option>
+                    <option value="confirmed">確認済み</option>
+                    <option value="issues">要対応あり</option>
+                  </select>
+                </label>
+                <label>
+                  <span>送信結果</span>
+                  <select id="notification-send-status-input">
+                    <option value="unchecked">未確認</option>
+                    <option value="confirmed">確認済み</option>
+                    <option value="issues">要対応あり</option>
+                  </select>
+                </label>
+                <label>
+                  <span>確認者</span>
+                  <input id="notification-check-reviewer-input" type="text" placeholder="確認者名">
+                </label>
+                <label class="full-field">
+                  <span>確認メモ</span>
+                  <textarea id="notification-check-note-input" rows="2" placeholder="Netlify環境変数、VAPID鍵、配信ログの確認結果"></textarea>
+                </label>
+                <button class="primary-button full-field" type="submit">通知本番チェックを保存</button>
+              </form>
+              <div class="notification-production-summary" id="notification-production-summary"></div>
             </section>
 
             <section class="panel notification-rehearsal-panel">

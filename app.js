@@ -87,6 +87,8 @@ const notificationDeliveryFilter = document.querySelector("#notification-deliver
 const notificationDeliveryRefreshButton = document.querySelector("#notification-delivery-refresh-button");
 const notificationDeliveryLog = document.querySelector("#notification-delivery-log");
 const notificationVerificationList = document.querySelector("#notification-verification-list");
+const notificationProductionCheckForm = document.querySelector("#notification-production-check-form");
+const notificationProductionSummary = document.querySelector("#notification-production-summary");
 const pwaTestForm = document.querySelector("#pwa-test-form");
 const pwaTestReview = document.querySelector("#pwa-test-review");
 const pwaTestLog = document.querySelector("#pwa-test-log");
@@ -190,6 +192,14 @@ const defaultState = {
     lastSyncedAt: null,
   },
   pwaTestResults: [],
+  notificationProductionCheck: {
+    envStatus: "unchecked",
+    dryRunStatus: "unchecked",
+    sendStatus: "unchecked",
+    reviewer: "",
+    note: "",
+    checkedAt: null,
+  },
   pwaReleaseDecision: {
     status: "draft",
     reviewStatus: "not_started",
@@ -701,6 +711,21 @@ notificationDeliveryRefreshButton.addEventListener("click", () => loadNotificati
 notificationDeliveryFilter.addEventListener("change", () => {
   activeNotificationDeliveryFilter = notificationDeliveryFilter.value;
   renderNotificationDeliveryLog();
+});
+
+notificationProductionCheckForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+  state.notificationProductionCheck = normalizeNotificationProductionCheck({
+    envStatus: document.querySelector("#notification-env-status-input").value,
+    dryRunStatus: document.querySelector("#notification-dry-run-status-input").value,
+    sendStatus: document.querySelector("#notification-send-status-input").value,
+    reviewer: document.querySelector("#notification-check-reviewer-input").value,
+    note: document.querySelector("#notification-check-note-input").value,
+    checkedAt: new Date().toISOString(),
+  });
+  saveState();
+  renderNotificationVerificationChecklist();
+  showToast("通知本番チェックを保存しました");
 });
 
 notificationDeliveryLog.addEventListener("click", async (event) => {
@@ -1698,7 +1723,7 @@ function getNotificationDeliveryDetailMarkup(delivery, channel, status) {
 }
 
 function renderNotificationVerificationChecklist() {
-  if (!notificationVerificationList) {
+  if (!notificationVerificationList || !notificationProductionCheckForm || !notificationProductionSummary) {
     return;
   }
 
@@ -1706,6 +1731,13 @@ function renderNotificationVerificationChecklist() {
   const hasPushKey = Boolean(getPushApplicationServerKey());
   const hasPushSupport = canUsePushNotifications();
   const environmentItems = getNotificationProductionEnvironmentChecklist();
+  const productionCheck = normalizeNotificationProductionCheck(state.notificationProductionCheck || {});
+  const productionReady = productionCheck.envStatus === "confirmed" && productionCheck.dryRunStatus === "confirmed" && productionCheck.sendStatus === "confirmed";
+  document.querySelector("#notification-env-status-input").value = productionCheck.envStatus;
+  document.querySelector("#notification-dry-run-status-input").value = productionCheck.dryRunStatus;
+  document.querySelector("#notification-send-status-input").value = productionCheck.sendStatus;
+  document.querySelector("#notification-check-reviewer-input").value = productionCheck.reviewer || state.account.name || "";
+  document.querySelector("#notification-check-note-input").value = productionCheck.note;
   const items = [
     {
       label: "Supabase接続",
@@ -1739,13 +1771,18 @@ function renderNotificationVerificationChecklist() {
     },
     {
       label: "Netlify環境変数",
-      note: "SUPABASE_SERVICE_ROLE_KEY / VAPID / Resendを本番で確認",
-      status: "manual",
+      note: getNotificationProductionStatusLabel(productionCheck.envStatus),
+      status: productionCheck.envStatus === "confirmed" ? "ready" : productionCheck.envStatus === "issues" ? "missing" : "manual",
     },
     {
       label: "dry-run解除",
-      note: "NOTIFICATION_DELIVERY_DRY_RUN=falseで本番送信を確認",
-      status: "manual",
+      note: getNotificationProductionStatusLabel(productionCheck.dryRunStatus),
+      status: productionCheck.dryRunStatus === "confirmed" ? "ready" : productionCheck.dryRunStatus === "issues" ? "missing" : "manual",
+    },
+    {
+      label: "本番送信結果",
+      note: getNotificationProductionStatusLabel(productionCheck.sendStatus),
+      status: productionCheck.sendStatus === "confirmed" ? "ready" : productionCheck.sendStatus === "issues" ? "missing" : "manual",
     },
   ];
 
@@ -1785,6 +1822,18 @@ function renderNotificationVerificationChecklist() {
       </div>
     `,
   );
+  notificationProductionSummary.innerHTML = `
+    <article class="${productionReady ? "ready" : "pending"}">
+      <span>${escapeHtml(productionReady ? "本番通知OK" : "本番通知確認中")}</span>
+      <strong>${escapeHtml(productionReady ? "環境変数、dry-run解除、送信結果を確認済み" : getNotificationProductionNextAction(productionCheck))}</strong>
+      <small>${escapeHtml(productionCheck.checkedAt ? `${formatFullDate(productionCheck.checkedAt)} / ${productionCheck.reviewer || "確認者未記録"}` : "まだ確認メモは保存されていません")}</small>
+    </article>
+    <article>
+      <span>確認メモ</span>
+      <strong>${escapeHtml(productionCheck.note || "未記録")}</strong>
+      <small>Netlify設定、VAPID鍵、配信ログの確認結果を残します</small>
+    </article>
+  `;
 }
 
 function getNotificationProductionEnvironmentChecklist() {
@@ -1798,6 +1847,31 @@ function getNotificationProductionEnvironmentChecklist() {
     { name: "WEB_PUSH_VAPID_PRIVATE_KEY", note: "Netlifyだけに置くPush署名用の秘密キーです。" },
     { name: "WEB_PUSH_TTL_SECONDS", note: "任意。未設定なら24時間です。" },
   ];
+}
+
+function getNotificationProductionStatusLabel(status) {
+  const labels = {
+    unchecked: "未確認",
+    confirmed: "確認済み",
+    issues: "要対応あり",
+  };
+  return labels[status] || labels.unchecked;
+}
+
+function getNotificationProductionNextAction(check) {
+  if (check.envStatus !== "confirmed") {
+    return "Netlify環境変数を確認";
+  }
+
+  if (check.dryRunStatus !== "confirmed") {
+    return "dry-run解除を確認";
+  }
+
+  if (check.sendStatus !== "confirmed") {
+    return "本番送信結果を確認";
+  }
+
+  return "本番通知チェックを確認";
 }
 
 async function handleAuthSubmit(action) {
@@ -7063,6 +7137,7 @@ function normalizeState(saved) {
     taskDate: saved.taskDate || getDateKey(new Date()),
     reminders: normalizeReminders(saved.reminders),
     pwaTestResults: Array.isArray(saved.pwaTestResults) ? saved.pwaTestResults.map(normalizePwaTestResult) : [],
+    notificationProductionCheck: normalizeNotificationProductionCheck(saved.notificationProductionCheck || {}),
     pwaReleaseDecision: normalizePwaReleaseDecision(saved.pwaReleaseDecision || {}),
     aiEvaluationLog: Array.isArray(saved.aiEvaluationLog) ? saved.aiEvaluationLog.map(normalizeAiEvaluationEntry) : [],
     aiPromptImprovementNote: saved.aiPromptImprovementNote || "",
@@ -7230,6 +7305,17 @@ function normalizePwaReleaseDecision(decision) {
     note: String(decision.note || "").trim(),
     decidedAt: decision.decidedAt || null,
     reviewExportedAt: decision.reviewExportedAt || null,
+  };
+}
+
+function normalizeNotificationProductionCheck(check) {
+  return {
+    envStatus: getAllowedValue(check.envStatus, ["unchecked", "confirmed", "issues"], "unchecked"),
+    dryRunStatus: getAllowedValue(check.dryRunStatus, ["unchecked", "confirmed", "issues"], "unchecked"),
+    sendStatus: getAllowedValue(check.sendStatus, ["unchecked", "confirmed", "issues"], "unchecked"),
+    reviewer: String(check.reviewer || "").trim(),
+    note: String(check.note || "").trim(),
+    checkedAt: check.checkedAt || null,
   };
 }
 
