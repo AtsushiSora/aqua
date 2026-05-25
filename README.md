@@ -119,13 +119,14 @@
 - PWA最終リリース判定メモへの本番URL保存
 - PWA本番URLレビューJSONの書き出し日時保存
 - PWA公開前レビューの最終QA表示
+- PWA実機レビューの実行状態保存
 
 ## 次に作るとよいもの
 
 - 本物のAI画像分析
 - 実写真でのプロンプトv3評価
 - プロンプトv3評価サンプルの拡充
-- PWA公開前レビューの実機実行
+- PWA公開前レビューの実行結果確認
 
 ## 通知配信ワーカー
 
@@ -180,20 +181,20 @@ VAPID鍵は `node scripts/generate-vapid-keys.mjs` で生成できます。
 アカウント画面の「PWA実機テスト結果」には、端末、ブラウザ、確認項目、OK/要確認/NG、メモを保存できます。
 記録はローカル状態に保存され、JSONで書き出せます。Supabaseログイン中は `pwa_device_tests` に同期されます。
 ログイン、ホーム追加、通知受信、オフライン復帰、4モード表示のOK状況はレビューサマリーで確認できます。
-「PWA最終リリース判定」では、公開OK/確認中/保留、確認者、本番URL、残タスクを保存できます。Supabaseログイン中は `pwa_release_decisions` に同期されます。
+「PWA最終リリース判定」では、公開OK/確認中/保留、実機レビュー状態、確認者、本番URL、残タスクを保存できます。Supabaseログイン中は `pwa_release_decisions` に同期されます。
 最終実機レビューでは、実機記録、必須項目、NGなし、公開判断、確認者、クラウド保存の証跡を一覧できます。
 JSON書き出しには、必須項目カバレッジ、最終リリース判定、証跡サマリー、実機テスト結果が含まれます。
 未完了の証跡がある場合は次アクションが表示され、すべて揃うと公開前レビュー完了として表示されます。
 JSONを書き出すと、書き出し日時が最終リリース判定メモに保存されます。
 最終QAでは、本番URL、実機結果、最終判定、クラウド保存、レビューJSONが揃っているかを確認できます。
 
-既存のSupabase環境へ反映する場合は、`supabase/schema.sql` の `pwa_device_tests` と `pwa_release_decisions` のテーブル、インデックス、RLSポリシーを追加してください。既存の `pwa_release_decisions` には `production_url` と `review_exported_at` も追加してください。
+既存のSupabase環境へ反映する場合は、`supabase/schema.sql` の `pwa_device_tests` と `pwa_release_decisions` のテーブル、インデックス、RLSポリシーを追加してください。既存の `pwa_release_decisions` には `review_status`、`production_url`、`review_exported_at` も追加してください。
 
 公開前レビューの操作順:
 
 1. 本番URLを実機で開き、ログイン、ホーム追加、通知受信、オフライン復帰、4モード表示を確認する。
 2. アカウント画面の「PWA実機テスト結果」に端末、ブラウザ、確認項目、結果、メモを保存する。
-3. 「PWA最終リリース判定」で公開OK/確認中/保留、確認者、本番URL、残タスクを保存する。
+3. 「PWA最終リリース判定」で公開OK/確認中/保留、実機レビュー状態、確認者、本番URL、残タスクを保存する。
 4. Supabaseログイン中の場合は同期状態を確認する。
 5. JSONボタンで `aquanote-pwa-production-review-YYYY-MM-DD.json` を書き出す。
 
