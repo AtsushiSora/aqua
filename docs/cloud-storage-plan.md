@@ -91,6 +91,7 @@ PWA Push subscription scaffold:
 - Expand delivery history rows with error context and operational notes. Done in the prototype.
 - Surface a production notification verification checklist in the account view. Done in the prototype.
 - Surface a production notification rehearsal flow in the account view. Done in the prototype.
+- Surface production notification environment variables and dry-run release notes in the account view. Done in the prototype.
 - Store the selected UI mode on the local profile and Supabase profile payload. Done in the prototype.
 - Add a Netlify Function entrypoint for AI image/log analysis. Done in the prototype.
 - Show AI Gateway/model verification status in the AI view. Done in the prototype.

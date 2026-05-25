@@ -1195,6 +1195,7 @@ function renderNotificationVerificationChecklist() {
   const hasNotificationApi = canUseNotifications();
   const hasPushKey = Boolean(getPushApplicationServerKey());
   const hasPushSupport = canUsePushNotifications();
+  const environmentItems = getNotificationProductionEnvironmentChecklist();
   const items = [
     {
       label: "Supabase接続",
@@ -1249,6 +1250,44 @@ function renderNotificationVerificationChecklist() {
       `,
     )
     .join("");
+
+  notificationVerificationList.parentElement
+    ?.querySelector(".notification-production-config")
+    ?.remove();
+  notificationVerificationList.insertAdjacentHTML(
+    "afterend",
+    `
+      <div class="notification-production-config">
+        <span>Netlify production env</span>
+        <ul>
+          ${environmentItems
+            .map(
+              (item) => `
+                <li>
+                  <strong>${escapeHtml(item.name)}</strong>
+                  <small>${escapeHtml(item.note)}</small>
+                </li>
+              `,
+            )
+            .join("")}
+        </ul>
+        <p>dry-runのまま配信予約を確認してから、最後にNOTIFICATION_DELIVERY_DRY_RUN=falseへ切り替えます。</p>
+      </div>
+    `,
+  );
+}
+
+function getNotificationProductionEnvironmentChecklist() {
+  return [
+    { name: "SUPABASE_URL", note: "Supabase REST APIの接続先。VITE_SUPABASE_URLでも代用できます。" },
+    { name: "SUPABASE_SERVICE_ROLE_KEY", note: "配信ワーカー専用。ブラウザには出さない秘密キーです。" },
+    { name: "NOTIFICATION_DELIVERY_DRY_RUN", note: "本番送信時だけfalse。未設定なら送信しないdry-runです。" },
+    { name: "RESEND_API_KEY / NOTIFICATION_EMAIL_FROM", note: "メール通知を送る場合に設定します。" },
+    { name: "WEB_PUSH_VAPID_SUBJECT", note: "mailto: またはサイトURL。Push署名の連絡先です。" },
+    { name: "WEB_PUSH_VAPID_PUBLIC_KEY", note: "supabase-config.jsのAQUANOTE_PUSH_CONFIG.publicKeyと同じ値です。" },
+    { name: "WEB_PUSH_VAPID_PRIVATE_KEY", note: "Netlifyだけに置くPush署名用の秘密キーです。" },
+    { name: "WEB_PUSH_TTL_SECONDS", note: "任意。未設定なら24時間です。" },
+  ];
 }
 
 async function handleAuthSubmit(action) {

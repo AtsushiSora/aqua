@@ -510,6 +510,8 @@ body[data-ui-mode="glance"] .ai-image-validation-summary article {
 }
 
 body[data-ui-mode="glance"] .notification-delivery-detail div,
+body[data-ui-mode="glance"] .notification-production-config,
+body[data-ui-mode="glance"] .notification-production-config li,
 body[data-ui-mode="glance"] .ai-observations,
 body[data-ui-mode="glance"] .ai-condition-coverage,
 body[data-ui-mode="glance"] .ai-condition-risk,
@@ -3236,6 +3238,65 @@ textarea {
   overflow-wrap: anywhere;
 }
 
+.notification-production-config {
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px solid var(--glass-border);
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.46), transparent),
+    var(--waterline),
+    rgba(248, 252, 251, 0.82);
+}
+
+.notification-production-config > span {
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.notification-production-config ul {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.notification-production-config li {
+  min-width: 0;
+  padding: 8px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.58);
+}
+
+.notification-production-config strong,
+.notification-production-config small {
+  display: block;
+  overflow-wrap: anywhere;
+}
+
+.notification-production-config strong {
+  color: var(--aqua-dark);
+  font-family: var(--font-jp);
+  font-size: 0.78rem;
+}
+
+.notification-production-config small,
+.notification-production-config p {
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-weight: 800;
+}
+
+.notification-production-config p {
+  margin: 0;
+}
+
 .notification-rehearsal-panel {
   display: grid;
   align-content: start;
@@ -3778,6 +3839,7 @@ textarea {
   .account-form,
   .auth-form,
   .notification-settings,
+  .notification-production-config ul,
   .preference-toggles,
   .quiet-hours,
   .ai-api-status-grid,
