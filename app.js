@@ -3644,11 +3644,32 @@ function exportPwaTestResults() {
     return;
   }
 
+  const releaseDecision = normalizePwaReleaseDecision(state.pwaReleaseDecision || {});
+  const coverage = getPwaReleaseCoverage(results);
+  const evidence = getPwaReleaseEvidenceItems(releaseDecision, coverage);
+  const readyForRelease = coverage.ready && releaseDecision.status === "ready" && evidence.every((item) => item.ready);
+
   const payload = {
     app: "AquaNote",
-    type: "pwa-device-test-results",
+    type: "pwa-production-review",
     exportedAt: new Date().toISOString(),
-    releaseDecision: normalizePwaReleaseDecision(state.pwaReleaseDecision || {}),
+    readyForRelease,
+    coverage: {
+      passedCount: coverage.passedCount,
+      requiredCount: coverage.scopes.length,
+      failedCount: coverage.failedCount,
+      ready: coverage.ready,
+      requiredScopes: coverage.scopes.map((scope) => ({
+        scope,
+        label: getPwaTestScopeLabel(scope),
+        passed: results.some((result) => result.scope === scope && result.status === "passed"),
+      })),
+    },
+    releaseDecision: {
+      ...releaseDecision,
+      statusLabel: getPwaReleaseDecisionLabel(releaseDecision.status),
+    },
+    evidence,
     results: results.map((result) => ({
       ...result,
       statusLabel: getPwaTestStatusLabel(result.status),
@@ -3657,11 +3678,11 @@ function exportPwaTestResults() {
   };
 
   downloadFile(
-    `aquanote-pwa-device-tests-${getDateKey(new Date())}.json`,
+    `aquanote-pwa-production-review-${getDateKey(new Date())}.json`,
     JSON.stringify(payload, null, 2),
     "application/json;charset=utf-8",
   );
-  showToast("PWA実機テスト結果を書き出しました");
+  showToast("PWA本番URLレビュー結果を書き出しました");
 }
 
 function downloadFile(filename, content, type) {

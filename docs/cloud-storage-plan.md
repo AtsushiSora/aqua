@@ -104,6 +104,7 @@ PWA Push subscription scaffold:
 - Capture a local final PWA release decision memo. Done in the prototype.
 - Sync the final PWA release decision memo to `pwa_release_decisions`. Done in the prototype.
 - Summarize final PWA production review evidence in the account view. Done in the prototype.
+- Export final PWA production review evidence as JSON. Done in the prototype.
 - Add a Netlify Function entrypoint for AI image/log analysis. Done in the prototype.
 - Show AI Gateway/model verification status in the AI view. Done in the prototype.
 - Tune the AI prompt to v3 with visible evidence, confidence, retake tips, and non-diagnostic care guidance. Done in the prototype.
@@ -142,5 +143,6 @@ Production release evidence:
 - Capture the final production release decision after the required PWA checks pass.
 - Review synced `pwa_release_decisions` before production launch.
 - Export the final PWA review evidence for release notes.
+- Finish the production review handoff flow in the account view.
 - Review basic, simple, glance, and adult modes across dashboard, posts, AI, and account views.
 - Keep JSON export/import as a recovery path while the sync model is being tested.
