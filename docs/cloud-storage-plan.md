@@ -95,6 +95,7 @@ PWA Push subscription scaffold:
 - Store the selected UI mode on the local profile and Supabase profile payload. Done in the prototype.
 - Add PWA install assets, app shortcuts, and offline fallback page. Done in the prototype.
 - Surface a PWA release checklist in the account view. Done in the prototype.
+- Surface a production PWA rehearsal flow in the account view. Done in the prototype.
 - Add a Netlify Function entrypoint for AI image/log analysis. Done in the prototype.
 - Show AI Gateway/model verification status in the AI view. Done in the prototype.
 - Tune the AI prompt to v3 with visible evidence, confidence, retake tips, and non-diagnostic care guidance. Done in the prototype.

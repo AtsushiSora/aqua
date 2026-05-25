@@ -513,6 +513,7 @@ body[data-ui-mode="glance"] .notification-delivery-detail div,
 body[data-ui-mode="glance"] .notification-production-config,
 body[data-ui-mode="glance"] .notification-production-config li,
 body[data-ui-mode="glance"] .pwa-release-grid article,
+body[data-ui-mode="glance"] .notification-rehearsal-list li,
 body[data-ui-mode="glance"] .ai-observations,
 body[data-ui-mode="glance"] .ai-condition-coverage,
 body[data-ui-mode="glance"] .ai-condition-risk,
@@ -3315,6 +3316,11 @@ textarea {
 }
 
 .pwa-release-panel {
+  display: grid;
+  align-content: start;
+}
+
+.pwa-rehearsal-panel {
   display: grid;
   align-content: start;
 }
