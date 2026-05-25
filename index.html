@@ -1002,6 +1002,36 @@
               <div class="pwa-test-log" id="pwa-test-log"></div>
             </section>
 
+            <section class="panel pwa-release-decision-panel">
+              <div class="section-head">
+                <div>
+                  <p class="eyebrow">Release decision</p>
+                  <h2>PWA最終リリース判定</h2>
+                </div>
+                <span class="release-decision-chip" id="pwa-release-decision-chip">未記録</span>
+              </div>
+              <form class="pwa-release-decision-form" id="pwa-release-decision-form">
+                <label>
+                  <span>判定</span>
+                  <select id="pwa-release-decision-status-input">
+                    <option value="draft">確認中</option>
+                    <option value="ready">公開OK</option>
+                    <option value="hold">保留</option>
+                  </select>
+                </label>
+                <label>
+                  <span>確認者</span>
+                  <input id="pwa-release-decision-reviewer-input" type="text" placeholder="確認者名">
+                </label>
+                <label class="full-field">
+                  <span>残タスク・判断メモ</span>
+                  <textarea id="pwa-release-decision-note-input" rows="3" placeholder="本番URL、残タスク、公開判断の理由"></textarea>
+                </label>
+                <button class="primary-button full-field" type="submit">判定メモを保存</button>
+              </form>
+              <div class="pwa-release-decision-summary" id="pwa-release-decision-summary"></div>
+            </section>
+
             <section class="panel account-sync-panel">
               <div class="section-head">
                 <div>

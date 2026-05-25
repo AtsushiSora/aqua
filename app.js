@@ -91,6 +91,9 @@ const pwaTestForm = document.querySelector("#pwa-test-form");
 const pwaTestReview = document.querySelector("#pwa-test-review");
 const pwaTestLog = document.querySelector("#pwa-test-log");
 const pwaTestExportButton = document.querySelector("#pwa-test-export-button");
+const pwaReleaseDecisionForm = document.querySelector("#pwa-release-decision-form");
+const pwaReleaseDecisionChip = document.querySelector("#pwa-release-decision-chip");
+const pwaReleaseDecisionSummary = document.querySelector("#pwa-release-decision-summary");
 const accountUiModeInput = document.querySelector("#account-ui-mode-input");
 const homeUiModeInput = document.querySelector("#home-ui-mode-input");
 const homeUiModeCycleButton = document.querySelector("#home-ui-mode-cycle-button");
@@ -175,6 +178,12 @@ const defaultState = {
     lastSyncedAt: null,
   },
   pwaTestResults: [],
+  pwaReleaseDecision: {
+    status: "draft",
+    reviewer: "",
+    note: "",
+    decidedAt: null,
+  },
   tanks: [
     {
       id: "tank-main",
@@ -523,6 +532,7 @@ importDataButton.addEventListener("click", () => importDataInput.click());
 importDataInput.addEventListener("change", importAppData);
 pwaTestForm.addEventListener("submit", handlePwaTestSubmit);
 pwaTestExportButton.addEventListener("click", exportPwaTestResults);
+pwaReleaseDecisionForm.addEventListener("submit", handlePwaReleaseDecisionSubmit);
 pwaTestLog.addEventListener("click", async (event) => {
   const button = event.target.closest("[data-pwa-test-delete]");
   if (!button) {
@@ -1047,6 +1057,7 @@ function renderAccount() {
   renderNotificationDeliveryLog();
   renderNotificationVerificationChecklist();
   renderPwaTestResults();
+  renderPwaReleaseDecision();
 
   const mediaCount = state.posts.filter((post) => hasPostMedia(post)).length;
   const commentCount = state.posts.reduce((total, post) => total + getDisplayCommentCount(post), 0);
@@ -1179,6 +1190,77 @@ function renderPwaTestReview(results) {
       ${escapeHtml(`記録 ${totalCount}件 / 要確認 ${watchCount}件 / NG ${failedCount}件${latestResult ? ` / 最新 ${formatFullDate(latestResult.createdAt)}` : ""}`)}
     </p>
   `;
+}
+
+function getPwaReleaseCoverage(results = state.pwaTestResults || []) {
+  const scopes = ["login", "install", "notification", "offline", "ui_modes"];
+  const passedScopes = new Set(results.filter((result) => result.status === "passed").map((result) => result.scope));
+  const failedCount = results.filter((result) => result.status === "failed").length;
+  return {
+    scopes,
+    passedCount: scopes.filter((scope) => passedScopes.has(scope)).length,
+    failedCount,
+    ready: scopes.every((scope) => passedScopes.has(scope)) && failedCount === 0,
+  };
+}
+
+function handlePwaReleaseDecisionSubmit(event) {
+  event.preventDefault();
+  state.pwaReleaseDecision = normalizePwaReleaseDecision({
+    status: document.querySelector("#pwa-release-decision-status-input").value,
+    reviewer: document.querySelector("#pwa-release-decision-reviewer-input").value,
+    note: document.querySelector("#pwa-release-decision-note-input").value,
+    decidedAt: new Date().toISOString(),
+  });
+  saveState();
+  renderPwaReleaseDecision();
+  showToast("PWA最終リリース判定を保存しました");
+}
+
+function renderPwaReleaseDecision() {
+  if (!pwaReleaseDecisionForm || !pwaReleaseDecisionChip || !pwaReleaseDecisionSummary) {
+    return;
+  }
+
+  const decision = normalizePwaReleaseDecision(state.pwaReleaseDecision || {});
+  const coverage = getPwaReleaseCoverage();
+  document.querySelector("#pwa-release-decision-status-input").value = decision.status;
+  document.querySelector("#pwa-release-decision-reviewer-input").value = decision.reviewer || state.account.name || "";
+  document.querySelector("#pwa-release-decision-note-input").value = decision.note;
+  pwaReleaseDecisionChip.textContent = getPwaReleaseDecisionLabel(decision.status);
+  pwaReleaseDecisionChip.className = `release-decision-chip ${escapeHtml(decision.status)}`;
+
+  const coverageText = `${coverage.passedCount}/${coverage.scopes.length} OK`;
+  const readinessNote = coverage.ready
+    ? "必須項目はOKです。公開OKにする場合は確認者と判断メモを残します。"
+    : "公開OKにする前に、未OKまたはNGのPWA確認項目を解消します。";
+
+  pwaReleaseDecisionSummary.innerHTML = `
+    <article class="${escapeHtml(decision.status)}">
+      <span>判定状況</span>
+      <strong>${escapeHtml(getPwaReleaseDecisionLabel(decision.status))}</strong>
+      <small>${escapeHtml(decision.decidedAt ? `${formatFullDate(decision.decidedAt)} / ${decision.reviewer || "確認者未記録"}` : "まだ保存されていません")}</small>
+    </article>
+    <article class="${coverage.ready ? "ready" : "pending"}">
+      <span>必須項目</span>
+      <strong>${escapeHtml(coverageText)}</strong>
+      <small>${escapeHtml(readinessNote)}</small>
+    </article>
+    <article>
+      <span>メモ</span>
+      <strong>${escapeHtml(decision.note || "未記録")}</strong>
+      <small>本番URL、残タスク、公開判断の理由を残します</small>
+    </article>
+  `;
+}
+
+function getPwaReleaseDecisionLabel(status) {
+  const labels = {
+    draft: "確認中",
+    ready: "公開OK",
+    hold: "保留",
+  };
+  return labels[status] || labels.draft;
 }
 
 function getPwaTestScopeLabel(scope) {
@@ -3414,6 +3496,7 @@ function exportPwaTestResults() {
     app: "AquaNote",
     type: "pwa-device-test-results",
     exportedAt: new Date().toISOString(),
+    releaseDecision: normalizePwaReleaseDecision(state.pwaReleaseDecision || {}),
     results: results.map((result) => ({
       ...result,
       statusLabel: getPwaTestStatusLabel(result.status),
@@ -6578,6 +6661,7 @@ function normalizeState(saved) {
     taskDate: saved.taskDate || getDateKey(new Date()),
     reminders: normalizeReminders(saved.reminders),
     pwaTestResults: Array.isArray(saved.pwaTestResults) ? saved.pwaTestResults.map(normalizePwaTestResult) : [],
+    pwaReleaseDecision: normalizePwaReleaseDecision(saved.pwaReleaseDecision || {}),
     aiEvaluationLog: Array.isArray(saved.aiEvaluationLog) ? saved.aiEvaluationLog.map(normalizeAiEvaluationEntry) : [],
     aiPromptImprovementNote: saved.aiPromptImprovementNote || "",
     aiPromptNotes: Array.isArray(saved.aiPromptNotes) ? saved.aiPromptNotes.map(normalizeAiPromptNote) : [],
@@ -6730,6 +6814,15 @@ function normalizePwaTestResult(result) {
     status: getAllowedValue(result.status, ["passed", "watch", "failed"], "watch"),
     scope: getAllowedValue(result.scope, ["install", "notification", "offline", "ui_modes", "login"], "install"),
     note: String(result.note || "").trim(),
+  };
+}
+
+function normalizePwaReleaseDecision(decision) {
+  return {
+    status: getAllowedValue(decision.status, ["draft", "ready", "hold"], "draft"),
+    reviewer: String(decision.reviewer || "").trim(),
+    note: String(decision.note || "").trim(),
+    decidedAt: decision.decidedAt || null,
   };
 }
 

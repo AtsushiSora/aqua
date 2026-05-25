@@ -100,6 +100,7 @@ PWA Push subscription scaffold:
 - Store production PWA device test notes locally and export them as JSON. Done in the prototype.
 - Sync production PWA device test notes to `pwa_device_tests`. Done in the prototype.
 - Summarize production PWA device test coverage in the account view. Done in the prototype.
+- Capture a local final PWA release decision memo. Done in the prototype.
 - Add a Netlify Function entrypoint for AI image/log analysis. Done in the prototype.
 - Show AI Gateway/model verification status in the AI view. Done in the prototype.
 - Tune the AI prompt to v3 with visible evidence, confidence, retake tips, and non-diagnostic care guidance. Done in the prototype.
@@ -136,5 +137,6 @@ Production release evidence:
 - Run PWA installation, notification, offline, and UI mode checks on the production URL.
 - Review synced `pwa_device_tests` rows before production launch.
 - Capture the final production release decision after the required PWA checks pass.
+- Sync the final release decision memo after the local flow is validated.
 - Review basic, simple, glance, and adult modes across dashboard, posts, AI, and account views.
 - Keep JSON export/import as a recovery path while the sync model is being tested.

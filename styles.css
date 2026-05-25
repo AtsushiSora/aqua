@@ -518,6 +518,7 @@ body[data-ui-mode="glance"] .pwa-test-item,
 body[data-ui-mode="glance"] .pwa-test-empty,
 body[data-ui-mode="glance"] .pwa-test-score,
 body[data-ui-mode="glance"] .pwa-test-scope-grid article,
+body[data-ui-mode="glance"] .pwa-release-decision-summary article,
 body[data-ui-mode="glance"] .ai-observations,
 body[data-ui-mode="glance"] .ai-condition-coverage,
 body[data-ui-mode="glance"] .ai-condition-risk,
@@ -3334,10 +3335,91 @@ textarea {
   align-content: start;
 }
 
+.pwa-release-decision-panel {
+  display: grid;
+  align-content: start;
+}
+
 .pwa-test-form {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
+}
+
+.pwa-release-decision-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.release-decision-chip {
+  padding: 6px 10px;
+  border: 1px solid var(--glass-border);
+  border-radius: 999px;
+  background: rgba(248, 252, 251, 0.8);
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-weight: 900;
+}
+
+.release-decision-chip.ready {
+  border-color: rgba(61, 173, 120, 0.34);
+  color: #247a57;
+}
+
+.release-decision-chip.hold {
+  border-color: rgba(211, 93, 93, 0.38);
+  color: #a23c3c;
+}
+
+.pwa-release-decision-summary {
+  display: grid;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.pwa-release-decision-summary article {
+  display: grid;
+  gap: 5px;
+  padding: 12px;
+  border: 1px solid var(--glass-border);
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.5), transparent),
+    var(--waterline),
+    rgba(248, 252, 251, 0.8);
+}
+
+.pwa-release-decision-summary article.ready {
+  border-color: rgba(61, 173, 120, 0.34);
+}
+
+.pwa-release-decision-summary article.hold {
+  border-color: rgba(211, 93, 93, 0.38);
+}
+
+.pwa-release-decision-summary article.pending,
+.pwa-release-decision-summary article.draft {
+  border-color: rgba(226, 162, 72, 0.34);
+}
+
+.pwa-release-decision-summary span {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 900;
+}
+
+.pwa-release-decision-summary strong {
+  color: var(--aqua-dark);
+  font-family: var(--font-jp);
+  font-size: 0.92rem;
+  overflow-wrap: anywhere;
+}
+
+.pwa-release-decision-summary small {
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 800;
 }
 
 .pwa-test-log {
@@ -4088,6 +4170,7 @@ textarea {
   .pwa-release-grid,
   .pwa-test-form,
   .pwa-test-scope-grid,
+  .pwa-release-decision-form,
   .preference-toggles,
   .quiet-hours,
   .ai-api-status-grid,
