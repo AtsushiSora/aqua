@@ -220,6 +220,7 @@ create table public.pwa_release_decisions (
   production_url text not null default '',
   note text not null default '',
   decided_at timestamptz,
+  review_exported_at timestamptz,
   updated_at timestamptz not null default now(),
   unique (owner_id)
 );

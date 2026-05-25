@@ -184,6 +184,7 @@ const defaultState = {
     productionUrl: "",
     note: "",
     decidedAt: null,
+    reviewExportedAt: null,
   },
   tanks: [
     {
@@ -1324,6 +1325,11 @@ function getPwaReleaseEvidenceItems(decision, coverage) {
       ready: Boolean(decision.cloudId),
       note: decision.cloudId ? "Supabase同期済み" : "ローカル保存のみ",
     },
+    {
+      label: "レビューJSON",
+      ready: Boolean(decision.reviewExportedAt),
+      note: decision.reviewExportedAt ? `${formatFullDate(decision.reviewExportedAt)} に書き出し` : "レビューJSON未書き出し",
+    },
   ];
 }
 
@@ -1345,6 +1351,7 @@ function getPwaReleaseHandoffState(evidenceItems) {
     公開判断: "判定を公開OKに更新",
     確認者: "確認者名を入力して判定メモを保存",
     クラウド保存: "Supabaseログイン中に判定メモを保存して同期",
+    レビューJSON: "JSONボタンで本番URLレビュー結果を書き出す",
   };
   const nextActions = missingItems.map((item) => actionLabels[item.label] || `${item.label}を確認`);
 
@@ -2126,7 +2133,7 @@ async function loadPwaReleaseDecisionFromSupabase() {
 
   const { data, error } = await supabaseClient
     .from("pwa_release_decisions")
-    .select("id, status, reviewer, production_url, note, decided_at, updated_at")
+    .select("id, status, reviewer, production_url, note, decided_at, review_exported_at, updated_at")
     .eq("owner_id", authSession.user.id)
     .maybeSingle();
 
@@ -2797,7 +2804,7 @@ async function syncPwaReleaseDecisionToSupabase(options = {}) {
   const { data, error } = await supabaseClient
     .from("pwa_release_decisions")
     .upsert(getPwaReleaseDecisionPayload(authSession.user), { onConflict: "owner_id" })
-    .select("id, status, reviewer, production_url, note, decided_at, updated_at")
+    .select("id, status, reviewer, production_url, note, decided_at, review_exported_at, updated_at")
     .maybeSingle();
 
   if (error) {
@@ -3069,6 +3076,7 @@ function getPwaReleaseDecisionPayload(user) {
     production_url: decision.productionUrl || "",
     note: decision.note || "",
     decided_at: decision.decidedAt || new Date().toISOString(),
+    review_exported_at: decision.reviewExportedAt || null,
     updated_at: new Date().toISOString(),
   };
 }
@@ -3476,6 +3484,7 @@ function applyRemotePwaReleaseDecision(remoteDecision) {
     productionUrl: remoteDecision.production_url,
     note: remoteDecision.note,
     decidedAt: remoteDecision.decided_at || remoteDecision.updated_at,
+    reviewExportedAt: remoteDecision.review_exported_at,
   });
 }
 
@@ -3693,6 +3702,12 @@ function exportPwaTestResults() {
     return;
   }
 
+  state.pwaReleaseDecision = normalizePwaReleaseDecision({
+    ...state.pwaReleaseDecision,
+    reviewExportedAt: new Date().toISOString(),
+  });
+  saveState();
+
   const releaseDecision = normalizePwaReleaseDecision(state.pwaReleaseDecision || {});
   const coverage = getPwaReleaseCoverage(results);
   const evidence = getPwaReleaseEvidenceItems(releaseDecision, coverage);
@@ -3731,6 +3746,10 @@ function exportPwaTestResults() {
     JSON.stringify(payload, null, 2),
     "application/json;charset=utf-8",
   );
+  renderPwaReleaseDecision();
+  if (authSession?.user) {
+    syncPwaReleaseDecisionToSupabase({ silent: true });
+  }
   showToast("PWA本番URLレビュー結果を書き出しました");
 }
 
@@ -7047,6 +7066,7 @@ function normalizePwaReleaseDecision(decision) {
     productionUrl: String(decision.productionUrl || "").trim(),
     note: String(decision.note || "").trim(),
     decidedAt: decision.decidedAt || null,
+    reviewExportedAt: decision.reviewExportedAt || null,
   };
 }
 
