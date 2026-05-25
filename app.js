@@ -181,6 +181,7 @@ const defaultState = {
   pwaReleaseDecision: {
     status: "draft",
     reviewer: "",
+    productionUrl: "",
     note: "",
     decidedAt: null,
   },
@@ -1209,6 +1210,7 @@ async function handlePwaReleaseDecisionSubmit(event) {
   state.pwaReleaseDecision = normalizePwaReleaseDecision({
     status: document.querySelector("#pwa-release-decision-status-input").value,
     reviewer: document.querySelector("#pwa-release-decision-reviewer-input").value,
+    productionUrl: document.querySelector("#pwa-release-decision-url-input").value,
     note: document.querySelector("#pwa-release-decision-note-input").value,
     decidedAt: new Date().toISOString(),
   });
@@ -1231,6 +1233,7 @@ function renderPwaReleaseDecision() {
   const handoff = getPwaReleaseHandoffState(evidenceItems);
   document.querySelector("#pwa-release-decision-status-input").value = decision.status;
   document.querySelector("#pwa-release-decision-reviewer-input").value = decision.reviewer || state.account.name || "";
+  document.querySelector("#pwa-release-decision-url-input").value = decision.productionUrl;
   document.querySelector("#pwa-release-decision-note-input").value = decision.note;
   pwaReleaseDecisionChip.textContent = getPwaReleaseDecisionLabel(decision.status);
   pwaReleaseDecisionChip.className = `release-decision-chip ${escapeHtml(decision.status)}`;
@@ -1255,6 +1258,11 @@ function renderPwaReleaseDecision() {
       <span>必須項目</span>
       <strong>${escapeHtml(coverageText)}</strong>
       <small>${escapeHtml(readinessNote)}</small>
+    </article>
+    <article>
+      <span>本番URL</span>
+      <strong>${escapeHtml(decision.productionUrl || "未記録")}</strong>
+      <small>実機レビュー対象の公開URL</small>
     </article>
     <article>
       <span>メモ</span>
@@ -1297,6 +1305,11 @@ function getPwaReleaseEvidenceItems(decision, coverage) {
       note: failedCount ? `${failedCount}件のNGがあります` : "NG記録はありません",
     },
     {
+      label: "本番URL",
+      ready: Boolean(decision.productionUrl),
+      note: decision.productionUrl || "本番URL未記録",
+    },
+    {
       label: "公開判断",
       ready: decision.status === "ready",
       note: getPwaReleaseDecisionLabel(decision.status),
@@ -1328,6 +1341,7 @@ function getPwaReleaseHandoffState(evidenceItems) {
     実機記録: "本番URLを実機で確認し、PWA実機テスト結果を保存",
     必須項目: "ログイン、ホーム追加、通知受信、オフライン復帰、4モード表示をOKにする",
     NGなし: "NG記録の原因を解消し、再テスト結果を保存",
+    本番URL: "本番URLを入力して判定メモを保存",
     公開判断: "判定を公開OKに更新",
     確認者: "確認者名を入力して判定メモを保存",
     クラウド保存: "Supabaseログイン中に判定メモを保存して同期",
@@ -2112,7 +2126,7 @@ async function loadPwaReleaseDecisionFromSupabase() {
 
   const { data, error } = await supabaseClient
     .from("pwa_release_decisions")
-    .select("id, status, reviewer, note, decided_at, updated_at")
+    .select("id, status, reviewer, production_url, note, decided_at, updated_at")
     .eq("owner_id", authSession.user.id)
     .maybeSingle();
 
@@ -2783,7 +2797,7 @@ async function syncPwaReleaseDecisionToSupabase(options = {}) {
   const { data, error } = await supabaseClient
     .from("pwa_release_decisions")
     .upsert(getPwaReleaseDecisionPayload(authSession.user), { onConflict: "owner_id" })
-    .select("id, status, reviewer, note, decided_at, updated_at")
+    .select("id, status, reviewer, production_url, note, decided_at, updated_at")
     .maybeSingle();
 
   if (error) {
@@ -3052,6 +3066,7 @@ function getPwaReleaseDecisionPayload(user) {
     owner_id: user.id,
     status: decision.status,
     reviewer: decision.reviewer || "",
+    production_url: decision.productionUrl || "",
     note: decision.note || "",
     decided_at: decision.decidedAt || new Date().toISOString(),
     updated_at: new Date().toISOString(),
@@ -3458,6 +3473,7 @@ function applyRemotePwaReleaseDecision(remoteDecision) {
     cloudId: remoteDecision.id,
     status: remoteDecision.status,
     reviewer: remoteDecision.reviewer,
+    productionUrl: remoteDecision.production_url,
     note: remoteDecision.note,
     decidedAt: remoteDecision.decided_at || remoteDecision.updated_at,
   });
@@ -7028,6 +7044,7 @@ function normalizePwaReleaseDecision(decision) {
     cloudId: decision.cloudId || null,
     status: getAllowedValue(decision.status, ["draft", "ready", "hold"], "draft"),
     reviewer: String(decision.reviewer || "").trim(),
+    productionUrl: String(decision.productionUrl || "").trim(),
     note: String(decision.note || "").trim(),
     decidedAt: decision.decidedAt || null,
   };

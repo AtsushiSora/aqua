@@ -217,6 +217,7 @@ create table public.pwa_release_decisions (
   owner_id uuid not null references public.profiles(id) on delete cascade,
   status text not null default 'draft' check (status in ('draft', 'ready', 'hold')),
   reviewer text not null default '',
+  production_url text not null default '',
   note text not null default '',
   decided_at timestamptz,
   updated_at timestamptz not null default now(),
