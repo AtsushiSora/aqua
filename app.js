@@ -56,6 +56,7 @@ const heroPhoto = document.querySelector("#hero-photo");
 const heroPhotoButton = document.querySelector("#hero-photo-button");
 const heroPhotoInput = document.querySelector("#hero-photo-input");
 const notificationButton = document.querySelector("#notification-button");
+const installAppButton = document.querySelector("#install-app-button");
 const enableNotificationsButton = document.querySelector("#enable-notifications-button");
 const reminderList = document.querySelector("#reminder-list");
 const sidebarNextTime = document.querySelector("#sidebar-next-time");
@@ -301,6 +302,7 @@ let authSession = null;
 let notificationDeliveryHistory = [];
 let activeNotificationDeliveryFilter = "all";
 let activeNotificationDeliveryDetailId = null;
+let deferredInstallPrompt = null;
 let aiEvaluationSyncTimer = null;
 let activeAiEvaluationSourceFilter = "all";
 let activeAiEvaluationStatusFilter = "all";
@@ -418,6 +420,18 @@ notificationButton.addEventListener("click", () => {
 });
 
 enableNotificationsButton.addEventListener("click", requestNotificationPermission);
+
+installAppButton.addEventListener("click", async () => {
+  if (!deferredInstallPrompt) {
+    showToast("ブラウザの共有メニューからホーム画面に追加できます");
+    return;
+  }
+
+  deferredInstallPrompt.prompt();
+  await deferredInstallPrompt.userChoice;
+  deferredInstallPrompt = null;
+  installAppButton.hidden = true;
+});
 
 postTankFilter.addEventListener("change", renderPosts);
 communityTagSearch.addEventListener("input", renderPosts);
@@ -6894,3 +6908,15 @@ if (document.getElementById(firstView)) {
 if ("serviceWorker" in navigator && location.protocol !== "file:") {
   navigator.serviceWorker.register("sw.js");
 }
+
+window.addEventListener("beforeinstallprompt", (event) => {
+  event.preventDefault();
+  deferredInstallPrompt = event;
+  installAppButton.hidden = false;
+});
+
+window.addEventListener("appinstalled", () => {
+  deferredInstallPrompt = null;
+  installAppButton.hidden = true;
+  showToast("AquaNoteをインストールしました");
+});

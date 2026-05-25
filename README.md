@@ -103,14 +103,15 @@
 - 通知配信ログの詳細表示と運用メモ
 - アカウント画面での通知本番検証チェックリスト
 - アカウント画面での通知本番リハーサル手順
-- PWA用の `manifest.webmanifest` と `sw.js`
+- PWA用の `manifest.webmanifest`、アプリアイコン、`sw.js`
+- PWAインストールボタンとオフラインページ
 
 ## 次に作るとよいもの
 
 - 本物のAI画像分析
 - 実写真でのプロンプトv3評価
 - プロンプトv3評価サンプルの拡充
-- ネイティブスマホアプリ、またはPWAの本番化
+- PWA本番公開前の実機確認
 
 ## 通知配信ワーカー
 
@@ -146,6 +147,13 @@ VAPID鍵は `node scripts/generate-vapid-keys.mjs` で生成できます。
 3. dry-runのまま通知予約が `notification_deliveries` に作られることを確認する。
 4. `NOTIFICATION_DELIVERY_DRY_RUN=false` にして直近リマインダーを同期する。
 5. アカウント画面の配信ログで `sent` / `failed` / `skipped` を確認し、失敗時は詳細を見て再送予約する。
+
+## PWA公開前チェック
+
+- `manifest.webmanifest` のアイコン、ショートカット、テーマカラーを確認
+- HTTPS上でインストールボタンが表示されることを確認
+- オフライン時に `offline.html` が表示されることを確認
+- Service Worker更新後に古いキャッシュが削除されることを確認
 
 ## AI分析API
 

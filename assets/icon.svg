@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">AquaNote icon</title>
+  <desc id="desc">AquaNote app icon with a water drop and aquatic leaf.</desc>
+  <rect width="512" height="512" rx="112" fill="#071116"/>
+  <circle cx="168" cy="150" r="74" fill="#25d9e4" opacity="0.9"/>
+  <circle cx="348" cy="354" r="96" fill="#8ee66f" opacity="0.86"/>
+  <path fill="#f7fbfb" d="M260 78c58 76 114 153 114 235 0 83-52 133-119 133-70 0-121-51-121-133 0-82 58-159 126-235Z"/>
+  <path fill="#0e8f96" d="M245 174c-34 45-56 90-56 138 0 45 25 73 66 73 38 0 64-29 64-73 0-48-27-94-74-138Z" opacity="0.88"/>
+  <path fill="#071116" d="M198 304c46-42 101-45 156-9-21 39-51 62-92 62-29 0-51-17-64-53Z" opacity="0.78"/>
+  <circle cx="322" cy="255" r="12" fill="#071116"/>
+</svg>

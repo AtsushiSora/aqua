@@ -980,6 +980,17 @@ time {
   color: var(--aqua-dark);
 }
 
+.install-app-button {
+  min-height: 42px;
+  padding: 0 14px;
+  border: 1px solid var(--glass-border);
+  border-radius: 999px;
+  background: var(--glass-strong);
+  color: var(--aqua-dark);
+  font-size: 0.82rem;
+  font-weight: 900;
+}
+
 .notification-dot {
   display: block;
   width: 9px;

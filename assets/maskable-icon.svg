@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">AquaNote maskable icon</title>
+  <desc id="desc">Maskable AquaNote icon with centered water mark.</desc>
+  <rect width="512" height="512" fill="#071116"/>
+  <circle cx="118" cy="116" r="92" fill="#25d9e4" opacity="0.32"/>
+  <circle cx="410" cy="400" r="118" fill="#8ee66f" opacity="0.28"/>
+  <circle cx="386" cy="118" r="46" fill="#ffd35a" opacity="0.42"/>
+  <path fill="#f7fbfb" d="M256 96c65 86 125 165 125 252 0 81-53 128-125 128s-125-47-125-128c0-87 60-166 125-252Z"/>
+  <path fill="#0e8f96" d="M244 193c-37 49-62 97-62 150 0 43 29 76 74 76s74-33 74-76c0-53-28-101-86-150Z" opacity="0.88"/>
+  <path fill="#071116" d="M190 331c46-49 113-52 174-10-21 43-56 67-104 67-34 0-58-19-70-57Z" opacity="0.8"/>
+  <circle cx="324" cy="280" r="13" fill="#071116"/>
+</svg>

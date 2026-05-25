@@ -2,9 +2,40 @@
   "name": "AquaNote",
   "short_name": "AquaNote",
   "description": "水槽・池の管理、投稿、AI分析、飼育ガイドをまとめたアクアリウムアプリ",
+  "id": "./",
   "start_url": "./index.html",
+  "scope": "./",
   "display": "standalone",
+  "orientation": "portrait-primary",
   "background_color": "#edf6f5",
   "theme_color": "#0e8f96",
-  "icons": []
+  "categories": ["lifestyle", "productivity", "social"],
+  "icons": [
+    {
+      "src": "assets/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "assets/maskable-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "管理を記録",
+      "short_name": "記録",
+      "description": "水温やpHなどの管理ログを開きます",
+      "url": "./index.html#tanks"
+    },
+    {
+      "name": "AI分析",
+      "short_name": "AI",
+      "description": "水槽状態のAI分析を開きます",
+      "url": "./index.html#ai"
+    }
+  ]
 }
