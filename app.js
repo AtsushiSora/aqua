@@ -193,6 +193,7 @@ const defaultState = {
   pwaReleaseDecision: {
     status: "draft",
     reviewStatus: "not_started",
+    resultStatus: "unchecked",
     reviewer: "",
     productionUrl: "",
     note: "",
@@ -1287,6 +1288,7 @@ async function handlePwaReleaseDecisionSubmit(event) {
   state.pwaReleaseDecision = normalizePwaReleaseDecision({
     status: document.querySelector("#pwa-release-decision-status-input").value,
     reviewStatus: document.querySelector("#pwa-release-review-status-input").value,
+    resultStatus: document.querySelector("#pwa-release-result-status-input").value,
     reviewer: document.querySelector("#pwa-release-decision-reviewer-input").value,
     productionUrl: document.querySelector("#pwa-release-decision-url-input").value,
     note: document.querySelector("#pwa-release-decision-note-input").value,
@@ -1312,6 +1314,7 @@ function renderPwaReleaseDecision() {
   const qaState = getPwaReleaseQaState(evidenceItems);
   document.querySelector("#pwa-release-decision-status-input").value = decision.status;
   document.querySelector("#pwa-release-review-status-input").value = decision.reviewStatus;
+  document.querySelector("#pwa-release-result-status-input").value = decision.resultStatus;
   document.querySelector("#pwa-release-decision-reviewer-input").value = decision.reviewer || state.account.name || "";
   document.querySelector("#pwa-release-decision-url-input").value = decision.productionUrl;
   document.querySelector("#pwa-release-decision-note-input").value = decision.note;
@@ -1343,6 +1346,11 @@ function renderPwaReleaseDecision() {
       <span>実機レビュー</span>
       <strong>${escapeHtml(getPwaReleaseReviewStatusLabel(decision.reviewStatus))}</strong>
       <small>本番URLを実機で確認した進捗</small>
+    </article>
+    <article class="${decision.resultStatus === "confirmed" ? "ready" : "pending"}">
+      <span>結果確認</span>
+      <strong>${escapeHtml(getPwaReleaseResultStatusLabel(decision.resultStatus))}</strong>
+      <small>実機結果、最終判定、JSON証跡の確認状態</small>
     </article>
     <article class="${coverage.ready ? "ready" : "pending"}">
       <span>必須項目</span>
@@ -1383,6 +1391,11 @@ function getPwaReleaseEvidenceItems(decision, coverage) {
       label: "実機レビュー",
       ready: decision.reviewStatus === "done",
       note: getPwaReleaseReviewStatusLabel(decision.reviewStatus),
+    },
+    {
+      label: "結果確認",
+      ready: decision.resultStatus === "confirmed",
+      note: getPwaReleaseResultStatusLabel(decision.resultStatus),
     },
     {
       label: "実機記録",
@@ -1456,6 +1469,7 @@ function getPwaReleaseHandoffState(evidenceItems) {
 
   const actionLabels = {
     実機レビュー: "実機レビューを完了に更新",
+    結果確認: "実機結果、最終判定、レビューJSONを確認済みに更新",
     実機記録: "本番URLを実機で確認し、PWA実機テスト結果を保存",
     必須項目: "ログイン、ホーム追加、通知受信、オフライン復帰、4モード表示をOKにする",
     NGなし: "NG記録の原因を解消し、再テスト結果を保存",
@@ -1490,6 +1504,15 @@ function getPwaReleaseReviewStatusLabel(status) {
     done: "完了",
   };
   return labels[status] || labels.not_started;
+}
+
+function getPwaReleaseResultStatusLabel(status) {
+  const labels = {
+    unchecked: "未確認",
+    confirmed: "確認済み",
+    issues: "要対応あり",
+  };
+  return labels[status] || labels.unchecked;
 }
 
 function getPwaTestScopeLabel(scope) {
@@ -2265,7 +2288,7 @@ async function loadPwaReleaseDecisionFromSupabase() {
 
   const { data, error } = await supabaseClient
     .from("pwa_release_decisions")
-    .select("id, status, review_status, reviewer, production_url, note, decided_at, review_exported_at, updated_at")
+    .select("id, status, review_status, result_status, reviewer, production_url, note, decided_at, review_exported_at, updated_at")
     .eq("owner_id", authSession.user.id)
     .maybeSingle();
 
@@ -2936,7 +2959,7 @@ async function syncPwaReleaseDecisionToSupabase(options = {}) {
   const { data, error } = await supabaseClient
     .from("pwa_release_decisions")
     .upsert(getPwaReleaseDecisionPayload(authSession.user), { onConflict: "owner_id" })
-    .select("id, status, review_status, reviewer, production_url, note, decided_at, review_exported_at, updated_at")
+    .select("id, status, review_status, result_status, reviewer, production_url, note, decided_at, review_exported_at, updated_at")
     .maybeSingle();
 
   if (error) {
@@ -3205,6 +3228,7 @@ function getPwaReleaseDecisionPayload(user) {
     owner_id: user.id,
     status: decision.status,
     review_status: decision.reviewStatus,
+    result_status: decision.resultStatus,
     reviewer: decision.reviewer || "",
     production_url: decision.productionUrl || "",
     note: decision.note || "",
@@ -3614,6 +3638,7 @@ function applyRemotePwaReleaseDecision(remoteDecision) {
     cloudId: remoteDecision.id,
     status: remoteDecision.status,
     reviewStatus: remoteDecision.review_status,
+    resultStatus: remoteDecision.result_status,
     reviewer: remoteDecision.reviewer,
     productionUrl: remoteDecision.production_url,
     note: remoteDecision.note,
@@ -3867,6 +3892,7 @@ function exportPwaTestResults() {
       ...releaseDecision,
       statusLabel: getPwaReleaseDecisionLabel(releaseDecision.status),
       reviewStatusLabel: getPwaReleaseReviewStatusLabel(releaseDecision.reviewStatus),
+      resultStatusLabel: getPwaReleaseResultStatusLabel(releaseDecision.resultStatus),
     },
     evidence,
     results: results.map((result) => ({
@@ -7198,6 +7224,7 @@ function normalizePwaReleaseDecision(decision) {
     cloudId: decision.cloudId || null,
     status: getAllowedValue(decision.status, ["draft", "ready", "hold"], "draft"),
     reviewStatus: getAllowedValue(decision.reviewStatus, ["not_started", "running", "done"], "not_started"),
+    resultStatus: getAllowedValue(decision.resultStatus, ["unchecked", "confirmed", "issues"], "unchecked"),
     reviewer: String(decision.reviewer || "").trim(),
     productionUrl: String(decision.productionUrl || "").trim(),
     note: String(decision.note || "").trim(),
