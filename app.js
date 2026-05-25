@@ -87,6 +87,9 @@ const notificationDeliveryFilter = document.querySelector("#notification-deliver
 const notificationDeliveryRefreshButton = document.querySelector("#notification-delivery-refresh-button");
 const notificationDeliveryLog = document.querySelector("#notification-delivery-log");
 const notificationVerificationList = document.querySelector("#notification-verification-list");
+const pwaTestForm = document.querySelector("#pwa-test-form");
+const pwaTestLog = document.querySelector("#pwa-test-log");
+const pwaTestExportButton = document.querySelector("#pwa-test-export-button");
 const accountUiModeInput = document.querySelector("#account-ui-mode-input");
 const homeUiModeInput = document.querySelector("#home-ui-mode-input");
 const homeUiModeCycleButton = document.querySelector("#home-ui-mode-cycle-button");
@@ -170,6 +173,7 @@ const defaultState = {
     syncStatus: "local",
     lastSyncedAt: null,
   },
+  pwaTestResults: [],
   tanks: [
     {
       id: "tank-main",
@@ -516,6 +520,19 @@ mockSyncButton.addEventListener("click", async () => {
 exportDataButton.addEventListener("click", exportAppData);
 importDataButton.addEventListener("click", () => importDataInput.click());
 importDataInput.addEventListener("change", importAppData);
+pwaTestForm.addEventListener("submit", handlePwaTestSubmit);
+pwaTestExportButton.addEventListener("click", exportPwaTestResults);
+pwaTestLog.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-pwa-test-delete]");
+  if (!button) {
+    return;
+  }
+
+  state.pwaTestResults = state.pwaTestResults.filter((result) => result.id !== button.dataset.pwaTestDelete);
+  saveState();
+  renderPwaTestResults();
+  showToast("PWA実機テスト結果を削除しました");
+});
 
 authForm.addEventListener("submit", async (event) => {
   event.preventDefault();
@@ -1024,6 +1041,7 @@ function renderAccount() {
   notificationPreferenceSummary.textContent = getNotificationPreferenceSummary();
   renderNotificationDeliveryLog();
   renderNotificationVerificationChecklist();
+  renderPwaTestResults();
 
   const mediaCount = state.posts.filter((post) => hasPostMedia(post)).length;
   const commentCount = state.posts.reduce((total, post) => total + getDisplayCommentCount(post), 0);
@@ -1049,6 +1067,78 @@ function renderAccount() {
   `;
 
   renderAuthPanel();
+}
+
+function handlePwaTestSubmit(event) {
+  event.preventDefault();
+  const result = normalizePwaTestResult({
+    id: createId("pwa-test"),
+    createdAt: new Date().toISOString(),
+    device: document.querySelector("#pwa-test-device-input").value,
+    browser: document.querySelector("#pwa-test-browser-input").value,
+    status: document.querySelector("#pwa-test-status-input").value,
+    scope: document.querySelector("#pwa-test-scope-input").value,
+    note: document.querySelector("#pwa-test-note-input").value,
+  });
+
+  state.pwaTestResults = [result, ...state.pwaTestResults].slice(0, 20);
+  saveState();
+  pwaTestForm.reset();
+  renderPwaTestResults();
+  showToast("PWA実機テスト結果を保存しました");
+}
+
+function renderPwaTestResults() {
+  if (!pwaTestLog) {
+    return;
+  }
+
+  const results = Array.isArray(state.pwaTestResults) ? state.pwaTestResults : [];
+  if (!results.length) {
+    pwaTestLog.innerHTML = `
+      <article class="pwa-test-empty">
+        <strong>まだ記録はありません</strong>
+        <span>本番URLで確認した端末、ブラウザ、結果をここに残せます。</span>
+      </article>
+    `;
+    return;
+  }
+
+  pwaTestLog.innerHTML = results
+    .map(
+      (result) => `
+        <article class="pwa-test-item ${escapeHtml(result.status)}">
+          <div>
+            <span>${escapeHtml(getPwaTestScopeLabel(result.scope))} / ${escapeHtml(getPwaTestStatusLabel(result.status))}</span>
+            <strong>${escapeHtml(result.device)} / ${escapeHtml(result.browser)}</strong>
+            <small>${escapeHtml(formatFullDate(result.createdAt))}</small>
+          </div>
+          <p>${escapeHtml(result.note || "メモなし")}</p>
+          <button class="text-button" type="button" data-pwa-test-delete="${escapeHtml(result.id)}">削除</button>
+        </article>
+      `,
+    )
+    .join("");
+}
+
+function getPwaTestScopeLabel(scope) {
+  const labels = {
+    install: "ホーム追加",
+    notification: "通知受信",
+    offline: "オフライン復帰",
+    ui_modes: "4モード表示",
+    login: "ログイン",
+  };
+  return labels[scope] || labels.install;
+}
+
+function getPwaTestStatusLabel(status) {
+  const labels = {
+    passed: "OK",
+    watch: "要確認",
+    failed: "NG",
+  };
+  return labels[status] || labels.watch;
 }
 
 function applyUiMode() {
@@ -3119,6 +3209,32 @@ function exportAppData() {
     "application/json;charset=utf-8",
   );
   showToast("データを書き出しました");
+}
+
+function exportPwaTestResults() {
+  const results = Array.isArray(state.pwaTestResults) ? state.pwaTestResults : [];
+  if (!results.length) {
+    showToast("書き出すPWA実機テスト結果がありません");
+    return;
+  }
+
+  const payload = {
+    app: "AquaNote",
+    type: "pwa-device-test-results",
+    exportedAt: new Date().toISOString(),
+    results: results.map((result) => ({
+      ...result,
+      statusLabel: getPwaTestStatusLabel(result.status),
+      scopeLabel: getPwaTestScopeLabel(result.scope),
+    })),
+  };
+
+  downloadFile(
+    `aquanote-pwa-device-tests-${getDateKey(new Date())}.json`,
+    JSON.stringify(payload, null, 2),
+    "application/json;charset=utf-8",
+  );
+  showToast("PWA実機テスト結果を書き出しました");
 }
 
 function downloadFile(filename, content, type) {
@@ -6269,6 +6385,7 @@ function normalizeState(saved) {
     tasks: { ...defaultState.tasks, ...saved.tasks },
     taskDate: saved.taskDate || getDateKey(new Date()),
     reminders: normalizeReminders(saved.reminders),
+    pwaTestResults: Array.isArray(saved.pwaTestResults) ? saved.pwaTestResults.map(normalizePwaTestResult) : [],
     aiEvaluationLog: Array.isArray(saved.aiEvaluationLog) ? saved.aiEvaluationLog.map(normalizeAiEvaluationEntry) : [],
     aiPromptImprovementNote: saved.aiPromptImprovementNote || "",
     aiPromptNotes: Array.isArray(saved.aiPromptNotes) ? saved.aiPromptNotes.map(normalizeAiPromptNote) : [],
@@ -6408,6 +6525,18 @@ function normalizeAiPromptNote(note) {
     promptVersion: note.promptVersion || "未確認",
     note: note.note || "",
     createdAt: note.createdAt || new Date().toISOString(),
+  };
+}
+
+function normalizePwaTestResult(result) {
+  return {
+    id: result.id || createId("pwa-test"),
+    createdAt: result.createdAt || new Date().toISOString(),
+    device: String(result.device || "未記録").trim() || "未記録",
+    browser: String(result.browser || "未記録").trim() || "未記録",
+    status: getAllowedValue(result.status, ["passed", "watch", "failed"], "watch"),
+    scope: getAllowedValue(result.scope, ["install", "notification", "offline", "ui_modes", "login"], "install"),
+    note: String(result.note || "").trim(),
   };
 }
 

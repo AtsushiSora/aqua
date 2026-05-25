@@ -514,6 +514,8 @@ body[data-ui-mode="glance"] .notification-production-config,
 body[data-ui-mode="glance"] .notification-production-config li,
 body[data-ui-mode="glance"] .pwa-release-grid article,
 body[data-ui-mode="glance"] .notification-rehearsal-list li,
+body[data-ui-mode="glance"] .pwa-test-item,
+body[data-ui-mode="glance"] .pwa-test-empty,
 body[data-ui-mode="glance"] .ai-observations,
 body[data-ui-mode="glance"] .ai-condition-coverage,
 body[data-ui-mode="glance"] .ai-condition-risk,
@@ -3325,6 +3327,89 @@ textarea {
   align-content: start;
 }
 
+.pwa-test-log-panel {
+  display: grid;
+  align-content: start;
+}
+
+.pwa-test-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.pwa-test-log {
+  display: grid;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.pwa-test-item,
+.pwa-test-empty {
+  min-width: 0;
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--glass-border);
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.5), transparent),
+    var(--waterline),
+    rgba(248, 252, 251, 0.8);
+}
+
+.pwa-test-item {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+}
+
+.pwa-test-item div,
+.pwa-test-empty {
+  min-width: 0;
+}
+
+.pwa-test-item span,
+.pwa-test-empty span {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 900;
+}
+
+.pwa-test-item strong,
+.pwa-test-empty strong {
+  display: block;
+  color: var(--aqua-dark);
+  font-family: var(--font-jp);
+  font-size: 0.94rem;
+}
+
+.pwa-test-item small {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.pwa-test-item p {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+
+.pwa-test-item.passed {
+  border-color: rgba(61, 173, 120, 0.34);
+}
+
+.pwa-test-item.watch {
+  border-color: rgba(226, 162, 72, 0.38);
+}
+
+.pwa-test-item.failed {
+  border-color: rgba(211, 93, 93, 0.38);
+}
+
 .pwa-release-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -3910,6 +3995,7 @@ textarea {
   .notification-settings,
   .notification-production-config ul,
   .pwa-release-grid,
+  .pwa-test-form,
   .preference-toggles,
   .quiet-hours,
   .ai-api-status-grid,

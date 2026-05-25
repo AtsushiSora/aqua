@@ -957,6 +957,50 @@
               </ol>
             </section>
 
+            <section class="panel pwa-test-log-panel">
+              <div class="section-head">
+                <div>
+                  <p class="eyebrow">Device log</p>
+                  <h2>PWA実機テスト結果</h2>
+                </div>
+                <button class="ghost-button" id="pwa-test-export-button" type="button">JSON</button>
+              </div>
+              <form class="pwa-test-form" id="pwa-test-form">
+                <label>
+                  <span>端末</span>
+                  <input id="pwa-test-device-input" type="text" placeholder="iPhone / Pixel">
+                </label>
+                <label>
+                  <span>ブラウザ</span>
+                  <input id="pwa-test-browser-input" type="text" placeholder="Safari / Chrome">
+                </label>
+                <label>
+                  <span>結果</span>
+                  <select id="pwa-test-status-input">
+                    <option value="passed">OK</option>
+                    <option value="watch">要確認</option>
+                    <option value="failed">NG</option>
+                  </select>
+                </label>
+                <label>
+                  <span>確認項目</span>
+                  <select id="pwa-test-scope-input">
+                    <option value="install">ホーム追加</option>
+                    <option value="notification">通知受信</option>
+                    <option value="offline">オフライン復帰</option>
+                    <option value="ui_modes">4モード表示</option>
+                    <option value="login">ログイン</option>
+                  </select>
+                </label>
+                <label class="full-field">
+                  <span>メモ</span>
+                  <textarea id="pwa-test-note-input" rows="2" placeholder="本番URL、気づいたこと、再確認ポイント"></textarea>
+                </label>
+                <button class="primary-button full-field" type="submit">結果を保存</button>
+              </form>
+              <div class="pwa-test-log" id="pwa-test-log"></div>
+            </section>
+
             <section class="panel account-sync-panel">
               <div class="section-head">
                 <div>
