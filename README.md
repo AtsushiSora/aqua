@@ -112,13 +112,14 @@
 - PWA本番URLテスト結果のOK/要確認/NGレビューサマリー
 - PWA本番URLでの最終リリース判定メモ
 - PWA最終リリース判定メモのSupabase `pwa_release_decisions` 同期
+- PWA本番URLでの最終実機レビュー証跡サマリー
 
 ## 次に作るとよいもの
 
 - 本物のAI画像分析
 - 実写真でのプロンプトv3評価
 - プロンプトv3評価サンプルの拡充
-- PWA本番URLでの最終実機レビュー
+- PWA本番URLレビュー結果のJSON書き出し
 
 ## 通知配信ワーカー
 
@@ -174,6 +175,7 @@ VAPID鍵は `node scripts/generate-vapid-keys.mjs` で生成できます。
 記録はローカル状態に保存され、JSONで書き出せます。Supabaseログイン中は `pwa_device_tests` に同期されます。
 ログイン、ホーム追加、通知受信、オフライン復帰、4モード表示のOK状況はレビューサマリーで確認できます。
 「PWA最終リリース判定」では、公開OK/確認中/保留、確認者、残タスクを保存できます。Supabaseログイン中は `pwa_release_decisions` に同期されます。
+最終実機レビューでは、実機記録、必須項目、NGなし、公開判断、確認者、クラウド保存の証跡を一覧できます。
 
 既存のSupabase環境へ反映する場合は、`supabase/schema.sql` の `pwa_device_tests` と `pwa_release_decisions` のテーブル、インデックス、RLSポリシーを追加してください。
 

@@ -1227,6 +1227,7 @@ function renderPwaReleaseDecision() {
 
   const decision = normalizePwaReleaseDecision(state.pwaReleaseDecision || {});
   const coverage = getPwaReleaseCoverage();
+  const evidenceItems = getPwaReleaseEvidenceItems(decision, coverage);
   document.querySelector("#pwa-release-decision-status-input").value = decision.status;
   document.querySelector("#pwa-release-decision-reviewer-input").value = decision.reviewer || state.account.name || "";
   document.querySelector("#pwa-release-decision-note-input").value = decision.note;
@@ -1254,7 +1255,57 @@ function renderPwaReleaseDecision() {
       <strong>${escapeHtml(decision.note || "未記録")}</strong>
       <small>本番URL、残タスク、公開判断の理由を残します</small>
     </article>
+    <div class="pwa-release-evidence-grid">
+      ${evidenceItems
+        .map(
+          (item) => `
+            <article class="${item.ready ? "ready" : "pending"}">
+              <span>${escapeHtml(item.label)}</span>
+              <strong>${escapeHtml(item.ready ? "OK" : "未完了")}</strong>
+              <small>${escapeHtml(item.note)}</small>
+            </article>
+          `,
+        )
+        .join("")}
+    </div>
   `;
+}
+
+function getPwaReleaseEvidenceItems(decision, coverage) {
+  const results = Array.isArray(state.pwaTestResults) ? state.pwaTestResults : [];
+  const failedCount = results.filter((result) => result.status === "failed").length;
+  return [
+    {
+      label: "実機記録",
+      ready: results.length > 0,
+      note: `${results.length}件のPWA実機テスト結果`,
+    },
+    {
+      label: "必須項目",
+      ready: coverage.ready,
+      note: `${coverage.passedCount}/${coverage.scopes.length}項目OK`,
+    },
+    {
+      label: "NGなし",
+      ready: failedCount === 0,
+      note: failedCount ? `${failedCount}件のNGがあります` : "NG記録はありません",
+    },
+    {
+      label: "公開判断",
+      ready: decision.status === "ready",
+      note: getPwaReleaseDecisionLabel(decision.status),
+    },
+    {
+      label: "確認者",
+      ready: Boolean(decision.reviewer),
+      note: decision.reviewer || "確認者未記録",
+    },
+    {
+      label: "クラウド保存",
+      ready: Boolean(decision.cloudId),
+      note: decision.cloudId ? "Supabase同期済み" : "ローカル保存のみ",
+    },
+  ];
 }
 
 function getPwaReleaseDecisionLabel(status) {
