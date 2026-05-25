@@ -520,6 +520,7 @@ body[data-ui-mode="glance"] .pwa-test-score,
 body[data-ui-mode="glance"] .pwa-test-scope-grid article,
 body[data-ui-mode="glance"] .pwa-release-decision-summary article,
 body[data-ui-mode="glance"] .pwa-release-evidence-grid article,
+body[data-ui-mode="glance"] .pwa-review-guide,
 body[data-ui-mode="glance"] .ai-observations,
 body[data-ui-mode="glance"] .ai-condition-coverage,
 body[data-ui-mode="glance"] .ai-condition-risk,
@@ -3345,6 +3346,27 @@ textarea {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
+}
+
+.pwa-review-guide {
+  display: grid;
+  gap: 4px;
+  margin-top: 14px;
+  padding: 12px;
+  border: 1px solid var(--glass-border);
+  border-radius: 8px;
+  background: rgba(248, 252, 251, 0.78);
+}
+
+.pwa-review-guide span {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 900;
+}
+
+.pwa-review-guide strong {
+  color: var(--aqua-dark);
+  font-size: 0.9rem;
 }
 
 .pwa-release-decision-form {
