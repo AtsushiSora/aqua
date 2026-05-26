@@ -89,6 +89,7 @@ const notificationDeliveryLog = document.querySelector("#notification-delivery-l
 const notificationVerificationList = document.querySelector("#notification-verification-list");
 const notificationProductionCheckForm = document.querySelector("#notification-production-check-form");
 const notificationProductionSummary = document.querySelector("#notification-production-summary");
+const notificationApplyDeliveryResultButton = document.querySelector("#notification-apply-delivery-result-button");
 const pwaTestForm = document.querySelector("#pwa-test-form");
 const pwaTestReview = document.querySelector("#pwa-test-review");
 const pwaTestLog = document.querySelector("#pwa-test-log");
@@ -726,6 +727,19 @@ notificationProductionCheckForm.addEventListener("submit", (event) => {
   saveState();
   renderNotificationVerificationChecklist();
   showToast("通知本番チェックを保存しました");
+});
+
+notificationApplyDeliveryResultButton.addEventListener("click", () => {
+  const deliveryState = getNotificationDeliveryVerificationState();
+  state.notificationProductionCheck = normalizeNotificationProductionCheck({
+    ...state.notificationProductionCheck,
+    sendStatus: deliveryState.status,
+    note: mergeNotificationProductionNote(state.notificationProductionCheck?.note, deliveryState.note),
+    checkedAt: new Date().toISOString(),
+  });
+  saveState();
+  renderNotificationVerificationChecklist();
+  showToast("配信ログの結果を通知本番チェックに反映しました");
 });
 
 notificationDeliveryLog.addEventListener("click", async (event) => {
@@ -1732,12 +1746,14 @@ function renderNotificationVerificationChecklist() {
   const hasPushSupport = canUsePushNotifications();
   const environmentItems = getNotificationProductionEnvironmentChecklist();
   const productionCheck = normalizeNotificationProductionCheck(state.notificationProductionCheck || {});
+  const deliveryStats = getNotificationDeliveryStats();
   const productionReady = productionCheck.envStatus === "confirmed" && productionCheck.dryRunStatus === "confirmed" && productionCheck.sendStatus === "confirmed";
   document.querySelector("#notification-env-status-input").value = productionCheck.envStatus;
   document.querySelector("#notification-dry-run-status-input").value = productionCheck.dryRunStatus;
   document.querySelector("#notification-send-status-input").value = productionCheck.sendStatus;
   document.querySelector("#notification-check-reviewer-input").value = productionCheck.reviewer || state.account.name || "";
   document.querySelector("#notification-check-note-input").value = productionCheck.note;
+  notificationApplyDeliveryResultButton.disabled = deliveryStats.total === 0;
   const items = [
     {
       label: "Supabase接続",
@@ -1829,11 +1845,75 @@ function renderNotificationVerificationChecklist() {
       <small>${escapeHtml(productionCheck.checkedAt ? `${formatFullDate(productionCheck.checkedAt)} / ${productionCheck.reviewer || "確認者未記録"}` : "まだ確認メモは保存されていません")}</small>
     </article>
     <article>
+      <span>配信ログ</span>
+      <strong>${escapeHtml(`送信済み ${deliveryStats.sent} / 失敗 ${deliveryStats.failed} / スキップ ${deliveryStats.skipped}`)}</strong>
+      <small>${escapeHtml(deliveryStats.total ? `最新${deliveryStats.total}件の通知配信ログ` : "配信ログを更新すると実機送信結果を確認できます")}</small>
+    </article>
+    <article>
       <span>確認メモ</span>
       <strong>${escapeHtml(productionCheck.note || "未記録")}</strong>
       <small>Netlify設定、VAPID鍵、配信ログの確認結果を残します</small>
     </article>
   `;
+}
+
+function getNotificationDeliveryStats() {
+  return notificationDeliveryHistory.reduce(
+    (stats, delivery) => {
+      const status = delivery.status || "pending";
+      return {
+        ...stats,
+        total: stats.total + 1,
+        sent: stats.sent + (status === "sent" ? 1 : 0),
+        failed: stats.failed + (status === "failed" ? 1 : 0),
+        skipped: stats.skipped + (status === "skipped" ? 1 : 0),
+        pending: stats.pending + (status === "pending" ? 1 : 0),
+      };
+    },
+    { total: 0, sent: 0, failed: 0, skipped: 0, pending: 0 },
+  );
+}
+
+function getNotificationDeliveryVerificationState() {
+  const stats = getNotificationDeliveryStats();
+  if (!stats.total) {
+    return {
+      status: "unchecked",
+      note: "通知配信ログがまだありません。",
+    };
+  }
+
+  if (stats.failed > 0) {
+    return {
+      status: "issues",
+      note: `配信ログ確認: 送信済み${stats.sent}件、失敗${stats.failed}件、スキップ${stats.skipped}件。失敗ログの詳細確認と再送予約が必要です。`,
+    };
+  }
+
+  if (stats.sent > 0) {
+    return {
+      status: "confirmed",
+      note: `配信ログ確認: 送信済み${stats.sent}件、失敗${stats.failed}件、スキップ${stats.skipped}件。実機受信結果を確認済みです。`,
+    };
+  }
+
+  return {
+    status: "unchecked",
+    note: `配信ログ確認: 送信済み${stats.sent}件、失敗${stats.failed}件、スキップ${stats.skipped}件。送信済みログを待っています。`,
+  };
+}
+
+function mergeNotificationProductionNote(currentNote, nextNote) {
+  const current = String(currentNote || "").trim();
+  if (!current) {
+    return nextNote;
+  }
+
+  if (current.includes(nextNote)) {
+    return current;
+  }
+
+  return `${current}\n${nextNote}`;
 }
 
 function getNotificationProductionEnvironmentChecklist() {
@@ -2563,6 +2643,7 @@ async function loadNotificationDeliveryHistory(options = {}) {
   if (!supabaseClient || !authSession?.user) {
     notificationDeliveryHistory = [];
     renderNotificationDeliveryLog();
+    renderNotificationVerificationChecklist();
     return false;
   }
 
@@ -2578,11 +2659,13 @@ async function loadNotificationDeliveryHistory(options = {}) {
       showToast(error.message || "通知配信ログを読み込めませんでした");
     }
     renderNotificationDeliveryLog();
+    renderNotificationVerificationChecklist();
     return false;
   }
 
   notificationDeliveryHistory = data || [];
   renderNotificationDeliveryLog();
+  renderNotificationVerificationChecklist();
 
   if (!options.silent) {
     showToast("通知配信ログを更新しました");
