@@ -356,6 +356,8 @@ let aiApiStatus = {
   model: "未確認",
   promptVersion: "未確認",
   gateway: "未確認",
+  auth: "未確認",
+  imageAnalysis: "未確認",
   lastSource: "ローカル分析",
 };
 
@@ -5371,6 +5373,7 @@ async function requestAiAnalysis(payload, fallbackResult) {
     aiApiStatus.model = result.model || aiApiStatus.model;
     aiApiStatus.promptVersion = result.promptVersion || aiApiStatus.promptVersion;
     aiApiStatus.gateway = result.source || aiApiStatus.gateway;
+    aiApiStatus.imageAnalysis = result.imageAnalysis === "real-photo" ? "実写真対応" : aiApiStatus.imageAnalysis;
     aiApiStatus.configured = true;
     aiApiStatus.checkedAt = new Date().toISOString();
     renderAiApiStatus();
@@ -5400,14 +5403,24 @@ function recordAiEvaluation({ payload, result, fallbackResult, source, error = "
     fallbackSummary: fallbackResult.summary,
     difference: getAiResultDifference(result, fallbackResult, error),
     retakeTips: Array.isArray(result.retakeTips) ? result.retakeTips : [],
+    note: getAiEvaluationInitialNote(payload, result),
     photoCondition: "unspecified",
     reviewLabel: "unreviewed",
-    note: "",
   };
 
   state.aiEvaluationLog = [entry, ...(state.aiEvaluationLog || [])].slice(0, 8);
   saveState();
   renderAiEvaluationLog();
+}
+
+function getAiEvaluationInitialNote(payload, result) {
+  if (!payload.post) {
+    return "";
+  }
+
+  const imageInput = payload.post.imageDataUrl ? "ローカル画像" : payload.post.imageUrl ? "Storage画像URL" : "画像なし";
+  const analysisMode = result.imageAnalysis === "real-photo" ? "実写真分析" : "画像未使用";
+  return `${analysisMode}: ${imageInput}`;
 }
 
 function getAiResultDifference(result, fallbackResult, error = "") {
@@ -5463,6 +5476,8 @@ async function checkAiAnalysisApi() {
       model: data.model || "未確認",
       promptVersion: data.promptVersion || "未確認",
       gateway: data.gateway || "未確認",
+      auth: data.authConfigured ? "APIキーあり" : "Gateway認証に委任",
+      imageAnalysis: data.imageAnalysis === "enabled" ? "実写真対応" : "未確認",
     };
     renderAiApiStatus();
     showToast(data.configured ? "AI API設定を確認しました" : "AI Gatewayが未設定です");
@@ -5492,6 +5507,8 @@ function renderAiApiStatus() {
     { label: "モデル", value: aiApiStatus.model },
     { label: "プロンプト", value: aiApiStatus.promptVersion },
     { label: "設定", value: configuredLabel },
+    { label: "画像分析", value: aiApiStatus.imageAnalysis },
+    { label: "認証", value: aiApiStatus.auth },
     { label: "最終分析", value: aiApiStatus.lastSource },
     { label: "確認日時", value: checkedAt },
   ];
@@ -6262,6 +6279,7 @@ function normalizeAiApiResult(result, fallbackResult) {
     model: result?.model || null,
     promptVersion: result?.promptVersion || null,
     source: result?.source || null,
+    imageAnalysis: result?.imageAnalysis || null,
   };
 }
 
@@ -6916,6 +6934,7 @@ function renderAiResult(result, post = null) {
   const imageSrc = post ? getPostImageSrc(post) : null;
   const metaItems = [
     result.source ? `分析: ${result.source}` : "",
+    result.imageAnalysis === "real-photo" ? "画像: 実写真" : "",
     result.model ? `モデル: ${result.model}` : "",
     result.promptVersion ? `プロンプト: ${result.promptVersion}` : "",
     Number.isFinite(Number(result.confidence)) ? `信頼度: ${Math.round(Number(result.confidence) * 100)}%` : "",

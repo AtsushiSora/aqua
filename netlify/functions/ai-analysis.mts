@@ -32,9 +32,11 @@ export default async (request: Request) => {
   if (request.method === "GET") {
     return jsonResponse({
       configured: Boolean(OPENAI_BASE_URL),
+      authConfigured: Boolean(OPENAI_API_KEY),
       model: AI_ANALYSIS_MODEL,
       promptVersion: PROMPT_VERSION,
       gateway: OPENAI_BASE_URL ? "openai-compatible" : "not-configured",
+      imageAnalysis: "enabled",
     });
   }
 
@@ -47,6 +49,7 @@ export default async (request: Request) => {
   }
 
   const payload = (await request.json()) as AnalysisRequest;
+  const hasImage = Boolean(payload.post?.imageDataUrl || payload.post?.imageUrl);
   const messages = buildMessages(payload);
   const response = await fetch(`${OPENAI_BASE_URL.replace(/\/$/, "")}/v1/chat/completions`, {
     method: "POST",
@@ -58,6 +61,7 @@ export default async (request: Request) => {
       model: AI_ANALYSIS_MODEL,
       messages,
       temperature: 0.2,
+      max_tokens: 700,
       response_format: { type: "json_object" },
     }),
   });
@@ -73,6 +77,7 @@ export default async (request: Request) => {
     model: AI_ANALYSIS_MODEL,
     promptVersion: PROMPT_VERSION,
     source: "netlify-ai-gateway",
+    imageAnalysis: hasImage ? "real-photo" : "log-only",
   });
 };
 
@@ -122,7 +127,7 @@ function buildMessages(payload: AnalysisRequest) {
       role: "user",
       content: [
         { type: "text", text },
-        { type: "image_url", image_url: { url: imageUrl } },
+        { type: "image_url", image_url: { url: imageUrl, detail: "high" } },
       ],
     },
   ];
@@ -131,7 +136,7 @@ function buildMessages(payload: AnalysisRequest) {
 function normalizeAnalysis(content: string) {
   let parsed;
   try {
-    parsed = JSON.parse(content);
+    parsed = JSON.parse(extractJson(content));
   } catch {
     parsed = {};
   }
@@ -155,6 +160,22 @@ function normalizeAnalysis(content: string) {
     summary: String(parsed.summary || "画像とログから確認ポイントを整理しました。"),
     items: items.length ? items : ["今日やること: 水温、pH、食欲を確認", "数日見ること: 水の透明度とコケの変化"],
   };
+}
+
+function extractJson(content: string) {
+  const trimmed = String(content || "").trim();
+  const fenced = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/i);
+  if (fenced?.[1]) {
+    return fenced[1].trim();
+  }
+
+  const firstBrace = trimmed.indexOf("{");
+  const lastBrace = trimmed.lastIndexOf("}");
+  if (firstBrace >= 0 && lastBrace > firstBrace) {
+    return trimmed.slice(firstBrace, lastBrace + 1);
+  }
+
+  return trimmed;
 }
 
 function authorizationHeaders() {
