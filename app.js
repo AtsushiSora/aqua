@@ -110,6 +110,10 @@ const accountBackgroundPreview = document.querySelector("#account-background-pre
 const accountButtonPreview = document.querySelector("#account-button-preview");
 const accountBackgroundStatus = document.querySelector("#account-background-status");
 const accountButtonStatus = document.querySelector("#account-button-status");
+const dashboardTitle = document.querySelector("#dashboard-title");
+const heroTitle = document.querySelector(".hero-copy h2");
+const heroLead = document.querySelector(".hero-copy h2 + p");
+const quickDockButtons = document.querySelectorAll(".quick-dock button");
 const supabaseConfig = window.AQUANOTE_SUPABASE_CONFIG || {};
 const pushConfig = window.AQUANOTE_PUSH_CONFIG || {};
 const UI_MODES = ["standard", "simple", "glance", "adult"];
@@ -120,6 +124,53 @@ const taskLabels = {
   feedMorning: "朝の餌やり",
   checkTemp: "水温チェック",
   checkAlgae: "ガラス面のコケ確認",
+};
+
+const homeModeCopy = {
+  standard: {
+    title: "今日のアクアノート",
+    heroTitle: "水槽管理を、きれいに続ける。",
+    heroLead: "水温、pH、写真、気づいた変化をひとつにまとめて、毎日の管理を軽くします。",
+    dock: [
+      ["記録", "水温・pH"],
+      ["投稿", "写真を共有"],
+      ["AI", "状態チェック"],
+      ["ガイド", "飼育のヒント"],
+    ],
+  },
+  simple: {
+    title: "今日やること",
+    heroTitle: "水槽のようすをかんたんチェック",
+    heroLead: "写真をえらんで、温度や気づいたことを入れるだけ。次に見るところがすぐわかります。",
+    dock: [
+      ["きろく", "温度を書く"],
+      ["しゃしん", "見せる"],
+      ["AIチェック", "みてもらう"],
+      ["ヒント", "こまった時"],
+    ],
+  },
+  glance: {
+    title: "一目チェック",
+    heroTitle: "大事な状態を、ひと目で。",
+    heroLead: "大きなボタンと数値だけを前に出して、Apple Watchのようにすぐ操作できます。",
+    dock: [
+      ["記録", "Log"],
+      ["写真", "Photo"],
+      ["AI", "Check"],
+      ["ヒント", "Guide"],
+    ],
+  },
+  adult: {
+    title: "水槽ダッシュボード",
+    heroTitle: "日々の管理を静かに整える。",
+    heroLead: "水質、写真、タスク、レビューを落ち着いた画面で確認し、公開前の判断までつなげます。",
+    dock: [
+      ["管理記録", "水温・pH"],
+      ["写真投稿", "共有"],
+      ["AI確認", "分析"],
+      ["飼育ガイド", "参照"],
+    ],
+  },
 };
 
 const weekdayLabels = ["日", "月", "火", "水", "木", "金", "土"];
@@ -1714,7 +1765,35 @@ function applyUiMode() {
   if (homeUiModeInput) {
     homeUiModeInput.value = uiMode;
   }
+  applyHomeModeCopy(uiMode);
   applyCustomAppearance();
+}
+
+function applyHomeModeCopy(uiMode) {
+  const copy = homeModeCopy[uiMode] || homeModeCopy.standard;
+  if (dashboardTitle) {
+    dashboardTitle.textContent = copy.title;
+  }
+  if (heroTitle) {
+    heroTitle.textContent = copy.heroTitle;
+  }
+  if (heroLead) {
+    heroLead.textContent = copy.heroLead;
+  }
+  quickDockButtons.forEach((button, index) => {
+    const item = copy.dock[index];
+    if (!item) {
+      return;
+    }
+    const title = button.querySelector("strong");
+    const note = button.querySelector("small");
+    if (title) {
+      title.textContent = item[0];
+    }
+    if (note) {
+      note.textContent = item[1];
+    }
+  });
 }
 
 function applyCustomAppearance() {

@@ -115,6 +115,7 @@ PWA Push subscription scaffold:
 - Store the real-device review execution status in the final PWA release decision memo. Done in the prototype.
 - Store the PWA production review result confirmation status in the final release memo. Done in the prototype.
 - Store user-selected local images for app background and button surfaces. Done in the prototype.
+- Strengthen mode-specific home copy and custom button image surfaces. Done in the prototype.
 - Add a Netlify Function entrypoint for AI image/log analysis. Done in the prototype.
 - Show AI Gateway/model verification status in the AI view. Done in the prototype.
 - Send real post photos to the AI Gateway as high-detail image input and harden JSON parsing. Done in the prototype.
@@ -181,5 +182,5 @@ Production release evidence:
 - Execute the PWA production review on real devices.
 - Confirm the real-device review status is marked done before production launch.
 - Confirm the PWA production review result status is marked confirmed before production launch.
-- Review basic, simple, glance, and adult modes across dashboard, posts, AI, and account views.
+- Review basic, simple, glance, and adult modes across dashboard, posts, AI, account, and custom-image states.
 - Keep JSON export/import as a recovery path while the sync model is being tested.
