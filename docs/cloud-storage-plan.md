@@ -157,6 +157,7 @@ PWA Push subscription scaffold:
 - Add the release path after the Gateway production decision is ready. Done in the prototype.
 - Connect the Gateway production decision to final PWA QA evidence. Done in the prototype.
 - Integrate Gateway production evidence into the PWA review JSON. Done in the prototype.
+- Show the Gateway production decision checklist in the release review view. Done in the prototype.
 - Keep the optional `WEB_PUSH_ENDPOINT` provider path for hosted push gateways.
 - Keep in-app reminder checks as a fallback while notification delivery is tested.
 
@@ -164,7 +165,7 @@ PWA Push subscription scaffold:
 
 Production release evidence:
 
-- Show the Gateway production decision checklist in the release review view.
+- Improve incomplete-action guidance for Gateway production review.
 - Review needs-fix examples and turn them into prompt improvement notes.
 - Run PWA installation, notification, offline, and UI mode checks on the production URL.
 - Review synced `pwa_device_tests` rows before production launch.

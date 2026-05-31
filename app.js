@@ -1379,6 +1379,8 @@ function renderPwaReleaseDecision() {
   const evidenceItems = getPwaReleaseEvidenceItems(decision, coverage);
   const handoff = getPwaReleaseHandoffState(evidenceItems);
   const qaState = getPwaReleaseQaState(evidenceItems);
+  const gatewayDecision = getAiGatewayProductionDecisionEvidence();
+  const gatewayExportEvidence = getPwaGatewayDecisionExportEvidence(gatewayDecision);
   document.querySelector("#pwa-release-decision-status-input").value = decision.status;
   document.querySelector("#pwa-release-review-status-input").value = decision.reviewStatus;
   document.querySelector("#pwa-release-result-status-input").value = decision.resultStatus;
@@ -1434,6 +1436,15 @@ function renderPwaReleaseDecision() {
       <strong>${escapeHtml(decision.note || "未記録")}</strong>
       <small>本番URL、残タスク、公開判断の理由を残します</small>
     </article>
+    <div class="pwa-gateway-evidence ${gatewayDecision.ready ? "ready" : "pending"}">
+      <span>Gateway本番判定</span>
+      <strong>${escapeHtml(gatewayExportEvidence.title)}</strong>
+      <ul>
+        ${gatewayExportEvidence.checklist
+          .map((item) => `<li class="${item.ready ? "ready" : "pending"}">${escapeHtml(item.label)}: ${escapeHtml(item.note)}</li>`)
+          .join("")}
+      </ul>
+    </div>
     <div class="pwa-release-evidence-grid">
       ${evidenceItems
         .map(
