@@ -3032,6 +3032,39 @@ textarea {
   font-size: 0.78rem;
 }
 
+.ai-rereview-decision dl {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  margin: 0;
+}
+
+.ai-rereview-decision dl div {
+  padding: 7px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.62);
+}
+
+.ai-rereview-decision dt {
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 900;
+}
+
+.ai-rereview-decision dd {
+  margin: 2px 0 0;
+  color: var(--aqua-dark);
+  font-size: 1rem;
+  font-weight: 950;
+}
+
+.ai-rereview-decision em {
+  color: var(--aqua-dark);
+  font-size: 0.76rem;
+  font-style: normal;
+  font-weight: 900;
+}
+
 .ai-retest-condition-summary {
   display: grid;
   gap: 8px;

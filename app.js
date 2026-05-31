@@ -6399,7 +6399,26 @@ function renderAiImageValidationSummary(entries) {
       <div class="ai-rereview-decision ${reReviewDecision.ready ? "is-ready" : reReviewDecision.status === "要再調整" ? "is-warning" : ""}">
         <span>再レビュー最終判定</span>
         <strong>${escapeHtml(reReviewDecision.status)}</strong>
+        <dl>
+          <div>
+            <dt>再レビュー済み</dt>
+            <dd>${reReviewSummary.reReviewed}</dd>
+          </div>
+          <div>
+            <dt>良い例</dt>
+            <dd>${reReviewSummary.good}</dd>
+          </div>
+          <div>
+            <dt>要修正</dt>
+            <dd>${reReviewSummary.needsFix}</dd>
+          </div>
+        </dl>
         <p>${escapeHtml(reReviewDecision.summary)}</p>
+        ${
+          reReviewSummary.targetConditionLabels.length
+            ? `<em>${escapeHtml(reReviewSummary.targetConditionLabels.join(" / "))}</em>`
+            : ""
+        }
         <small>${escapeHtml(reReviewDecision.nextAction)}</small>
       </div>
       <div class="ai-retest-condition-summary">
