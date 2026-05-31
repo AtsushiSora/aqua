@@ -1396,14 +1396,15 @@ function renderPwaTestReview(results) {
   }
 
   const scopes = PWA_REQUIRED_SCOPES;
-  const passedScopes = new Set(results.filter((result) => result.status === "passed").map((result) => result.scope));
-  const watchCount = results.filter((result) => result.status === "watch").length;
-  const failedCount = results.filter((result) => result.status === "failed").length;
-  const passedCount = scopes.filter((scope) => passedScopes.has(scope)).length;
+  const scopeStatuses = getPwaScopeStatuses(results);
+  const watchCount = scopes.filter((scope) => scopeStatuses[scope] === "watch").length;
+  const failedCount = scopes.filter((scope) => scopeStatuses[scope] === "failed").length;
+  const passedCount = scopes.filter((scope) => scopeStatuses[scope] === "passed").length;
   const totalCount = results.length;
   const latestResult = results[0] || null;
   const modeQa = getPwaModeQaSummary(results);
   const actionItems = getPwaDeviceQaActionItems(results);
+  const resolvedActionCount = getPwaDeviceQaActionItems(results, { includeResolved: true }).filter((item) => item.resolved).length;
   const ready = passedCount === scopes.length && failedCount === 0;
   const reviewLabel = ready ? "公開前OK" : totalCount ? "確認中" : "未記録";
   const reviewNote = ready
@@ -1419,14 +1420,7 @@ function renderPwaTestReview(results) {
     <div class="pwa-test-scope-grid">
       ${scopes
         .map((scope) => {
-          const entries = results.filter((result) => result.scope === scope);
-          const status = entries.some((result) => result.status === "failed")
-            ? "failed"
-            : entries.some((result) => result.status === "passed")
-              ? "passed"
-              : entries.some((result) => result.status === "watch")
-                ? "watch"
-                : "missing";
+          const status = scopeStatuses[scope];
           return `
             <article class="${escapeHtml(status)}">
               <span>${escapeHtml(getPwaTestScopeLabel(scope))}</span>
@@ -1453,7 +1447,7 @@ function renderPwaTestReview(results) {
         .join("")}
     </div>
     <div class="pwa-device-action-list ${actionItems.length ? "has-actions" : "is-clear"}">
-      <span>${actionItems.length ? "実機QAの対応メモ" : "実機QAの対応メモなし"}</span>
+      <span>${actionItems.length ? "実機QAの未解消メモ" : "実機QAの未解消メモなし"}${resolvedActionCount ? ` / 解消済み${resolvedActionCount}件` : ""}</span>
       ${
         actionItems.length
           ? actionItems
@@ -1474,28 +1468,43 @@ function renderPwaTestReview(results) {
 }
 
 function getPwaModeQaSummary(results) {
-  const passedScopes = new Set(results.filter((result) => result.status === "passed").map((result) => result.scope));
+  const scopeStatuses = getPwaScopeStatuses(results);
   const latestModeResult = results.find((result) => result.scope === "ui_modes");
   const latestImageResult = results.find((result) => result.scope === "custom_images");
   return [
     {
       label: "4モード表示",
-      ready: passedScopes.has("ui_modes"),
+      ready: scopeStatuses.ui_modes === "passed",
       note: latestModeResult?.note || "ベーシック、かんたん、一目、大人モードでホーム、投稿、AI、アカウントを確認",
     },
     {
       label: "画像カスタム",
-      ready: passedScopes.has("custom_images"),
+      ready: scopeStatuses.custom_images === "passed",
       note: latestImageResult?.note || "背景画像とボタン背面画像を設定し、各モードで文字の読みやすさを確認",
     },
   ];
 }
 
-function getPwaDeviceQaActionItems(results) {
-  return results
+function getPwaDeviceQaActionItems(results, options = {}) {
+  const includeResolved = Boolean(options.includeResolved);
+  const sortedResults = [...results].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  return sortedResults
     .filter((result) => ["watch", "failed"].includes(result.status))
+    .map((result) => {
+      const resolvedBy = sortedResults.find(
+        (candidate) =>
+          candidate.scope === result.scope &&
+          candidate.status === "passed" &&
+          new Date(candidate.createdAt) > new Date(result.createdAt),
+      );
+      return {
+        result,
+        resolvedBy,
+      };
+    })
+    .filter((item) => includeResolved || !item.resolvedBy)
     .slice(0, 5)
-    .map((result) => ({
+    .map(({ result, resolvedBy }) => ({
       id: result.id,
       status: result.status,
       label: `${getPwaTestScopeLabel(result.scope)} / ${getPwaTestStatusLabel(result.status)}`,
@@ -1503,18 +1512,30 @@ function getPwaDeviceQaActionItems(results) {
       browser: result.browser || "ブラウザ未記録",
       note: result.note || "原因、再現手順、次の修正内容を追記してください。",
       createdAt: result.createdAt,
+      resolved: Boolean(resolvedBy),
+      resolvedAt: resolvedBy?.createdAt || null,
     }));
+}
+
+function getPwaScopeStatuses(results) {
+  return PWA_REQUIRED_SCOPES.reduce((statuses, scope) => {
+    const latest = [...results]
+      .filter((result) => result.scope === scope)
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))[0];
+    statuses[scope] = latest ? latest.status : "missing";
+    return statuses;
+  }, {});
 }
 
 function getPwaReleaseCoverage(results = state.pwaTestResults || []) {
   const scopes = PWA_REQUIRED_SCOPES;
-  const passedScopes = new Set(results.filter((result) => result.status === "passed").map((result) => result.scope));
-  const failedCount = results.filter((result) => result.status === "failed").length;
+  const scopeStatuses = getPwaScopeStatuses(results);
+  const failedCount = scopes.filter((scope) => scopeStatuses[scope] === "failed").length;
   return {
     scopes,
-    passedCount: scopes.filter((scope) => passedScopes.has(scope)).length,
+    passedCount: scopes.filter((scope) => scopeStatuses[scope] === "passed").length,
     failedCount,
-    ready: scopes.every((scope) => passedScopes.has(scope)) && failedCount === 0,
+    ready: scopes.every((scope) => scopeStatuses[scope] === "passed") && failedCount === 0,
   };
 }
 
@@ -1549,6 +1570,9 @@ function renderPwaReleaseDecision() {
   const qaState = getPwaReleaseQaState(evidenceItems);
   const appearanceQa = getPwaModeQaSummary(state.pwaTestResults || []);
   const deviceQaActions = getPwaDeviceQaActionItems(state.pwaTestResults || []);
+  const resolvedDeviceQaActionCount = getPwaDeviceQaActionItems(state.pwaTestResults || [], { includeResolved: true }).filter(
+    (item) => item.resolved,
+  ).length;
   const gatewayDecision = getAiGatewayProductionDecisionEvidence();
   const gatewayExportEvidence = getPwaGatewayDecisionExportEvidence(gatewayDecision);
   document.querySelector("#pwa-release-decision-status-input").value = decision.status;
@@ -1625,7 +1649,8 @@ function renderPwaReleaseDecision() {
     </div>
     <div class="pwa-device-action-evidence ${deviceQaActions.length ? "pending" : "ready"}">
       <span>実機QA対応</span>
-      <strong>${escapeHtml(deviceQaActions.length ? `${deviceQaActions.length}件の確認事項` : "要確認/NGなし")}</strong>
+      <strong>${escapeHtml(deviceQaActions.length ? `${deviceQaActions.length}件の未解消` : "未解消なし")}</strong>
+      <small>${escapeHtml(resolvedDeviceQaActionCount ? `後続OKで解消済み: ${resolvedDeviceQaActionCount}件` : "後続OKで解消した項目はまだありません")}</small>
       ${
         deviceQaActions.length
           ? deviceQaActions
@@ -4396,6 +4421,7 @@ function exportPwaTestResults() {
   const gatewayDecisionEvidence = getAiGatewayProductionDecisionEvidence();
   const appearanceQa = getPwaModeQaSummary(results);
   const deviceQaActions = getPwaDeviceQaActionItems(results);
+  const allDeviceQaActions = getPwaDeviceQaActionItems(results, { includeResolved: true });
   const evidence = getPwaReleaseEvidenceItems(releaseDecision, coverage);
   const readyForRelease = coverage.ready && releaseDecision.status === "ready" && evidence.every((item) => item.ready);
 
@@ -4421,7 +4447,10 @@ function exportPwaTestResults() {
     },
     deviceQaActions: {
       ready: deviceQaActions.length === 0,
+      unresolvedCount: deviceQaActions.length,
+      resolvedCount: allDeviceQaActions.filter((item) => item.resolved).length,
       items: deviceQaActions,
+      history: allDeviceQaActions,
     },
     gatewayDecisionEvidence: getPwaGatewayDecisionExportEvidence(gatewayDecisionEvidence),
     releaseDecision: {

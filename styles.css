@@ -4082,10 +4082,16 @@ textarea {
 }
 
 .pwa-device-action-evidence > span,
-.pwa-device-action-evidence > strong {
+.pwa-device-action-evidence > strong,
+.pwa-device-action-evidence > small {
   color: var(--aqua-dark);
   font-size: 0.86rem;
   font-weight: 900;
+}
+
+.pwa-device-action-evidence > small {
+  color: var(--muted);
+  font-size: 0.76rem;
 }
 
 .pwa-device-action-evidence article {
