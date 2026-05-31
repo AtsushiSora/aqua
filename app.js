@@ -4130,13 +4130,21 @@ function exportAiReviewData(format) {
   const entries = getVisibleAiEvaluationEntries();
   const notes = getVisibleAiPromptNotes();
   const needsFixNotes = getAiNeedsFixPromptNotes(notes);
-  const needsFixNoteConditions = getAiNeedsFixNoteConditions(needsFixNotes);
+  const retestAdjustmentNotes = getAiRetestAdjustmentPromptNotes(notes);
+  const needsFixNoteConditions = getAiPromptNoteConditions(needsFixNotes);
+  const retestAdjustmentConditions = getAiPromptNoteConditions(retestAdjustmentNotes);
+  const promptDraftNoteConditions = getUniqueValues([...needsFixNoteConditions, ...retestAdjustmentConditions]);
   const promptDraftItems = getAiPromptV4DraftItems({
     notes,
     needsFixNotes,
+    retestAdjustmentNotes,
     needsFixEntries: entries.filter((entry) => entry.reviewLabel === "needs_fix"),
   });
-  const promptDraftReview = getAiPromptDraftReview({ draftItems: promptDraftItems, needsFixNotes, needsFixNoteConditions });
+  const promptDraftReview = getAiPromptDraftReview({
+    draftItems: promptDraftItems,
+    needsFixNotes: [...needsFixNotes, ...retestAdjustmentNotes],
+    needsFixNoteConditions: promptDraftNoteConditions,
+  });
   const retestConditionSummary = getAiPromptDraftRetestConditionSummary(entries);
   if (!entries.length && !notes.length && !promptDraftItems.length) {
     showToast("書き出すAI評価レビューがありません");
@@ -4291,6 +4299,8 @@ function exportAiReviewData(format) {
       items: promptDraftItems,
       needsFixNotesCount: needsFixNotes.length,
       needsFixNoteConditions,
+      retestAdjustmentNotesCount: retestAdjustmentNotes.length,
+      retestAdjustmentConditions,
       review: promptDraftReview,
       retest: getAiPromptDraftRetestExport(entries, promptDraftReview, retestConditionSummary),
     },
@@ -5847,11 +5857,18 @@ function renderAiPromptDraft(entries) {
   const notes = Array.isArray(state.aiPromptNotes) ? state.aiPromptNotes : [];
   const needsFixEntries = entries.filter((entry) => entry.reviewLabel === "needs_fix");
   const needsFixNotes = getAiNeedsFixPromptNotes(notes);
-  const needsFixNoteConditions = getAiNeedsFixNoteConditions(needsFixNotes);
-  const draftItems = getAiPromptV4DraftItems({ notes, needsFixNotes, needsFixEntries });
-  const promptDraftReview = getAiPromptDraftReview({ draftItems, needsFixNotes, needsFixNoteConditions });
-  const needsFixNoteConditionText = needsFixNoteConditions.length
-    ? `${needsFixNoteConditions.map((condition) => getAiPhotoConditionLabel(condition)).join(" / ")} を草案に反映`
+  const retestAdjustmentNotes = getAiRetestAdjustmentPromptNotes(notes);
+  const needsFixNoteConditions = getAiPromptNoteConditions(needsFixNotes);
+  const retestAdjustmentConditions = getAiPromptNoteConditions(retestAdjustmentNotes);
+  const promptDraftNoteConditions = getUniqueValues([...needsFixNoteConditions, ...retestAdjustmentConditions]);
+  const draftItems = getAiPromptV4DraftItems({ notes, needsFixNotes, retestAdjustmentNotes, needsFixEntries });
+  const promptDraftReview = getAiPromptDraftReview({
+    draftItems,
+    needsFixNotes: [...needsFixNotes, ...retestAdjustmentNotes],
+    needsFixNoteConditions: promptDraftNoteConditions,
+  });
+  const needsFixNoteConditionText = promptDraftNoteConditions.length
+    ? `${promptDraftNoteConditions.map((condition) => getAiPhotoConditionLabel(condition)).join(" / ")} を草案に反映`
     : "要修正レビューを改善メモ化すると草案が強くなります";
 
   aiPromptDraft.innerHTML = `
@@ -5874,23 +5891,29 @@ function renderAiPromptDraft(entries) {
         <strong>${needsFixNotes.length ? `${needsFixNotes.length}件` : "未保存"}</strong>
         <p>${escapeHtml(needsFixNoteConditionText)}</p>
       </div>
-      <div class="ai-prompt-draft-review ${promptDraftReview.ready ? "is-ready" : needsFixNotes.length ? "is-active" : ""}">
+      <div class="ai-prompt-draft-retest">
+        <span>再評価メモ再強化</span>
+        <strong>${retestAdjustmentNotes.length ? `${retestAdjustmentNotes.length}件` : "未保存"}</strong>
+        <p>${escapeHtml(getAiRetestAdjustmentDraftEvidenceText(retestAdjustmentConditions))}</p>
+      </div>
+      <div class="ai-prompt-draft-review ${promptDraftReview.ready ? "is-ready" : needsFixNotes.length || retestAdjustmentNotes.length ? "is-active" : ""}">
         <span>草案反映レビュー</span>
         <strong>${escapeHtml(promptDraftReview.status)}</strong>
         <p>${escapeHtml(promptDraftReview.summary)}</p>
         <small>${escapeHtml(promptDraftReview.nextAction)}</small>
       </div>
-      <small>要修正 ${needsFixEntries.length}件 / 改善メモ ${notes.length}件 / 要修正メモ ${needsFixNotes.length}件</small>
+      <small>要修正 ${needsFixEntries.length}件 / 改善メモ ${notes.length}件 / 要修正メモ ${needsFixNotes.length}件 / 再評価メモ ${retestAdjustmentNotes.length}件</small>
     </article>
   `;
 }
 
-function getAiPromptV4DraftItems({ notes, needsFixNotes = [], needsFixEntries = [] }) {
+function getAiPromptV4DraftItems({ notes, needsFixNotes = [], retestAdjustmentNotes = [], needsFixEntries = [] }) {
   const items = [];
   const conditionCounts = getAiPhotoConditionCounts(needsFixEntries);
   const weakCondition = getAiWeakPhotoCondition(conditionCounts);
   const latestNote = notes[0]?.note || "";
-  const needsFixNoteConditions = getAiNeedsFixNoteConditions(needsFixNotes);
+  const needsFixNoteConditions = getAiPromptNoteConditions(needsFixNotes);
+  const retestAdjustmentConditions = getAiPromptNoteConditions(retestAdjustmentNotes);
 
   if (weakCondition) {
     items.push(`${getAiPhotoConditionLabel(weakCondition.key)}では、${getAiWeakConditionSuggestion(weakCondition)}`);
@@ -5899,6 +5922,14 @@ function getAiPromptV4DraftItems({ notes, needsFixNotes = [], needsFixEntries = 
   if (needsFixNotes.length) {
     items.push("保存済みの実写真要修正メモを優先し、見える根拠・見えない範囲・撮り直し案を必ず分けて返す。");
   }
+
+  if (retestAdjustmentNotes.length) {
+    items.push("再評価後も要修正だった条件は、草案内で最優先の再調整対象として扱う。");
+  }
+
+  retestAdjustmentConditions.forEach((condition) => {
+    items.push(getAiRetestAdjustmentConditionSuggestion(condition));
+  });
 
   needsFixNoteConditions.forEach((condition) => {
     items.push(getAiNeedsFixNoteConditionSuggestion(condition));
@@ -5920,19 +5951,35 @@ function getAiPromptV4DraftItems({ notes, needsFixNotes = [], needsFixEntries = 
     items.push("要修正レビューの評価メモを増やし、言い過ぎた表現と不足した撮影条件を分けて整理する。");
   }
 
-  return [...new Set(items)].slice(0, 5);
+  return [...new Set(items)].slice(0, 6);
 }
 
 function getAiNeedsFixPromptNotes(notes = []) {
   return notes.filter((note) => String(note.note || "").includes("実写真要修正メモ:"));
 }
 
-function getAiNeedsFixNoteConditions(notes = []) {
+function getAiRetestAdjustmentPromptNotes(notes = []) {
+  return notes.filter((note) => String(note.note || "").includes("再評価要再調整メモ:"));
+}
+
+function getAiPromptNoteConditions(notes = []) {
   const conditions = ["dark", "small_fish", "algae", "reflection", "normal", "unspecified"];
   return conditions.filter((condition) => {
     const label = getAiPhotoConditionLabel(condition);
     return notes.some((note) => String(note.note || "").includes(label));
   });
+}
+
+function getUniqueValues(values = []) {
+  return [...new Set(values.filter(Boolean))];
+}
+
+function getAiRetestAdjustmentDraftEvidenceText(conditions = []) {
+  if (!conditions.length) {
+    return "再評価で要再調整になった条件を改善メモへ戻すと、草案をさらに強められます。";
+  }
+
+  return `${conditions.map((condition) => getAiPhotoConditionLabel(condition)).join(" / ")} を再強化対象に追加`;
 }
 
 function getAiNeedsFixNoteConditionSuggestion(condition) {
@@ -5946,6 +5993,19 @@ function getAiNeedsFixNoteConditionSuggestion(condition) {
   };
 
   return suggestions[condition] || "要修正メモの撮影条件に合わせて、見える範囲と見えない範囲の分離を強める。";
+}
+
+function getAiRetestAdjustmentConditionSuggestion(condition) {
+  const suggestions = {
+    dark: "暗い写真の再評価で要修正が残る場合は、暗さで見えない範囲を結論から外し、撮影し直す理由を短く明示する。",
+    small_fish: "魚が小さい写真の再評価で要修正が残る場合は、魚の状態評価を控え、拡大写真・動画・行動観察を先に案内する。",
+    algae: "コケ多め写真の再評価で要修正が残る場合は、写真だけで水質悪化を決めず、照明時間と水換え履歴の確認を必須にする。",
+    reflection: "反射あり写真の再評価で要修正が残る場合は、反射で隠れた対象を観察済みにせず、角度変更の再撮影を最初に促す。",
+    normal: "通常写真の再評価で要修正が残る場合は、断定表現を減らし、写真根拠とユーザー確認事項を一文ずつ分ける。",
+    unspecified: "条件未指定の再評価メモは、暗さ・魚の大きさ・コケ・反射のどれが要因かを出力で切り分ける。",
+  };
+
+  return suggestions[condition] || "再評価で残った要修正条件は、次の草案で最優先に再調整する。";
 }
 
 function getAiPromptDraftReview({ draftItems = [], needsFixNotes = [], needsFixNoteConditions = [] }) {
@@ -6143,13 +6203,21 @@ function renderAiImageValidationSummary(entries) {
   const retestConditionSummary = getAiPromptDraftRetestConditionSummary(entries);
   const notes = Array.isArray(state.aiPromptNotes) ? state.aiPromptNotes : [];
   const needsFixNotes = getAiNeedsFixPromptNotes(notes);
-  const needsFixNoteConditions = getAiNeedsFixNoteConditions(needsFixNotes);
+  const retestAdjustmentNotes = getAiRetestAdjustmentPromptNotes(notes);
+  const needsFixNoteConditions = getAiPromptNoteConditions(needsFixNotes);
+  const retestAdjustmentConditions = getAiPromptNoteConditions(retestAdjustmentNotes);
+  const promptDraftNoteConditions = getUniqueValues([...needsFixNoteConditions, ...retestAdjustmentConditions]);
   const promptDraftItems = getAiPromptV4DraftItems({
     notes,
     needsFixNotes,
+    retestAdjustmentNotes,
     needsFixEntries: entries.filter((entry) => entry.reviewLabel === "needs_fix"),
   });
-  const promptDraftReview = getAiPromptDraftReview({ draftItems: promptDraftItems, needsFixNotes, needsFixNoteConditions });
+  const promptDraftReview = getAiPromptDraftReview({
+    draftItems: promptDraftItems,
+    needsFixNotes: [...needsFixNotes, ...retestAdjustmentNotes],
+    needsFixNoteConditions: promptDraftNoteConditions,
+  });
   const productionChecklist = getAiPromptV4ProductionChecklist({
     gatewayPhotoEntries,
     v4Entries,

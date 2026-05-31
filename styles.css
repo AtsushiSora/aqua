@@ -2709,6 +2709,20 @@ textarea {
   font-size: 0.94rem;
 }
 
+.ai-prompt-draft-retest {
+  display: grid;
+  gap: 4px;
+  padding: 10px;
+  border: 1px solid rgba(211, 139, 27, 0.24);
+  border-radius: 8px;
+  background: rgba(255, 247, 230, 0.72);
+}
+
+.ai-prompt-draft-retest strong {
+  margin-top: 0;
+  font-size: 0.94rem;
+}
+
 .ai-prompt-draft-review {
   display: grid;
   gap: 4px;
