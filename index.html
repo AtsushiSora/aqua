@@ -115,24 +115,24 @@
             <div class="dashboard-main">
               <div class="hero-band">
                 <div class="hero-copy">
-                  <p class="eyebrow">Daily aquarium care</p>
+                  <p class="eyebrow">My aquarium</p>
                   <h2>水槽管理を、きれいに続ける。</h2>
                   <p>
                     水温、pH、写真、気づいた変化をひとつにまとめて、毎日の管理を軽くします。
                   </p>
                   <div class="hero-actions">
                     <button class="primary-button" type="button" data-view-target="tanks">記録する</button>
-                    <button class="ghost-button" type="button" data-view-target="community">投稿を見る</button>
+                    <button class="ghost-button" type="button" data-view-target="tanks">水槽を見る</button>
                     <button class="photo-button" type="button" id="hero-photo-button">写真を変更</button>
                     <input id="hero-photo-input" type="file" accept="image/*" hidden>
                   </div>
                 </div>
-                <div class="hero-media">
-                  <img id="hero-photo" src="assets/site-concept.png" alt="水草と流木が入った淡水アクアリウム">
+                <div class="hero-media is-placeholder">
+                  <img id="hero-photo" src="assets/site-concept.png" alt="自分の水槽写真">
                   <div class="hero-photo-card">
-                    <span>Sample photo</span>
-                    <strong>リビング水草水槽</strong>
-                    <small>あとで自分の水槽や魚の写真に変更できます</small>
+                    <span id="hero-photo-status">写真未設定</span>
+                    <strong id="hero-tank-name">自分の水槽</strong>
+                    <small id="hero-photo-note">写真を設定すると、ここに大きく表示されます</small>
                   </div>
                 </div>
               </div>

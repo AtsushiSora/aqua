@@ -55,6 +55,10 @@ const logDateInput = document.querySelector("#log-date");
 const heroPhoto = document.querySelector("#hero-photo");
 const heroPhotoButton = document.querySelector("#hero-photo-button");
 const heroPhotoInput = document.querySelector("#hero-photo-input");
+const heroMedia = document.querySelector(".hero-media");
+const heroPhotoStatus = document.querySelector("#hero-photo-status");
+const heroTankName = document.querySelector("#hero-tank-name");
+const heroPhotoNote = document.querySelector("#hero-photo-note");
 const notificationButton = document.querySelector("#notification-button");
 const installAppButton = document.querySelector("#install-app-button");
 const enableNotificationsButton = document.querySelector("#enable-notifications-button");
@@ -1199,7 +1203,21 @@ function renderPostControls() {
 }
 
 function renderHeroPhoto() {
-  heroPhoto.src = state.heroPhotoDataUrl || "assets/site-concept.png";
+  const tank = getActiveTank();
+  const featuredPost = state.posts.find(
+    (post) => post.id === tank.featuredPostId && !String(post.id).startsWith("sample-") && getPostThumbnailSrc(post),
+  );
+  const featuredImage = featuredPost ? getPostThumbnailSrc(featuredPost) : null;
+  const heroImage = state.heroPhotoDataUrl || featuredImage;
+
+  heroPhoto.src = heroImage || "assets/site-concept.png";
+  heroPhoto.alt = heroImage ? `${tank.name} の水槽写真` : "水槽写真未設定";
+  heroMedia.classList.toggle("is-placeholder", !heroImage);
+  heroPhotoStatus.textContent = state.heroPhotoDataUrl ? "トップ写真" : featuredImage ? "メイン水槽写真" : "写真未設定";
+  heroTankName.textContent = tank.name;
+  heroPhotoNote.textContent = heroImage
+    ? "この水槽をTOPに大きく表示しています"
+    : "写真を設定すると、ここに自分の水槽が大きく表示されます";
 }
 
 function renderAccount() {

@@ -299,7 +299,7 @@ body[data-ui-mode="simple"] .hero-band {
 
 body[data-ui-mode="simple"] .hero-copy p:not(.eyebrow) {
   max-width: 46ch;
-  color: #24484d;
+  color: rgba(255, 255, 255, 0.9);
   font-size: 1.02rem;
   font-weight: 800;
 }
@@ -376,7 +376,7 @@ body[data-ui-mode="adult"] .sync-status-button.is-synced {
 
 body[data-ui-mode="adult"] .hero-band {
   background:
-    linear-gradient(115deg, rgba(251, 252, 250, 0.92), rgba(241, 244, 240, 0.74)),
+    linear-gradient(115deg, rgba(12, 30, 32, 0.26), rgba(241, 244, 240, 0.1)),
     var(--waterline);
 }
 
@@ -454,7 +454,7 @@ body[data-ui-mode="glance"] .sync-status-button.is-synced {
 }
 
 body[data-ui-mode="glance"] .hero-band {
-  min-height: 330px;
+  min-height: clamp(360px, 44vw, 540px);
   border-color: rgba(137, 247, 255, 0.18);
   background:
     radial-gradient(circle at 76% 26%, rgba(37, 217, 228, 0.22), transparent 28%),
@@ -1256,9 +1256,9 @@ body[data-ui-mode="glance"][data-custom-buttons="true"] .icon-button {
 
 .hero-band {
   position: relative;
-  min-height: 252px;
+  min-height: clamp(360px, 46vw, 560px);
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   padding: clamp(22px, 3.5vw, 40px);
   background: var(--nav);
   border: 1px solid rgba(255, 255, 255, 0.34);
@@ -1301,6 +1301,33 @@ body[data-ui-mode="glance"][data-custom-buttons="true"] .icon-button {
     linear-gradient(0deg, rgba(14, 31, 33, 0.26), transparent 56%),
     repeating-linear-gradient(98deg, transparent 0 72px, rgba(255, 255, 255, 0.08) 74px, transparent 92px);
   z-index: 1;
+}
+
+.hero-media.is-placeholder {
+  background:
+    linear-gradient(180deg, rgba(6, 45, 49, 0.18), rgba(7, 30, 35, 0.82)),
+    radial-gradient(circle at 24% 18%, rgba(137, 247, 255, 0.22), transparent 28%),
+    linear-gradient(145deg, #d8f3ef, #65bcb8 58%, #153e46);
+}
+
+.hero-media.is-placeholder img {
+  opacity: 0;
+}
+
+.hero-media.is-placeholder::before {
+  content: "水槽写真を設定";
+  position: absolute;
+  right: clamp(18px, 4vw, 46px);
+  top: clamp(18px, 4vw, 42px);
+  z-index: 2;
+  padding: 8px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-radius: 999px;
+  background: rgba(8, 45, 51, 0.34);
+  color: rgba(255, 255, 255, 0.86);
+  font-size: 0.78rem;
+  font-weight: 900;
+  backdrop-filter: blur(10px);
 }
 
 .hero-copy {
@@ -1364,24 +1391,33 @@ body[data-ui-mode="glance"][data-custom-buttons="true"] .icon-button {
 }
 
 .hero-photo-card {
-  display: none;
-}
-
-@media (min-width: 1180px) {
-  .hero-photo-card {
-    display: none;
-  }
+  position: absolute;
+  right: clamp(18px, 4vw, 42px);
+  bottom: clamp(18px, 4vw, 38px);
+  z-index: 3;
+  width: min(300px, 34vw);
+  display: grid;
+  gap: 4px;
+  padding: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  border-radius: 8px;
+  background: rgba(9, 34, 38, 0.58);
+  color: white;
+  backdrop-filter: blur(14px);
 }
 
 .hero-photo-card span,
 .hero-photo-card small {
-  color: var(--muted);
+  color: rgba(255, 255, 255, 0.74);
   font-size: 0.8rem;
+  font-weight: 800;
 }
 
 .hero-photo-card strong {
   font-size: 1.05rem;
   font-family: var(--font-jp);
+  color: #ffffff;
+  overflow-wrap: anywhere;
 }
 
 .quick-dock {
@@ -4924,7 +4960,7 @@ textarea {
   }
 
   .hero-band {
-    min-height: 300px;
+    min-height: 390px;
   }
 
   .quick-dock {
@@ -5024,12 +5060,28 @@ textarea {
 
   .hero-band {
     padding: 18px;
-    min-height: 264px;
+    min-height: 420px;
+    align-items: flex-start;
+    padding-bottom: 124px;
   }
 
   .hero-media::after {
     background:
-      linear-gradient(0deg, rgba(10, 46, 48, 0.42), transparent 52%);
+      linear-gradient(180deg, rgba(8, 27, 30, 0.74), rgba(8, 27, 30, 0.22) 46%, rgba(8, 27, 30, 0.64)),
+      repeating-linear-gradient(98deg, transparent 0 72px, rgba(255, 255, 255, 0.08) 74px, transparent 92px);
+  }
+
+  .hero-media.is-placeholder::before {
+    right: 18px;
+    top: auto;
+    bottom: 92px;
+  }
+
+  .hero-photo-card {
+    right: 18px;
+    bottom: 18px;
+    left: 18px;
+    width: auto;
   }
 
   .hero-copy h2 {
@@ -5084,7 +5136,7 @@ textarea {
   }
 
   body[data-ui-mode="simple"] .hero-band {
-    min-height: 246px;
+    min-height: 400px;
   }
 
   body[data-ui-mode="simple"] .hero-copy p:not(.eyebrow) {
@@ -5107,7 +5159,7 @@ textarea {
   }
 
   body[data-ui-mode="glance"] .hero-band {
-    min-height: 278px;
+    min-height: 420px;
   }
 
   body[data-ui-mode="glance"] .quick-dock button {
