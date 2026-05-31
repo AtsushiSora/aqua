@@ -1525,11 +1525,45 @@ function getAiGatewayProductionDecisionEvidence() {
     ready: decision.ready,
     summary: decision.ready ? "Gateway公開OK" : decision.summary,
     nextAction: decision.nextAction,
+    targetConditions: reReviewSummary.targetConditions,
     targetConditionLabels: reReviewSummary.targetConditionLabels,
     reReviewed: reReviewSummary.reReviewed,
     good: reReviewSummary.good,
     needsFix: reReviewSummary.needsFix,
     watch: reReviewSummary.watch,
+  };
+}
+
+function getPwaGatewayDecisionExportEvidence(gatewayDecision) {
+  return {
+    ...gatewayDecision,
+    title: gatewayDecision.ready ? "AI Gateway本番判定OK" : "AI Gateway本番判定は確認中",
+    evidenceSummary: [
+      `判定: ${gatewayDecision.status}`,
+      `再レビュー済み: ${gatewayDecision.reReviewed}件`,
+      `良い例: ${gatewayDecision.good}件`,
+      `要修正: ${gatewayDecision.needsFix}件`,
+      gatewayDecision.targetConditionLabels.length
+        ? `対象条件: ${gatewayDecision.targetConditionLabels.join(" / ")}`
+        : "対象条件: 未記録",
+    ],
+    checklist: [
+      {
+        label: "再レビュー済み",
+        ready: gatewayDecision.reReviewed > 0,
+        note: `${gatewayDecision.reReviewed}件`,
+      },
+      {
+        label: "要修正なし",
+        ready: gatewayDecision.needsFix === 0,
+        note: `${gatewayDecision.needsFix}件`,
+      },
+      {
+        label: "公開OK判定",
+        ready: gatewayDecision.ready,
+        note: gatewayDecision.status,
+      },
+    ],
   };
 }
 
@@ -4102,7 +4136,7 @@ function exportPwaTestResults() {
         passed: results.some((result) => result.scope === scope && result.status === "passed"),
       })),
     },
-    gatewayDecisionEvidence,
+    gatewayDecisionEvidence: getPwaGatewayDecisionExportEvidence(gatewayDecisionEvidence),
     releaseDecision: {
       ...releaseDecision,
       statusLabel: getPwaReleaseDecisionLabel(releaseDecision.status),
