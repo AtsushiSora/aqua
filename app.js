@@ -4135,6 +4135,7 @@ function exportAiReviewData(format) {
   const retestAdjustmentConditions = getAiPromptNoteConditions(retestAdjustmentNotes);
   const promptDraftNoteConditions = getUniqueValues([...needsFixNoteConditions, ...retestAdjustmentConditions]);
   const reReviewSummary = getAiDraftReReviewSummary(entries, retestAdjustmentConditions);
+  const reReviewDecision = getAiDraftReReviewDecision(reReviewSummary);
   const promptDraftItems = getAiPromptV4DraftItems({
     notes,
     needsFixNotes,
@@ -4268,6 +4269,24 @@ function exportAiReviewData(format) {
         "",
         `再評価対象${item.retestNeeded}件`,
       ]),
+      [
+        "prompt_v4_rereview_decision",
+        new Date().toISOString(),
+        "",
+        "AI Gateway",
+        reReviewDecision.status,
+        reReviewDecision.nextAction,
+        "",
+        reReviewSummary.targetConditionLabels.join(" / "),
+        "",
+        "aquanote-care-v4-draft",
+        "v4",
+        reReviewDecision.ready ? "再レビュー公開OK" : "再レビュー確認中",
+        "",
+        reReviewDecision.summary,
+        "",
+        `再レビュー済み${reReviewSummary.reReviewed}件 / 良い例${reReviewSummary.good}件 / 要修正${reReviewSummary.needsFix}件 / 保留${reReviewSummary.watch}件`,
+      ],
     ];
     downloadFile(`aquanote-ai-reviews-${dateKey}.csv`, toCsv(rows), "text/csv;charset=utf-8");
     showToast("AI評価レビューをCSVで書き出しました");
@@ -4305,6 +4324,7 @@ function exportAiReviewData(format) {
       review: promptDraftReview,
       retest: getAiPromptDraftRetestExport(entries, promptDraftReview, retestConditionSummary),
       reReview: reReviewSummary,
+      reReviewDecision,
     },
   };
   downloadFile(
@@ -6137,6 +6157,42 @@ function getAiDraftReReviewHeadline(summary) {
   return "未開始";
 }
 
+function getAiDraftReReviewDecision(summary) {
+  if (!summary.reReviewed) {
+    return {
+      status: "判定待ち",
+      ready: false,
+      summary: "草案再強化後の再レビューがまだありません。",
+      nextAction: "再レビュー対象を付け、良い例/要修正/保留を分類してください。",
+    };
+  }
+
+  if (summary.needsFix > 0) {
+    return {
+      status: "要再調整",
+      ready: false,
+      summary: `再レビュー後も要修正が${summary.needsFix}件あります。`,
+      nextAction: "要修正が残った条件を改善メモへ戻し、草案を再調整してください。",
+    };
+  }
+
+  if (summary.good > 0 && summary.reReviewNeeded === 0) {
+    return {
+      status: "公開OK",
+      ready: true,
+      summary: `再レビュー済み${summary.reReviewed}件で要修正は残っていません。`,
+      nextAction: "本番公開前の最終チェックへ進めます。",
+    };
+  }
+
+  return {
+    status: "確認中",
+    ready: false,
+    summary: "再レビュー済みはありますが、良い例または未完了対象の確認が必要です。",
+    nextAction: "良い例/保留の分類と未完了の再レビュー対象を確認してください。",
+  };
+}
+
 function getAiPromptDraftRetestExport(entries = [], promptDraftReview = null, conditionSummary = null) {
   const gatewayPhotoEntries = entries.filter((entry) => entry.target === "投稿写真" && entry.source === "AI Gateway");
   const retestNeeded = gatewayPhotoEntries.filter((entry) => entry.promptDraftRetestStatus === "retest_needed");
@@ -6268,6 +6324,7 @@ function renderAiImageValidationSummary(entries) {
   const retestAdjustmentConditions = getAiPromptNoteConditions(retestAdjustmentNotes);
   const promptDraftNoteConditions = getUniqueValues([...needsFixNoteConditions, ...retestAdjustmentConditions]);
   const reReviewSummary = getAiDraftReReviewSummary(entries, retestAdjustmentConditions);
+  const reReviewDecision = getAiDraftReReviewDecision(reReviewSummary);
   const promptDraftItems = getAiPromptV4DraftItems({
     notes,
     needsFixNotes,
@@ -6338,6 +6395,12 @@ function renderAiImageValidationSummary(entries) {
             ? `<small>${escapeHtml(reReviewSummary.targetConditionLabels.join(" / "))}</small>`
             : ""
         }
+      </div>
+      <div class="ai-rereview-decision ${reReviewDecision.ready ? "is-ready" : reReviewDecision.status === "要再調整" ? "is-warning" : ""}">
+        <span>再レビュー最終判定</span>
+        <strong>${escapeHtml(reReviewDecision.status)}</strong>
+        <p>${escapeHtml(reReviewDecision.summary)}</p>
+        <small>${escapeHtml(reReviewDecision.nextAction)}</small>
       </div>
       <div class="ai-retest-condition-summary">
         <span>再評価後の条件別改善</span>
