@@ -2949,6 +2949,7 @@ textarea {
 }
 
 .ai-draft-retest-summary,
+.ai-draft-rereview-summary,
 .ai-draft-retest {
   display: grid;
   gap: 8px;
@@ -2959,32 +2960,38 @@ textarea {
 }
 
 .ai-draft-retest-summary.is-needed,
+.ai-draft-rereview-summary.is-needed,
 .ai-draft-retest.is-needed {
   border-color: rgba(17, 92, 110, 0.24);
   background: rgba(237, 251, 255, 0.78);
 }
 
 .ai-draft-retest-summary.is-done,
+.ai-draft-rereview-summary.is-done,
 .ai-draft-retest.is-done {
   border-color: rgba(42, 157, 143, 0.28);
   background: rgba(232, 248, 241, 0.82);
 }
 
 .ai-draft-retest-summary strong,
+.ai-draft-rereview-summary strong,
 .ai-draft-retest strong {
   color: var(--aqua-dark);
   font-size: 0.95rem;
 }
 
 .ai-draft-retest-summary span,
+.ai-draft-rereview-summary span,
 .ai-draft-retest span,
+.ai-draft-rereview-summary small,
 .ai-draft-retest small {
   color: var(--muted);
   font-size: 0.76rem;
   font-weight: 900;
 }
 
-.ai-draft-retest-summary p {
+.ai-draft-retest-summary p,
+.ai-draft-rereview-summary p {
   margin: 0;
   font-size: 0.78rem;
 }
