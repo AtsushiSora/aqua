@@ -6420,6 +6420,11 @@ function renderAiImageValidationSummary(entries) {
             : ""
         }
         <small>${escapeHtml(reReviewDecision.nextAction)}</small>
+        ${
+          reReviewDecision.ready
+            ? `<a class="ai-release-link" href="#account">最終リリース確認へ進む</a>`
+            : ""
+        }
       </div>
       <div class="ai-retest-condition-summary">
         <span>再評価後の条件別改善</span>

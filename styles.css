@@ -3065,6 +3065,20 @@ textarea {
   font-weight: 900;
 }
 
+.ai-release-link {
+  width: fit-content;
+  min-height: 34px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: var(--aqua-dark);
+  color: #ffffff;
+  font-size: 0.78rem;
+  font-weight: 900;
+  text-decoration: none;
+}
+
 .ai-retest-condition-summary {
   display: grid;
   gap: 8px;
