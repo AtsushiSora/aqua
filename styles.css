@@ -2864,6 +2864,24 @@ textarea {
   margin-top: 8px;
 }
 
+.ai-needs-fix-note {
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid var(--glass-border);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.58);
+}
+
+.ai-needs-fix-note.is-active {
+  border-color: rgba(217, 145, 45, 0.28);
+  background: rgba(255, 246, 225, 0.78);
+}
+
+.ai-needs-fix-note button {
+  width: fit-content;
+}
+
 .ai-live-review {
   display: grid;
   gap: 8px;

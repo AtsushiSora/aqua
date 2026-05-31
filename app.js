@@ -661,6 +661,12 @@ aiPromptImprovementNote.addEventListener("input", () => {
 });
 aiPromptNoteSaveButton.addEventListener("click", () => saveAiPromptNote());
 aiImageValidationSummary.addEventListener("click", (event) => {
+  const needsFixNoteButton = event.target.closest("[data-ai-needs-fix-note]");
+  if (needsFixNoteButton) {
+    applyAiNeedsFixEntryNote(needsFixNoteButton.dataset.aiNeedsFixNote);
+    return;
+  }
+
   const reviewButton = event.target.closest("[data-ai-quick-review]");
   if (reviewButton) {
     updateAiEvaluationReview(reviewButton.dataset.aiQuickReview, reviewButton.dataset.aiQuickReviewValue);
@@ -5797,6 +5803,7 @@ function renderAiImageValidationSummary(entries) {
   const nextConditionKey = getNextAiPhotoConditionKey(conditionCounts);
   const latestGatewayPhoto = gatewayPhotoEntries[0] || null;
   const latestUnreviewedGatewayPhoto = gatewayPhotoEntries.find((entry) => entry.reviewLabel === "unreviewed") || null;
+  const latestNeedsFixGatewayPhoto = gatewayPhotoEntries.find((entry) => entry.reviewLabel === "needs_fix") || null;
   const productionChecklist = getAiPromptV4ProductionChecklist({
     gatewayPhotoEntries,
     v4Entries,
@@ -5861,6 +5868,19 @@ function renderAiImageValidationSummary(entries) {
         ${
           weakCondition
             ? `<button class="ghost-button" type="button" data-ai-weak-condition-note="${escapeHtml(weakCondition.key)}">改善メモを履歴保存</button>`
+            : ""
+        }
+      </div>
+      <div class="ai-needs-fix-note ${latestNeedsFixGatewayPhoto ? "is-active" : ""}">
+        <span>要修正メモ</span>
+        <strong>${escapeHtml(latestNeedsFixGatewayPhoto ? getAiPhotoConditionLabel(latestNeedsFixGatewayPhoto.photoCondition) : "要修正なし")}</strong>
+        <p>${escapeHtml(latestNeedsFixGatewayPhoto ? latestNeedsFixGatewayPhoto.summary : "要修正に分類したGateway写真があると、改善メモへ変換できます。")}</p>
+        ${
+          latestNeedsFixGatewayPhoto
+            ? `
+              <small>${escapeHtml(formatFullDate(latestNeedsFixGatewayPhoto.createdAt))} / ${escapeHtml(latestNeedsFixGatewayPhoto.difference)}</small>
+              <button class="ghost-button" type="button" data-ai-needs-fix-note="${escapeHtml(latestNeedsFixGatewayPhoto.id)}">要修正を改善メモ化</button>
+            `
             : ""
         }
       </div>
@@ -6218,6 +6238,29 @@ function applyAiWeakConditionNote(conditionKey) {
   aiPromptImprovementNote.value = nextNote;
   state.aiPromptImprovementNote = nextNote;
   saveAiPromptNote({ silentEmpty: true, toastMessage: "弱点候補を改善メモ履歴へ保存しました" });
+}
+
+function applyAiNeedsFixEntryNote(entryId) {
+  const entry = (state.aiEvaluationLog || []).find((item) => item.id === entryId);
+  if (!entry || entry.reviewLabel !== "needs_fix") {
+    return;
+  }
+
+  const conditionLabel = getAiPhotoConditionLabel(entry.photoCondition);
+  const retakeNote = Array.isArray(entry.retakeTips) && entry.retakeTips.length
+    ? `撮り直し観点: ${entry.retakeTips.join(" / ")}`
+    : "撮り直し観点: 出力に不足。暗さ、反射、魚の小ささ、コケの見え方を明示する。";
+  const nextNote = [
+    `実写真要修正メモ: ${conditionLabel}`,
+    `状態: ${entry.status} / 差分: ${entry.difference}`,
+    `要約: ${entry.summary}`,
+    retakeNote,
+    "改善方針: 見える範囲と見えない範囲を分け、断定表現を確認行動へ移す。",
+  ].join("\n");
+
+  aiPromptImprovementNote.value = nextNote;
+  state.aiPromptImprovementNote = nextNote;
+  saveAiPromptNote({ silentEmpty: true, toastMessage: "要修正レビューを改善メモ履歴へ保存しました" });
 }
 
 function getAiEvaluationSuggestion(counts, entries) {

@@ -121,6 +121,7 @@ PWA Push subscription scaffold:
 - Classify the latest unreviewed Gateway photo directly from the validation summary. Done in the prototype.
 - Tag the latest unreviewed Gateway photo with a photo condition from the validation summary. Done in the prototype.
 - Show per-condition real-photo sample progress against a two-sample target. Done in the prototype.
+- Convert the latest needs-fix Gateway photo review into a prompt improvement note. Done in the prototype.
 - Tune the AI prompt to v3 with visible evidence, confidence, retake tips, and non-diagnostic care guidance. Done in the prototype.
 - Keep local comparison logs and review notes for AI Gateway versus fallback results. Done in the prototype.
 - Sync AI comparison logs and review notes to `ai_evaluations`. Done in the prototype.
@@ -150,7 +151,7 @@ PWA Push subscription scaffold:
 
 Production release evidence:
 
-- Add needs-fix notes for classified live Gateway photo samples.
+- Use saved needs-fix notes to strengthen the next prompt draft.
 - Review needs-fix examples and turn them into prompt improvement notes.
 - Run PWA installation, notification, offline, and UI mode checks on the production URL.
 - Review synced `pwa_device_tests` rows before production launch.
