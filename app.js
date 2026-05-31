@@ -94,6 +94,8 @@ const pwaTestForm = document.querySelector("#pwa-test-form");
 const pwaTestReview = document.querySelector("#pwa-test-review");
 const pwaTestLog = document.querySelector("#pwa-test-log");
 const pwaTestExportButton = document.querySelector("#pwa-test-export-button");
+const pwaTestScopeInput = document.querySelector("#pwa-test-scope-input");
+const pwaTestScopeHint = document.querySelector("#pwa-test-scope-hint");
 const pwaReleaseDecisionForm = document.querySelector("#pwa-release-decision-form");
 const pwaReleaseDecisionChip = document.querySelector("#pwa-release-decision-chip");
 const pwaReleaseDecisionSummary = document.querySelector("#pwa-release-decision-summary");
@@ -118,6 +120,14 @@ const supabaseConfig = window.AQUANOTE_SUPABASE_CONFIG || {};
 const pushConfig = window.AQUANOTE_PUSH_CONFIG || {};
 const UI_MODES = ["standard", "simple", "glance", "adult"];
 const PWA_REQUIRED_SCOPES = ["login", "install", "notification", "offline", "ui_modes", "custom_images"];
+const PWA_SCOPE_QA_HINTS = {
+  login: ["ログイン状態", "プロフィール同期", "再読み込み後の維持"],
+  install: ["ホーム画面追加", "アイコン起動", "スタンドアロン表示"],
+  notification: ["通知許可", "Push購読", "dry-run解除後の受信"],
+  offline: ["機内モード再読み込み", "オフラインページ", "復帰後の再表示"],
+  ui_modes: ["ベーシック", "かんたん", "一目", "大人"],
+  custom_images: ["背景画像", "ボタン背面", "文字の読みやすさ"],
+};
 const AI_REQUIRED_PHOTO_CONDITIONS = ["dark", "small_fish", "algae", "reflection"];
 const AI_REQUIRED_SAMPLES_PER_CONDITION = 2;
 
@@ -533,6 +543,7 @@ installAppButton.addEventListener("click", async () => {
 postTankFilter.addEventListener("change", renderPosts);
 communityTagSearch.addEventListener("input", renderPosts);
 communitySortSelect.addEventListener("change", renderPosts);
+pwaTestScopeInput.addEventListener("change", renderPwaTestScopeHint);
 
 albumMonthFilter.addEventListener("change", () => {
   activeAlbumMonth = albumMonthFilter.value;
@@ -1183,6 +1194,7 @@ function renderApp() {
   renderReminders();
   renderDashboard();
   renderAccount();
+  renderPwaTestScopeHint();
   renderAiApiStatus();
   renderAiEvaluationLog();
 }
@@ -1299,6 +1311,7 @@ async function handlePwaTestSubmit(event) {
   state.pwaTestResults = [result, ...state.pwaTestResults].slice(0, 20);
   saveState();
   pwaTestForm.reset();
+  renderPwaTestScopeHint();
   renderPwaTestResults();
   if (authSession?.user) {
     await syncPwaDeviceTestsToSupabase({ silent: true });
@@ -1338,6 +1351,21 @@ function renderPwaTestResults() {
       `,
     )
     .join("");
+}
+
+function renderPwaTestScopeHint() {
+  if (!pwaTestScopeInput || !pwaTestScopeHint) {
+    return;
+  }
+
+  const scope = getAllowedValue(pwaTestScopeInput.value, PWA_REQUIRED_SCOPES, "install");
+  const hints = PWA_SCOPE_QA_HINTS[scope] || [];
+  pwaTestScopeHint.innerHTML = `
+    <span>${escapeHtml(getPwaTestScopeLabel(scope))}の記録観点</span>
+    <div>
+      ${hints.map((hint) => `<small>${escapeHtml(hint)}</small>`).join("")}
+    </div>
+  `;
 }
 
 function renderPwaTestReview(results) {

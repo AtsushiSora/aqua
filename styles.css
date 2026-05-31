@@ -3913,6 +3913,36 @@ textarea {
   gap: 12px;
 }
 
+.pwa-test-scope-hint {
+  display: grid;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid rgba(10, 95, 99, 0.14);
+  border-radius: 8px;
+  background: rgba(237, 251, 255, 0.66);
+}
+
+.pwa-test-scope-hint span {
+  color: var(--aqua-dark);
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
+.pwa-test-scope-hint div {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.pwa-test-scope-hint small {
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.72);
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 850;
+}
+
 .pwa-review-guide {
   display: grid;
   gap: 4px;
