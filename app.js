@@ -117,6 +117,7 @@ const quickDockButtons = document.querySelectorAll(".quick-dock button");
 const supabaseConfig = window.AQUANOTE_SUPABASE_CONFIG || {};
 const pushConfig = window.AQUANOTE_PUSH_CONFIG || {};
 const UI_MODES = ["standard", "simple", "glance", "adult"];
+const PWA_REQUIRED_SCOPES = ["login", "install", "notification", "offline", "ui_modes", "custom_images"];
 const AI_REQUIRED_PHOTO_CONDITIONS = ["dark", "small_fish", "algae", "reflection"];
 const AI_REQUIRED_SAMPLES_PER_CONDITION = 2;
 
@@ -1344,7 +1345,7 @@ function renderPwaTestReview(results) {
     return;
   }
 
-  const scopes = ["login", "install", "notification", "offline", "ui_modes"];
+  const scopes = PWA_REQUIRED_SCOPES;
   const passedScopes = new Set(results.filter((result) => result.status === "passed").map((result) => result.scope));
   const watchCount = results.filter((result) => result.status === "watch").length;
   const failedCount = results.filter((result) => result.status === "failed").length;
@@ -1354,8 +1355,8 @@ function renderPwaTestReview(results) {
   const ready = passedCount === scopes.length && failedCount === 0;
   const reviewLabel = ready ? "公開前OK" : totalCount ? "確認中" : "未記録";
   const reviewNote = ready
-    ? "必須項目はOKです。最後に本番URLで再読み込みして、通知とオフライン復帰をもう一度確認します。"
-    : "本番URLでログイン、ホーム追加、通知受信、オフライン復帰、4モード表示を確認して記録します。";
+    ? "必須項目はOKです。最後に本番URLで再読み込みして、通知、オフライン復帰、画像カスタムをもう一度確認します。"
+    : "本番URLでログイン、ホーム追加、通知受信、オフライン復帰、4モード表示、画像カスタムを確認して記録します。";
 
   pwaTestReview.innerHTML = `
     <div class="pwa-test-score ${ready ? "ready" : "pending"}">
@@ -1390,7 +1391,7 @@ function renderPwaTestReview(results) {
 }
 
 function getPwaReleaseCoverage(results = state.pwaTestResults || []) {
-  const scopes = ["login", "install", "notification", "offline", "ui_modes"];
+  const scopes = PWA_REQUIRED_SCOPES;
   const passedScopes = new Set(results.filter((result) => result.status === "passed").map((result) => result.scope));
   const failedCount = results.filter((result) => result.status === "failed").length;
   return {
@@ -1691,7 +1692,7 @@ function getPwaReleaseHandoffState(evidenceItems) {
     実機レビュー: "実機レビューを完了に更新",
     結果確認: "実機結果、最終判定、レビューJSONを確認済みに更新",
     実機記録: "本番URLを実機で確認し、PWA実機テスト結果を保存",
-    必須項目: "ログイン、ホーム追加、通知受信、オフライン復帰、4モード表示をOKにする",
+    必須項目: "ログイン、ホーム追加、通知受信、オフライン復帰、4モード表示、画像カスタムをOKにする",
     NGなし: "NG記録の原因を解消し、再テスト結果を保存",
     本番URL: "本番URLを入力して判定メモを保存",
     公開判断: "判定を公開OKに更新",
@@ -1741,6 +1742,7 @@ function getPwaTestScopeLabel(scope) {
     notification: "通知受信",
     offline: "オフライン復帰",
     ui_modes: "4モード表示",
+    custom_images: "画像カスタム",
     login: "ログイン",
   };
   return labels[scope] || labels.install;
@@ -8368,7 +8370,7 @@ function normalizePwaTestResult(result) {
     device: String(result.device || "未記録").trim() || "未記録",
     browser: String(result.browser || "未記録").trim() || "未記録",
     status: getAllowedValue(result.status, ["passed", "watch", "failed"], "watch"),
-    scope: getAllowedValue(result.scope, ["install", "notification", "offline", "ui_modes", "login"], "install"),
+    scope: getAllowedValue(result.scope, PWA_REQUIRED_SCOPES, "install"),
     note: String(result.note || "").trim(),
   };
 }
