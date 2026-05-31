@@ -147,6 +147,7 @@ PWA Push subscription scaffold:
 - Use saved needs-fix notes to strengthen the next prompt draft. Done in the prototype.
 - Review the prompt draft impact from saved needs-fix notes. Done in the prototype.
 - Re-test Gateway photo output after the prompt draft impact review. Done in the prototype.
+- Summarize condition-level improvement after Gateway photo re-tests. Done in the prototype.
 - Keep the optional `WEB_PUSH_ENDPOINT` provider path for hosted push gateways.
 - Keep in-app reminder checks as a fallback while notification delivery is tested.
 
@@ -154,7 +155,7 @@ PWA Push subscription scaffold:
 
 Production release evidence:
 
-- Summarize condition-level improvement after Gateway photo re-tests.
+- Turn re-test conditions that still need adjustment back into prompt notes.
 - Review needs-fix examples and turn them into prompt improvement notes.
 - Run PWA installation, notification, offline, and UI mode checks on the production URL.
 - Review synced `pwa_device_tests` rows before production launch.

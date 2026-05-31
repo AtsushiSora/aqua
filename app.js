@@ -4131,6 +4131,7 @@ function exportAiReviewData(format) {
     needsFixEntries: entries.filter((entry) => entry.reviewLabel === "needs_fix"),
   });
   const promptDraftReview = getAiPromptDraftReview({ draftItems: promptDraftItems, needsFixNotes, needsFixNoteConditions });
+  const retestConditionSummary = getAiPromptDraftRetestConditionSummary(entries);
   if (!entries.length && !notes.length && !promptDraftItems.length) {
     showToast("書き出すAI評価レビューがありません");
     return;
@@ -4234,6 +4235,24 @@ function exportAiReviewData(format) {
             ],
           ]
         : []),
+      ...retestConditionSummary.map((item) => [
+        "prompt_v4_retest_condition",
+        new Date().toISOString(),
+        "",
+        "AI Gateway",
+        item.status,
+        item.nextAction,
+        "",
+        item.label,
+        "",
+        "aquanote-care-v4-draft",
+        "v4",
+        item.improved ? "再評価改善" : "再評価確認中",
+        "",
+        `再評価済み${item.retested}件 / 良い例${item.good}件 / 要修正${item.needsFix}件 / 保留${item.watch}件`,
+        "",
+        `再評価対象${item.retestNeeded}件`,
+      ]),
     ];
     downloadFile(`aquanote-ai-reviews-${dateKey}.csv`, toCsv(rows), "text/csv;charset=utf-8");
     showToast("AI評価レビューをCSVで書き出しました");
@@ -4267,7 +4286,7 @@ function exportAiReviewData(format) {
       needsFixNotesCount: needsFixNotes.length,
       needsFixNoteConditions,
       review: promptDraftReview,
-      retest: getAiPromptDraftRetestExport(entries, promptDraftReview),
+      retest: getAiPromptDraftRetestExport(entries, promptDraftReview, retestConditionSummary),
     },
   };
   downloadFile(
@@ -5996,15 +6015,17 @@ function getAiPromptDraftRetestSuggestion({ promptDraftReview, draftRetestNeeded
   return "草案反映OKです。最新のGateway写真を再評価対象にして、出力の変化を確認してください。";
 }
 
-function getAiPromptDraftRetestExport(entries = [], promptDraftReview = null) {
+function getAiPromptDraftRetestExport(entries = [], promptDraftReview = null, conditionSummary = null) {
   const gatewayPhotoEntries = entries.filter((entry) => entry.target === "投稿写真" && entry.source === "AI Gateway");
   const retestNeeded = gatewayPhotoEntries.filter((entry) => entry.promptDraftRetestStatus === "retest_needed");
   const retested = gatewayPhotoEntries.filter((entry) => entry.promptDraftRetestStatus === "retested");
+  const summary = conditionSummary || getAiPromptDraftRetestConditionSummary(entries);
 
   return {
     readyForRetest: promptDraftReview?.ready === true,
     retestNeeded: retestNeeded.length,
     retested: retested.length,
+    conditionSummary: summary,
     items: [...retestNeeded, ...retested].map((entry) => ({
       id: entry.id,
       status: entry.promptDraftRetestStatus,
@@ -6016,6 +6037,81 @@ function getAiPromptDraftRetestExport(entries = [], promptDraftReview = null) {
       summary: entry.summary,
     })),
   };
+}
+
+function getAiPromptDraftRetestConditionSummary(entries = []) {
+  const gatewayPhotoEntries = entries.filter((entry) => entry.target === "投稿写真" && entry.source === "AI Gateway");
+
+  return AI_REQUIRED_PHOTO_CONDITIONS.map((condition) => {
+    const conditionEntries = gatewayPhotoEntries.filter((entry) => entry.photoCondition === condition);
+    const retested = conditionEntries.filter((entry) => entry.promptDraftRetestStatus === "retested");
+    const retestNeeded = conditionEntries.filter((entry) => entry.promptDraftRetestStatus === "retest_needed");
+    const good = retested.filter((entry) => entry.reviewLabel === "good").length;
+    const needsFix = retested.filter((entry) => entry.reviewLabel === "needs_fix").length;
+    const watch = retested.filter((entry) => entry.reviewLabel === "watch").length;
+    const unreviewed = retested.filter((entry) => entry.reviewLabel === "unreviewed").length;
+    const improved = retested.length > 0 && good > 0 && needsFix === 0;
+    const status = getAiPromptDraftRetestConditionStatus({ retested: retested.length, retestNeeded: retestNeeded.length, good, needsFix });
+
+    return {
+      condition,
+      label: getAiPhotoConditionLabel(condition),
+      total: conditionEntries.length,
+      retestNeeded: retestNeeded.length,
+      retested: retested.length,
+      good,
+      needsFix,
+      watch,
+      unreviewed,
+      improved,
+      status,
+      nextAction: getAiPromptDraftRetestConditionNextAction({ condition, retested: retested.length, retestNeeded: retestNeeded.length, needsFix }),
+    };
+  });
+}
+
+function getAiPromptDraftRetestConditionSummaryHeadline(summary = []) {
+  const improved = summary.filter((item) => item.improved).length;
+  const warning = summary.filter((item) => item.needsFix > 0).length;
+  const checked = summary.filter((item) => item.retested > 0).length;
+
+  if (improved) {
+    return `改善あり ${improved}条件`;
+  }
+  if (warning) {
+    return `要再調整 ${warning}条件`;
+  }
+  if (checked) {
+    return `確認済み ${checked}条件`;
+  }
+  return "未開始";
+}
+
+function getAiPromptDraftRetestConditionStatus({ retested, retestNeeded, good, needsFix }) {
+  if (retested > 0 && good > 0 && needsFix === 0) {
+    return "改善あり";
+  }
+  if (retested > 0 && needsFix > 0) {
+    return "要再調整";
+  }
+  if (retestNeeded > 0) {
+    return "再評価待ち";
+  }
+  return "未開始";
+}
+
+function getAiPromptDraftRetestConditionNextAction({ condition, retested, retestNeeded, needsFix }) {
+  const label = getAiPhotoConditionLabel(condition);
+  if (retested > 0 && needsFix === 0) {
+    return `${label}は改善傾向です。同じ条件のサンプルを増やしてください。`;
+  }
+  if (needsFix > 0) {
+    return `${label}は再評価後も要修正があります。改善メモへ戻して草案を調整してください。`;
+  }
+  if (retestNeeded > 0) {
+    return `${label}の再評価対象があります。良い例/要修正/保留を付け直してください。`;
+  }
+  return `${label}の草案後再評価をまだ記録していません。`;
 }
 
 function renderAiImageValidationSummary(entries) {
@@ -6038,6 +6134,7 @@ function renderAiImageValidationSummary(entries) {
   const latestNeedsFixGatewayPhoto = gatewayPhotoEntries.find((entry) => entry.reviewLabel === "needs_fix") || null;
   const draftRetestNeededCount = gatewayPhotoEntries.filter((entry) => entry.promptDraftRetestStatus === "retest_needed").length;
   const draftRetestedCount = gatewayPhotoEntries.filter((entry) => entry.promptDraftRetestStatus === "retested").length;
+  const retestConditionSummary = getAiPromptDraftRetestConditionSummary(entries);
   const notes = Array.isArray(state.aiPromptNotes) ? state.aiPromptNotes : [];
   const needsFixNotes = getAiNeedsFixPromptNotes(notes);
   const needsFixNoteConditions = getAiNeedsFixNoteConditions(needsFixNotes);
@@ -6096,6 +6193,23 @@ function renderAiImageValidationSummary(entries) {
         <span>草案後再評価</span>
         <strong>${draftRetestedCount ? `再評価済み ${draftRetestedCount}件` : draftRetestNeededCount ? `対象 ${draftRetestNeededCount}件` : "未開始"}</strong>
         <p>${escapeHtml(getAiPromptDraftRetestSuggestion({ promptDraftReview, draftRetestNeededCount, draftRetestedCount, latestGatewayPhoto }))}</p>
+      </div>
+      <div class="ai-retest-condition-summary">
+        <span>再評価後の条件別改善</span>
+        <strong>${escapeHtml(getAiPromptDraftRetestConditionSummaryHeadline(retestConditionSummary))}</strong>
+        <ul>
+          ${retestConditionSummary
+            .map(
+              (item) => `
+                <li class="${item.improved ? "is-improved" : item.needsFix ? "is-warning" : item.retested ? "is-checked" : ""}">
+                  <strong>${escapeHtml(item.label)}</strong>
+                  <span>${escapeHtml(item.status)}</span>
+                  <p>再評価済み${item.retested}件 / 良い例${item.good}件 / 要修正${item.needsFix}件 / 保留${item.watch}件</p>
+                </li>
+              `,
+            )
+            .join("")}
+        </ul>
       </div>
       <div class="ai-condition-coverage">
         <span>条件別サンプル</span>
@@ -6191,7 +6305,7 @@ function getAiPromptV4ProductionChecklist({ gatewayPhotoEntries, v4Entries, prom
   const goodV4 = v4Entries.filter((entry) => entry.reviewLabel === "good");
   const hasNeedsFixNote = v4Entries.some((entry) => entry.reviewLabel === "needs_fix" && entry.note);
   const hasRetakeTips = v4Entries.some((entry) => Array.isArray(entry.retakeTips) && entry.retakeTips.length);
-  const unresolvedCondition = requiredConditions.find((key) => conditionCounts[key].needsFix > 0);
+  const unresolvedCondition = AI_REQUIRED_PHOTO_CONDITIONS.find((key) => conditionCounts[key].needsFix > 0);
   const improvedConditions = promptComparison.filter((item) => item.improved).length;
 
   return [

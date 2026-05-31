@@ -2975,6 +2975,67 @@ textarea {
   font-size: 0.78rem;
 }
 
+.ai-retest-condition-summary {
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid var(--glass-border);
+  border-radius: 8px;
+  background: rgba(248, 252, 251, 0.8);
+}
+
+.ai-retest-condition-summary > span {
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 900;
+}
+
+.ai-retest-condition-summary > strong {
+  color: var(--aqua-dark);
+  font-size: 0.95rem;
+}
+
+.ai-retest-condition-summary ul {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ai-retest-condition-summary li {
+  display: grid;
+  gap: 4px;
+  padding: 8px;
+  border-radius: 8px;
+  background: rgba(241, 245, 249, 0.78);
+}
+
+.ai-retest-condition-summary li.is-checked {
+  background: rgba(237, 251, 255, 0.78);
+}
+
+.ai-retest-condition-summary li.is-improved {
+  background: rgba(232, 248, 241, 0.82);
+}
+
+.ai-retest-condition-summary li.is-warning {
+  background: rgba(255, 247, 230, 0.82);
+}
+
+.ai-retest-condition-summary li strong {
+  color: var(--ink);
+  font-size: 0.82rem;
+}
+
+.ai-retest-condition-summary li span,
+.ai-retest-condition-summary li p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 850;
+}
+
 .ai-live-review-actions {
   display: flex;
   flex-wrap: wrap;
