@@ -1444,6 +1444,10 @@ function renderPwaReleaseDecision() {
           .map((item) => `<li class="${item.ready ? "ready" : "pending"}">${escapeHtml(item.label)}: ${escapeHtml(item.note)}</li>`)
           .join("")}
       </ul>
+      <div class="pwa-gateway-actions">
+        <span>${gatewayDecision.ready ? "次の確認" : "未完了アクション"}</span>
+        ${gatewayExportEvidence.incompleteActions.map((action) => `<p>${escapeHtml(action)}</p>`).join("")}
+      </div>
     </div>
     <div class="pwa-release-evidence-grid">
       ${evidenceItems
@@ -1546,6 +1550,7 @@ function getAiGatewayProductionDecisionEvidence() {
 }
 
 function getPwaGatewayDecisionExportEvidence(gatewayDecision) {
+  const incompleteActions = getPwaGatewayDecisionIncompleteActions(gatewayDecision);
   return {
     ...gatewayDecision,
     title: gatewayDecision.ready ? "AI Gateway本番判定OK" : "AI Gateway本番判定は確認中",
@@ -1575,7 +1580,33 @@ function getPwaGatewayDecisionExportEvidence(gatewayDecision) {
         note: gatewayDecision.status,
       },
     ],
+    incompleteActions,
   };
+}
+
+function getPwaGatewayDecisionIncompleteActions(gatewayDecision) {
+  if (gatewayDecision.ready) {
+    return ["Gateway本番判定は公開OKです。PWA最終QAと本番URL確認へ進めます。"];
+  }
+
+  const actions = [];
+  const conditionText = gatewayDecision.targetConditionLabels.length
+    ? gatewayDecision.targetConditionLabels.join(" / ")
+    : "対象条件未記録";
+
+  if (gatewayDecision.reReviewed === 0) {
+    actions.push(`再強化後のGateway写真を再レビューしてください。対象条件: ${conditionText}`);
+  }
+
+  if (gatewayDecision.needsFix > 0) {
+    actions.push(`要修正が${gatewayDecision.needsFix}件あります。改善メモへ戻して、草案を再調整します。`);
+  }
+
+  if (!gatewayDecision.ready) {
+    actions.push(gatewayDecision.nextAction || "Gateway本番判定を公開OKにしてから最終公開へ進みます。");
+  }
+
+  return [...new Set(actions)];
 }
 
 function getPwaReleaseQaState(evidenceItems) {
