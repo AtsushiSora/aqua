@@ -1352,6 +1352,7 @@ function renderPwaTestReview(results) {
   const passedCount = scopes.filter((scope) => passedScopes.has(scope)).length;
   const totalCount = results.length;
   const latestResult = results[0] || null;
+  const modeQa = getPwaModeQaSummary(results);
   const ready = passedCount === scopes.length && failedCount === 0;
   const reviewLabel = ready ? "公開前OK" : totalCount ? "確認中" : "未記録";
   const reviewNote = ready
@@ -1387,7 +1388,38 @@ function renderPwaTestReview(results) {
     <p class="pwa-test-review-note">
       ${escapeHtml(`記録 ${totalCount}件 / 要確認 ${watchCount}件 / NG ${failedCount}件${latestResult ? ` / 最新 ${formatFullDate(latestResult.createdAt)}` : ""}`)}
     </p>
+    <div class="pwa-mode-qa-list">
+      ${modeQa
+        .map(
+          (item) => `
+            <article class="${item.ready ? "passed" : "missing"}">
+              <span>${escapeHtml(item.label)}</span>
+              <strong>${escapeHtml(item.ready ? "確認済み" : "未確認")}</strong>
+              <small>${escapeHtml(item.note)}</small>
+            </article>
+          `,
+        )
+        .join("")}
+    </div>
   `;
+}
+
+function getPwaModeQaSummary(results) {
+  const passedScopes = new Set(results.filter((result) => result.status === "passed").map((result) => result.scope));
+  const latestModeResult = results.find((result) => result.scope === "ui_modes");
+  const latestImageResult = results.find((result) => result.scope === "custom_images");
+  return [
+    {
+      label: "4モード表示",
+      ready: passedScopes.has("ui_modes"),
+      note: latestModeResult?.note || "ベーシック、かんたん、一目、大人モードでホーム、投稿、AI、アカウントを確認",
+    },
+    {
+      label: "画像カスタム",
+      ready: passedScopes.has("custom_images"),
+      note: latestImageResult?.note || "背景画像とボタン背面画像を設定し、各モードで文字の読みやすさを確認",
+    },
+  ];
 }
 
 function getPwaReleaseCoverage(results = state.pwaTestResults || []) {
