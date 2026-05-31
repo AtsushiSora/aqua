@@ -665,6 +665,12 @@ aiImageValidationSummary.addEventListener("click", (event) => {
     return;
   }
 
+  const conditionButton = event.target.closest("[data-ai-quick-condition]");
+  if (conditionButton) {
+    updateAiEvaluationReview(conditionButton.dataset.aiQuickCondition, null, conditionButton.dataset.aiQuickConditionValue);
+    return;
+  }
+
   const button = event.target.closest("[data-ai-weak-condition-note]");
   if (!button) {
     return;
@@ -5786,6 +5792,7 @@ function renderAiImageValidationSummary(entries) {
   const promptComparison = getAiPromptGenerationComparison(gatewayPhotoEntries);
   const conditionCounts = getAiPhotoConditionCounts(gatewayPhotoEntries);
   const weakCondition = getAiWeakPhotoCondition(conditionCounts);
+  const nextConditionKey = getNextAiPhotoConditionKey(conditionCounts);
   const latestGatewayPhoto = gatewayPhotoEntries[0] || null;
   const latestUnreviewedGatewayPhoto = gatewayPhotoEntries.find((entry) => entry.reviewLabel === "unreviewed") || null;
   const productionChecklist = getAiPromptV4ProductionChecklist({
@@ -5835,6 +5842,7 @@ function renderAiImageValidationSummary(entries) {
       </div>
       <div class="ai-condition-coverage">
         <span>条件別サンプル</span>
+        <strong>${escapeHtml(nextConditionKey ? `次: ${getAiPhotoConditionLabel(nextConditionKey)}` : "主要条件は記録済み")}</strong>
         <ul>
           ${["dark", "small_fish", "algae", "reflection"]
             .map((key) => `<li>${escapeHtml(getAiPhotoConditionLabel(key))}: ${conditionCounts[key].total}件 / 要修正${conditionCounts[key].needsFix}件</li>`)
@@ -5863,6 +5871,15 @@ function renderAiImageValidationSummary(entries) {
                 <button class="ghost-button" type="button" data-ai-quick-review="${escapeHtml(latestUnreviewedGatewayPhoto.id)}" data-ai-quick-review-value="good">良い例</button>
                 <button class="ghost-button" type="button" data-ai-quick-review="${escapeHtml(latestUnreviewedGatewayPhoto.id)}" data-ai-quick-review-value="needs_fix">要修正</button>
                 <button class="ghost-button" type="button" data-ai-quick-review="${escapeHtml(latestUnreviewedGatewayPhoto.id)}" data-ai-quick-review-value="watch">保留</button>
+              </div>
+              <div class="ai-live-review-actions condition-actions">
+                ${["normal", "dark", "small_fish", "algae", "reflection"]
+                  .map(
+                    (key) => `
+                      <button class="text-button ${latestUnreviewedGatewayPhoto.photoCondition === key ? "is-selected" : ""}" type="button" data-ai-quick-condition="${escapeHtml(latestUnreviewedGatewayPhoto.id)}" data-ai-quick-condition-value="${escapeHtml(key)}">${escapeHtml(getAiPhotoConditionLabel(key))}</button>
+                    `,
+                  )
+                  .join("")}
               </div>
             `
             : ""
@@ -6000,6 +6017,10 @@ function getAiImageValidationSuggestion({ photoEntries, gatewayPhotoEntries, nee
   }
 
   return "Gateway写真検証を継続中です。良い例と要修正を分類して、実写真での安定性を見ます。";
+}
+
+function getNextAiPhotoConditionKey(conditionCounts) {
+  return ["dark", "small_fish", "algae", "reflection"].find((key) => !conditionCounts[key].total) || null;
 }
 
 function getAiPhotoConditionCounts(entries) {

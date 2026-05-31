@@ -2880,6 +2880,23 @@ textarea {
   min-height: 34px;
 }
 
+.ai-live-review-actions.condition-actions {
+  padding-top: 2px;
+}
+
+.ai-live-review-actions .text-button {
+  min-height: 32px;
+  padding: 0 10px;
+  border: 1px solid var(--glass-border);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.62);
+}
+
+.ai-live-review-actions .text-button.is-selected {
+  background: var(--aqua-dark);
+  color: #ffffff;
+}
+
 .ai-production-checklist {
   padding: 10px;
   border: 1px solid var(--glass-border);
