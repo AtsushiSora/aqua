@@ -667,6 +667,12 @@ aiImageValidationSummary.addEventListener("click", (event) => {
     return;
   }
 
+  const retestConditionNoteButton = event.target.closest("[data-ai-retest-condition-note]");
+  if (retestConditionNoteButton) {
+    applyAiRetestConditionNote(retestConditionNoteButton.dataset.aiRetestConditionNote);
+    return;
+  }
+
   const reviewButton = event.target.closest("[data-ai-quick-review]");
   if (reviewButton) {
     updateAiEvaluationReview(reviewButton.dataset.aiQuickReview, reviewButton.dataset.aiQuickReviewValue);
@@ -6205,6 +6211,11 @@ function renderAiImageValidationSummary(entries) {
                   <strong>${escapeHtml(item.label)}</strong>
                   <span>${escapeHtml(item.status)}</span>
                   <p>再評価済み${item.retested}件 / 良い例${item.good}件 / 要修正${item.needsFix}件 / 保留${item.watch}件</p>
+                  ${
+                    item.needsFix
+                      ? `<button class="text-button" type="button" data-ai-retest-condition-note="${escapeHtml(item.condition)}">改善メモへ戻す</button>`
+                      : ""
+                  }
                 </li>
               `,
             )
@@ -6623,6 +6634,47 @@ function applyAiNeedsFixEntryNote(entryId) {
   aiPromptImprovementNote.value = nextNote;
   state.aiPromptImprovementNote = nextNote;
   saveAiPromptNote({ silentEmpty: true, toastMessage: "要修正レビューを改善メモ履歴へ保存しました" });
+}
+
+function applyAiRetestConditionNote(conditionKey) {
+  const condition = getAllowedValue(conditionKey, AI_REQUIRED_PHOTO_CONDITIONS, "");
+  if (!condition) {
+    return;
+  }
+
+  const conditionLabel = getAiPhotoConditionLabel(condition);
+  const entries = (state.aiEvaluationLog || []).filter(
+    (entry) =>
+      entry.target === "投稿写真" &&
+      entry.source === "AI Gateway" &&
+      entry.photoCondition === condition &&
+      entry.promptDraftRetestStatus === "retested" &&
+      entry.reviewLabel === "needs_fix",
+  );
+
+  if (!entries.length) {
+    showToast("改善メモへ戻す再評価結果がありません");
+    return;
+  }
+
+  const latestEntry = entries
+    .slice()
+    .sort((a, b) => new Date(b.promptDraftRetestedAt || b.createdAt).getTime() - new Date(a.promptDraftRetestedAt || a.createdAt).getTime())[0];
+  const retakeNote = Array.isArray(latestEntry.retakeTips) && latestEntry.retakeTips.length
+    ? `残った撮り直し観点: ${latestEntry.retakeTips.join(" / ")}`
+    : "残った撮り直し観点: 出力に不足。見えない範囲、撮影角度、追加確認を具体化する。";
+  const nextNote = [
+    `再評価要再調整メモ: ${conditionLabel}`,
+    `再評価後も要修正: ${entries.length}件`,
+    `最新例: ${latestEntry.status} / ${latestEntry.difference}`,
+    `要約: ${latestEntry.summary}`,
+    retakeNote,
+    "改善方針: 草案で反映した条件別ルールを強め、見える根拠と確認行動をさらに分ける。",
+  ].join("\n");
+
+  aiPromptImprovementNote.value = nextNote;
+  state.aiPromptImprovementNote = nextNote;
+  saveAiPromptNote({ silentEmpty: true, toastMessage: "再評価結果を改善メモ履歴へ戻しました" });
 }
 
 function getAiEvaluationSuggestion(counts, entries) {

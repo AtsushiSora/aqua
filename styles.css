@@ -3036,6 +3036,16 @@ textarea {
   font-weight: 850;
 }
 
+.ai-retest-condition-summary li button {
+  width: fit-content;
+  min-height: 30px;
+  padding: 0 10px;
+  border: 1px solid rgba(211, 139, 27, 0.26);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.7);
+  color: var(--amber);
+}
+
 .ai-live-review-actions {
   display: flex;
   flex-wrap: wrap;
