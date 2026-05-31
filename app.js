@@ -1698,7 +1698,6 @@ function renderPwaReleaseDecision() {
 
 function getPwaReleaseEvidenceItems(decision, coverage) {
   const results = Array.isArray(state.pwaTestResults) ? state.pwaTestResults : [];
-  const failedCount = results.filter((result) => result.status === "failed").length;
   const gatewayDecision = getAiGatewayProductionDecisionEvidence();
   return [
     {
@@ -1723,8 +1722,8 @@ function getPwaReleaseEvidenceItems(decision, coverage) {
     },
     {
       label: "NGなし",
-      ready: failedCount === 0,
-      note: failedCount ? `${failedCount}件のNGがあります` : "NG記録はありません",
+      ready: coverage.failedCount === 0,
+      note: coverage.failedCount ? `${coverage.failedCount}件の未解消NGがあります` : "未解消NGはありません",
     },
     {
       label: "本番URL",
@@ -4418,6 +4417,7 @@ function exportPwaTestResults() {
 
   const releaseDecision = normalizePwaReleaseDecision(state.pwaReleaseDecision || {});
   const coverage = getPwaReleaseCoverage(results);
+  const scopeStatuses = getPwaScopeStatuses(results);
   const gatewayDecisionEvidence = getAiGatewayProductionDecisionEvidence();
   const appearanceQa = getPwaModeQaSummary(results);
   const deviceQaActions = getPwaDeviceQaActionItems(results);
@@ -4438,7 +4438,9 @@ function exportPwaTestResults() {
       requiredScopes: coverage.scopes.map((scope) => ({
         scope,
         label: getPwaTestScopeLabel(scope),
-        passed: results.some((result) => result.scope === scope && result.status === "passed"),
+        status: scopeStatuses[scope],
+        statusLabel: getPwaTestStatusLabel(scopeStatuses[scope]),
+        passed: scopeStatuses[scope] === "passed",
       })),
     },
     appearanceQa: {
