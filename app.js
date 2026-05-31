@@ -1453,6 +1453,7 @@ function renderPwaReleaseDecision() {
 function getPwaReleaseEvidenceItems(decision, coverage) {
   const results = Array.isArray(state.pwaTestResults) ? state.pwaTestResults : [];
   const failedCount = results.filter((result) => result.status === "failed").length;
+  const gatewayDecision = getAiGatewayProductionDecisionEvidence();
   return [
     {
       label: "実機レビュー",
@@ -1490,6 +1491,11 @@ function getPwaReleaseEvidenceItems(decision, coverage) {
       note: getPwaReleaseDecisionLabel(decision.status),
     },
     {
+      label: "Gateway判定",
+      ready: gatewayDecision.ready,
+      note: gatewayDecision.summary,
+    },
+    {
       label: "確認者",
       ready: Boolean(decision.reviewer),
       note: decision.reviewer || "確認者未記録",
@@ -1505,6 +1511,26 @@ function getPwaReleaseEvidenceItems(decision, coverage) {
       note: decision.reviewExportedAt ? `${formatFullDate(decision.reviewExportedAt)} に書き出し` : "レビューJSON未書き出し",
     },
   ];
+}
+
+function getAiGatewayProductionDecisionEvidence() {
+  const entries = Array.isArray(state.aiEvaluationLog) ? state.aiEvaluationLog : [];
+  const notes = Array.isArray(state.aiPromptNotes) ? state.aiPromptNotes : [];
+  const retestAdjustmentConditions = getAiPromptNoteConditions(getAiRetestAdjustmentPromptNotes(notes));
+  const reReviewSummary = getAiDraftReReviewSummary(entries, retestAdjustmentConditions);
+  const decision = getAiDraftReReviewDecision(reReviewSummary);
+
+  return {
+    status: decision.status,
+    ready: decision.ready,
+    summary: decision.ready ? "Gateway公開OK" : decision.summary,
+    nextAction: decision.nextAction,
+    targetConditionLabels: reReviewSummary.targetConditionLabels,
+    reReviewed: reReviewSummary.reReviewed,
+    good: reReviewSummary.good,
+    needsFix: reReviewSummary.needsFix,
+    watch: reReviewSummary.watch,
+  };
 }
 
 function getPwaReleaseQaState(evidenceItems) {
@@ -4056,6 +4082,7 @@ function exportPwaTestResults() {
 
   const releaseDecision = normalizePwaReleaseDecision(state.pwaReleaseDecision || {});
   const coverage = getPwaReleaseCoverage(results);
+  const gatewayDecisionEvidence = getAiGatewayProductionDecisionEvidence();
   const evidence = getPwaReleaseEvidenceItems(releaseDecision, coverage);
   const readyForRelease = coverage.ready && releaseDecision.status === "ready" && evidence.every((item) => item.ready);
 
@@ -4075,6 +4102,7 @@ function exportPwaTestResults() {
         passed: results.some((result) => result.scope === scope && result.status === "passed"),
       })),
     },
+    gatewayDecisionEvidence,
     releaseDecision: {
       ...releaseDecision,
       statusLabel: getPwaReleaseDecisionLabel(releaseDecision.status),
