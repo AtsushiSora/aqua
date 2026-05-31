@@ -118,6 +118,7 @@ PWA Push subscription scaffold:
 - Add a Netlify Function entrypoint for AI image/log analysis. Done in the prototype.
 - Show AI Gateway/model verification status in the AI view. Done in the prototype.
 - Send real post photos to the AI Gateway as high-detail image input and harden JSON parsing. Done in the prototype.
+- Classify the latest unreviewed Gateway photo directly from the validation summary. Done in the prototype.
 - Tune the AI prompt to v3 with visible evidence, confidence, retake tips, and non-diagnostic care guidance. Done in the prototype.
 - Keep local comparison logs and review notes for AI Gateway versus fallback results. Done in the prototype.
 - Sync AI comparison logs and review notes to `ai_evaluations`. Done in the prototype.
@@ -147,8 +148,8 @@ PWA Push subscription scaffold:
 
 Production release evidence:
 
-- Confirm live AI Gateway outputs against real aquarium photos.
-- Classify live real-photo Gateway outputs as good, needs-fix, or watch.
+- Add more classified live Gateway photo samples across the required photo conditions.
+- Review needs-fix examples and turn them into prompt improvement notes.
 - Run PWA installation, notification, offline, and UI mode checks on the production URL.
 - Review synced `pwa_device_tests` rows before production launch.
 - Capture the final production release decision after the required PWA checks pass.

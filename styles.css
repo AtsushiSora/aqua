@@ -2856,6 +2856,30 @@ textarea {
   margin-top: 8px;
 }
 
+.ai-live-review {
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid var(--glass-border);
+  border-radius: 8px;
+  background: rgba(241, 245, 249, 0.82);
+}
+
+.ai-live-review.is-active {
+  border-color: rgba(15, 143, 143, 0.22);
+  background: rgba(231, 247, 243, 0.82);
+}
+
+.ai-live-review-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.ai-live-review-actions button {
+  min-height: 34px;
+}
+
 .ai-production-checklist {
   padding: 10px;
   border: 1px solid var(--glass-border);

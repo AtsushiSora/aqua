@@ -659,6 +659,12 @@ aiPromptImprovementNote.addEventListener("input", () => {
 });
 aiPromptNoteSaveButton.addEventListener("click", () => saveAiPromptNote());
 aiImageValidationSummary.addEventListener("click", (event) => {
+  const reviewButton = event.target.closest("[data-ai-quick-review]");
+  if (reviewButton) {
+    updateAiEvaluationReview(reviewButton.dataset.aiQuickReview, reviewButton.dataset.aiQuickReviewValue);
+    return;
+  }
+
   const button = event.target.closest("[data-ai-weak-condition-note]");
   if (!button) {
     return;
@@ -699,15 +705,7 @@ aiEvaluationLog.addEventListener("change", (event) => {
     return;
   }
 
-  if (reviewField) {
-    item.reviewLabel = reviewField.value;
-  } else {
-    item.photoCondition = conditionField.value;
-  }
-  saveState();
-  if (authSession?.user) {
-    scheduleAiEvaluationSync();
-  }
+  updateAiEvaluationReview(itemId, reviewField ? reviewField.value : null, conditionField ? conditionField.value : null);
 });
 
 notificationDeliveryRefreshButton.addEventListener("click", () => loadNotificationDeliveryHistory());
@@ -5413,6 +5411,27 @@ function recordAiEvaluation({ payload, result, fallbackResult, source, error = "
   renderAiEvaluationLog();
 }
 
+function updateAiEvaluationReview(entryId, reviewLabel = null, photoCondition = null) {
+  const item = state.aiEvaluationLog.find((entry) => entry.id === entryId);
+  if (!item) {
+    return;
+  }
+
+  if (reviewLabel) {
+    item.reviewLabel = getAllowedValue(reviewLabel, ["unreviewed", "good", "needs_fix", "watch"], "unreviewed");
+  }
+
+  if (photoCondition) {
+    item.photoCondition = getAllowedValue(photoCondition, ["unspecified", "normal", "dark", "small_fish", "algae", "reflection"], "unspecified");
+  }
+
+  saveState();
+  renderAiEvaluationLog();
+  if (authSession?.user) {
+    scheduleAiEvaluationSync();
+  }
+}
+
 function getAiEvaluationInitialNote(payload, result) {
   if (!payload.post) {
     return "";
@@ -5768,6 +5787,7 @@ function renderAiImageValidationSummary(entries) {
   const conditionCounts = getAiPhotoConditionCounts(gatewayPhotoEntries);
   const weakCondition = getAiWeakPhotoCondition(conditionCounts);
   const latestGatewayPhoto = gatewayPhotoEntries[0] || null;
+  const latestUnreviewedGatewayPhoto = gatewayPhotoEntries.find((entry) => entry.reviewLabel === "unreviewed") || null;
   const productionChecklist = getAiPromptV4ProductionChecklist({
     gatewayPhotoEntries,
     v4Entries,
@@ -5828,6 +5848,23 @@ function renderAiImageValidationSummary(entries) {
         ${
           weakCondition
             ? `<button class="ghost-button" type="button" data-ai-weak-condition-note="${escapeHtml(weakCondition.key)}">改善メモを履歴保存</button>`
+            : ""
+        }
+      </div>
+      <div class="ai-live-review ${latestUnreviewedGatewayPhoto ? "is-active" : ""}">
+        <span>実写真出力確認</span>
+        <strong>${escapeHtml(latestUnreviewedGatewayPhoto ? latestUnreviewedGatewayPhoto.status : "未評価なし")}</strong>
+        <p>${escapeHtml(latestUnreviewedGatewayPhoto ? latestUnreviewedGatewayPhoto.summary : "未評価のGateway写真はありません。次の実写真分析を待っています。")}</p>
+        ${
+          latestUnreviewedGatewayPhoto
+            ? `
+              <small>${escapeHtml(formatFullDate(latestUnreviewedGatewayPhoto.createdAt))} / ${escapeHtml(latestUnreviewedGatewayPhoto.difference)}</small>
+              <div class="ai-live-review-actions">
+                <button class="ghost-button" type="button" data-ai-quick-review="${escapeHtml(latestUnreviewedGatewayPhoto.id)}" data-ai-quick-review-value="good">良い例</button>
+                <button class="ghost-button" type="button" data-ai-quick-review="${escapeHtml(latestUnreviewedGatewayPhoto.id)}" data-ai-quick-review-value="needs_fix">要修正</button>
+                <button class="ghost-button" type="button" data-ai-quick-review="${escapeHtml(latestUnreviewedGatewayPhoto.id)}" data-ai-quick-review-value="watch">保留</button>
+              </div>
+            `
             : ""
         }
       </div>
