@@ -113,6 +113,8 @@ const accountButtonStatus = document.querySelector("#account-button-status");
 const supabaseConfig = window.AQUANOTE_SUPABASE_CONFIG || {};
 const pushConfig = window.AQUANOTE_PUSH_CONFIG || {};
 const UI_MODES = ["standard", "simple", "glance", "adult"];
+const AI_REQUIRED_PHOTO_CONDITIONS = ["dark", "small_fish", "algae", "reflection"];
+const AI_REQUIRED_SAMPLES_PER_CONDITION = 2;
 
 const taskLabels = {
   feedMorning: "朝の餌やり",
@@ -5844,8 +5846,11 @@ function renderAiImageValidationSummary(entries) {
         <span>条件別サンプル</span>
         <strong>${escapeHtml(nextConditionKey ? `次: ${getAiPhotoConditionLabel(nextConditionKey)}` : "主要条件は記録済み")}</strong>
         <ul>
-          ${["dark", "small_fish", "algae", "reflection"]
-            .map((key) => `<li>${escapeHtml(getAiPhotoConditionLabel(key))}: ${conditionCounts[key].total}件 / 要修正${conditionCounts[key].needsFix}件</li>`)
+          ${AI_REQUIRED_PHOTO_CONDITIONS
+            .map((key) => {
+              const ready = conditionCounts[key].total >= AI_REQUIRED_SAMPLES_PER_CONDITION;
+              return `<li class="${ready ? "is-ready" : ""}">${escapeHtml(getAiPhotoConditionLabel(key))}: ${conditionCounts[key].total}/${AI_REQUIRED_SAMPLES_PER_CONDITION}件 / 要修正${conditionCounts[key].needsFix}件</li>`;
+            })
             .join("")}
         </ul>
       </div>
@@ -5910,10 +5915,10 @@ function renderAiImageValidationSummary(entries) {
 }
 
 function getAiPromptV4ProductionChecklist({ gatewayPhotoEntries, v4Entries, promptComparison, conditionCounts }) {
-  const requiredConditions = ["dark", "small_fish", "algae", "reflection"];
-  const coveredConditions = requiredConditions.filter((key) =>
+  const coveredConditions = AI_REQUIRED_PHOTO_CONDITIONS.filter((key) =>
     v4Entries.some((entry) => entry.photoCondition === key && ["good", "needs_fix", "watch"].includes(entry.reviewLabel)),
   );
+  const sampleReadyConditions = AI_REQUIRED_PHOTO_CONDITIONS.filter((key) => conditionCounts[key].total >= AI_REQUIRED_SAMPLES_PER_CONDITION);
   const reviewedV4 = v4Entries.filter((entry) => ["good", "needs_fix", "watch"].includes(entry.reviewLabel));
   const goodV4 = v4Entries.filter((entry) => entry.reviewLabel === "good");
   const hasNeedsFixNote = v4Entries.some((entry) => entry.reviewLabel === "needs_fix" && entry.note);
@@ -5931,8 +5936,12 @@ function getAiPromptV4ProductionChecklist({ gatewayPhotoEntries, v4Entries, prom
       label: "実写真のGateway分析を3件以上記録",
     },
     {
-      done: coveredConditions.length === requiredConditions.length,
-      label: "暗い写真、魚が小さい写真、コケ多め、反射ありを分類済み",
+      done: sampleReadyConditions.length === AI_REQUIRED_PHOTO_CONDITIONS.length,
+      label: `暗い写真、魚が小さい写真、コケ多め、反射ありを各${AI_REQUIRED_SAMPLES_PER_CONDITION}件以上記録`,
+    },
+    {
+      done: coveredConditions.length === AI_REQUIRED_PHOTO_CONDITIONS.length,
+      label: "主要な撮影条件を良い例/要修正/保留で分類済み",
     },
     {
       done: reviewedV4.length >= v4Entries.length && v4Entries.length > 0 && goodV4.length > 0,
@@ -5967,7 +5976,6 @@ function getAiPromptV4ProductionExport(entries) {
     label: item.label,
   }));
   const completed = items.filter((item) => item.done).length;
-  const requiredConditions = ["dark", "small_fish", "algae", "reflection"];
 
   return {
     promptVersion: aiApiStatus.promptVersion,
@@ -5979,10 +5987,11 @@ function getAiPromptV4ProductionExport(entries) {
     total: items.length,
     ready: items.length > 0 && completed === items.length,
     items,
-    conditionCoverage: requiredConditions.map((key) => ({
+    conditionCoverage: AI_REQUIRED_PHOTO_CONDITIONS.map((key) => ({
       condition: key,
       label: getAiPhotoConditionLabel(key),
       total: conditionCounts[key].total,
+      required: AI_REQUIRED_SAMPLES_PER_CONDITION,
       needsFix: conditionCounts[key].needsFix,
       v4Reviewed: v4Entries.filter(
         (entry) => entry.photoCondition === key && ["good", "needs_fix", "watch"].includes(entry.reviewLabel),
@@ -6007,9 +6016,9 @@ function getAiImageValidationSuggestion({ photoEntries, gatewayPhotoEntries, nee
       : "要修正の写真があります。評価メモとCSV/JSON書き出しを使って、プロンプトv3の修正点を整理してください。";
   }
 
-  const missingCondition = ["dark", "small_fish", "algae", "reflection"].find((key) => !conditionCounts[key].total);
+  const missingCondition = AI_REQUIRED_PHOTO_CONDITIONS.find((key) => conditionCounts[key].total < AI_REQUIRED_SAMPLES_PER_CONDITION);
   if (missingCondition) {
-    return `${getAiPhotoConditionLabel(missingCondition)}の評価サンプルが不足しています。次の投稿写真で条件タグを付けて検証してください。`;
+    return `${getAiPhotoConditionLabel(missingCondition)}の評価サンプルが不足しています。各条件${AI_REQUIRED_SAMPLES_PER_CONDITION}件を目標に、次の投稿写真で条件タグを付けて検証してください。`;
   }
 
   if (goodCount >= 3) {
@@ -6020,7 +6029,7 @@ function getAiImageValidationSuggestion({ photoEntries, gatewayPhotoEntries, nee
 }
 
 function getNextAiPhotoConditionKey(conditionCounts) {
-  return ["dark", "small_fish", "algae", "reflection"].find((key) => !conditionCounts[key].total) || null;
+  return AI_REQUIRED_PHOTO_CONDITIONS.find((key) => conditionCounts[key].total < AI_REQUIRED_SAMPLES_PER_CONDITION) || null;
 }
 
 function getAiPhotoConditionCounts(entries) {

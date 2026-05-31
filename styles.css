@@ -2803,9 +2803,17 @@ textarea {
 }
 
 .ai-condition-coverage li {
+  padding: 6px;
+  border-radius: 8px;
+  background: rgba(255, 247, 232, 0.72);
   color: var(--ink);
   font-size: 0.76rem;
   font-weight: 900;
+}
+
+.ai-condition-coverage li.is-ready {
+  background: rgba(231, 247, 243, 0.92);
+  color: var(--aqua-dark);
 }
 
 .ai-version-comparison {
