@@ -4120,6 +4120,7 @@ function exportAiReviewData(format) {
     needsFixNotes,
     needsFixEntries: entries.filter((entry) => entry.reviewLabel === "needs_fix"),
   });
+  const promptDraftReview = getAiPromptDraftReview({ draftItems: promptDraftItems, needsFixNotes, needsFixNoteConditions });
   if (!entries.length && !notes.length && !promptDraftItems.length) {
     showToast("書き出すAI評価レビューがありません");
     return;
@@ -4197,6 +4198,27 @@ function exportAiReviewData(format) {
         "",
         "",
       ]),
+      ...(promptDraftItems.length || needsFixNotes.length
+        ? [
+            [
+              "prompt_v4_draft_review",
+              new Date().toISOString(),
+              "",
+              "",
+              promptDraftReview.status,
+              promptDraftReview.nextAction,
+              "",
+              promptDraftReview.coveredConditionLabels.join(" / "),
+              "",
+              "aquanote-care-v4-draft",
+              "v4",
+              promptDraftReview.ready ? "草案反映OK" : "草案反映確認中",
+              promptDraftReview.summary,
+              "",
+              promptDraftReview.missingConditionLabels.join(" / "),
+            ],
+          ]
+        : []),
     ];
     downloadFile(`aquanote-ai-reviews-${dateKey}.csv`, toCsv(rows), "text/csv;charset=utf-8");
     showToast("AI評価レビューをCSVで書き出しました");
@@ -4229,6 +4251,7 @@ function exportAiReviewData(format) {
       items: promptDraftItems,
       needsFixNotesCount: needsFixNotes.length,
       needsFixNoteConditions,
+      review: promptDraftReview,
     },
   };
   downloadFile(
@@ -5743,6 +5766,7 @@ function renderAiPromptDraft(entries) {
   const needsFixNotes = getAiNeedsFixPromptNotes(notes);
   const needsFixNoteConditions = getAiNeedsFixNoteConditions(needsFixNotes);
   const draftItems = getAiPromptV4DraftItems({ notes, needsFixNotes, needsFixEntries });
+  const promptDraftReview = getAiPromptDraftReview({ draftItems, needsFixNotes, needsFixNoteConditions });
   const needsFixNoteConditionText = needsFixNoteConditions.length
     ? `${needsFixNoteConditions.map((condition) => getAiPhotoConditionLabel(condition)).join(" / ")} を草案に反映`
     : "要修正レビューを改善メモ化すると草案が強くなります";
@@ -5766,6 +5790,12 @@ function renderAiPromptDraft(entries) {
         <span>要修正メモ材料</span>
         <strong>${needsFixNotes.length ? `${needsFixNotes.length}件` : "未保存"}</strong>
         <p>${escapeHtml(needsFixNoteConditionText)}</p>
+      </div>
+      <div class="ai-prompt-draft-review ${promptDraftReview.ready ? "is-ready" : needsFixNotes.length ? "is-active" : ""}">
+        <span>草案反映レビュー</span>
+        <strong>${escapeHtml(promptDraftReview.status)}</strong>
+        <p>${escapeHtml(promptDraftReview.summary)}</p>
+        <small>${escapeHtml(promptDraftReview.nextAction)}</small>
       </div>
       <small>要修正 ${needsFixEntries.length}件 / 改善メモ ${notes.length}件 / 要修正メモ ${needsFixNotes.length}件</small>
     </article>
@@ -5833,6 +5863,59 @@ function getAiNeedsFixNoteConditionSuggestion(condition) {
   };
 
   return suggestions[condition] || "要修正メモの撮影条件に合わせて、見える範囲と見えない範囲の分離を強める。";
+}
+
+function getAiPromptDraftReview({ draftItems = [], needsFixNotes = [], needsFixNoteConditions = [] }) {
+  const coveredConditions = AI_REQUIRED_PHOTO_CONDITIONS.filter((condition) => needsFixNoteConditions.includes(condition));
+  const missingConditions = AI_REQUIRED_PHOTO_CONDITIONS.filter((condition) => !needsFixNoteConditions.includes(condition));
+  const coveredConditionLabels = coveredConditions.map((condition) => getAiPhotoConditionLabel(condition));
+  const missingConditionLabels = missingConditions.map((condition) => getAiPhotoConditionLabel(condition));
+
+  if (!needsFixNotes.length) {
+    return {
+      status: "未開始",
+      ready: false,
+      coveredConditionLabels,
+      missingConditionLabels,
+      summary: "実写真要修正メモがまだ保存されていないため、草案への反映レビューはできません。",
+      nextAction: "Gateway写真を要修正に分類し、要修正を改善メモ化してください。",
+    };
+  }
+
+  if (!draftItems.length) {
+    return {
+      status: "材料不足",
+      ready: false,
+      coveredConditionLabels,
+      missingConditionLabels,
+      summary: "要修正メモはありますが、プロンプト草案の項目がまだ作れていません。",
+      nextAction: "改善メモの内容を増やし、見える根拠・見えない範囲・撮り直し案を残してください。",
+    };
+  }
+
+  if (!missingConditions.length) {
+    return {
+      status: "反映OK",
+      ready: true,
+      coveredConditionLabels,
+      missingConditionLabels,
+      summary: "主要な実写真条件の要修正メモが草案材料に入っています。",
+      nextAction: "次は草案を見ながら実写真Gateway出力を再評価してください。",
+    };
+  }
+
+  const coveredText = coveredConditionLabels.length
+    ? `${coveredConditionLabels.join(" / ")}は反映済みです`
+    : "主要条件の反映はまだありません";
+
+  return {
+    status: coveredConditions.length >= 2 ? "反映中" : "反映少なめ",
+    ready: false,
+    coveredConditionLabels,
+    missingConditionLabels,
+    summary: `${coveredText}。未反映: ${missingConditionLabels.join(" / ")}。`,
+    nextAction: `${missingConditionLabels[0]}の要修正レビューを改善メモ化すると、草案レビューが進みます。`,
+  };
 }
 
 function renderAiImageValidationSummary(entries) {
