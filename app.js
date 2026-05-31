@@ -96,6 +96,8 @@ const pwaTestLog = document.querySelector("#pwa-test-log");
 const pwaTestExportButton = document.querySelector("#pwa-test-export-button");
 const pwaTestScopeInput = document.querySelector("#pwa-test-scope-input");
 const pwaTestScopeHint = document.querySelector("#pwa-test-scope-hint");
+const pwaTestNoteInput = document.querySelector("#pwa-test-note-input");
+const pwaTestNoteTemplateButton = document.querySelector("#pwa-test-note-template-button");
 const pwaReleaseDecisionForm = document.querySelector("#pwa-release-decision-form");
 const pwaReleaseDecisionChip = document.querySelector("#pwa-release-decision-chip");
 const pwaReleaseDecisionSummary = document.querySelector("#pwa-release-decision-summary");
@@ -127,6 +129,14 @@ const PWA_SCOPE_QA_HINTS = {
   offline: ["機内モード再読み込み", "オフラインページ", "復帰後の再表示"],
   ui_modes: ["ベーシック", "かんたん", "一目", "大人"],
   custom_images: ["背景画像", "ボタン背面", "文字の読みやすさ"],
+};
+const PWA_SCOPE_NOTE_TEMPLATES = {
+  login: "ログイン状態: OK / プロフィール同期: OK / 再読み込み後の維持: OK",
+  install: "ホーム画面追加: OK / アイコン起動: OK / スタンドアロン表示: OK",
+  notification: "通知許可: OK / Push購読: OK / dry-run解除後の受信: 未確認",
+  offline: "機内モード再読み込み: OK / オフラインページ: OK / 復帰後の再表示: OK",
+  ui_modes: "ベーシック: OK / かんたん: OK / 一目: OK / 大人: OK",
+  custom_images: "背景画像: OK / ボタン背面: OK / 文字の読みやすさ: OK",
 };
 const AI_REQUIRED_PHOTO_CONDITIONS = ["dark", "small_fish", "algae", "reflection"];
 const AI_REQUIRED_SAMPLES_PER_CONDITION = 2;
@@ -544,6 +554,7 @@ postTankFilter.addEventListener("change", renderPosts);
 communityTagSearch.addEventListener("input", renderPosts);
 communitySortSelect.addEventListener("change", renderPosts);
 pwaTestScopeInput.addEventListener("change", renderPwaTestScopeHint);
+pwaTestNoteTemplateButton.addEventListener("click", applyPwaTestNoteTemplate);
 
 albumMonthFilter.addEventListener("change", () => {
   activeAlbumMonth = albumMonthFilter.value;
@@ -1366,6 +1377,17 @@ function renderPwaTestScopeHint() {
       ${hints.map((hint) => `<small>${escapeHtml(hint)}</small>`).join("")}
     </div>
   `;
+}
+
+function applyPwaTestNoteTemplate() {
+  if (!pwaTestScopeInput || !pwaTestNoteInput) {
+    return;
+  }
+
+  const scope = getAllowedValue(pwaTestScopeInput.value, PWA_REQUIRED_SCOPES, "install");
+  const template = PWA_SCOPE_NOTE_TEMPLATES[scope] || "";
+  pwaTestNoteInput.value = pwaTestNoteInput.value ? `${pwaTestNoteInput.value}\n${template}` : template;
+  pwaTestNoteInput.focus();
 }
 
 function renderPwaTestReview(results) {

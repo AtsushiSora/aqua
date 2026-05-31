@@ -121,6 +121,7 @@ PWA Push subscription scaffold:
 - Fine-tune mobile spacing, copy length, and button sizing across UI modes. Done in the prototype.
 - Include UI mode and custom-image evidence in final PWA review output. Done in the prototype.
 - Add per-scope note guidance to PWA device QA recording. Done in the prototype.
+- Add per-scope note templates to PWA device QA recording. Done in the prototype.
 - Add a Netlify Function entrypoint for AI image/log analysis. Done in the prototype.
 - Show AI Gateway/model verification status in the AI view. Done in the prototype.
 - Send real post photos to the AI Gateway as high-detail image input and harden JSON parsing. Done in the prototype.
@@ -187,5 +188,5 @@ Production release evidence:
 - Execute the PWA production review on real devices.
 - Confirm the real-device review status is marked done before production launch.
 - Confirm the PWA production review result status is marked confirmed before production launch.
-- Run live-device QA on the production URL and close remaining gaps.
+- Apply live-device QA results from the production URL and close remaining gaps.
 - Keep JSON export/import as a recovery path while the sync model is being tested.

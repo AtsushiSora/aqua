@@ -3943,6 +3943,10 @@ textarea {
   font-weight: 850;
 }
 
+#pwa-test-note-template-button {
+  justify-self: start;
+}
+
 .pwa-review-guide {
   display: grid;
   gap: 4px;
