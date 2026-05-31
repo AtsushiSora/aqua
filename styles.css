@@ -3984,6 +3984,55 @@ textarea {
   gap: 8px;
 }
 
+.pwa-appearance-evidence {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid rgba(17, 92, 110, 0.18);
+  border-radius: 8px;
+  background: rgba(248, 252, 251, 0.78);
+}
+
+.pwa-appearance-evidence > span,
+.pwa-appearance-evidence > strong {
+  color: var(--aqua-dark);
+  font-size: 0.86rem;
+  font-weight: 900;
+}
+
+.pwa-appearance-evidence > div {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.pwa-appearance-evidence article {
+  padding: 10px;
+  border: 1px solid rgba(226, 162, 72, 0.34);
+  border-radius: 8px;
+  background: rgba(255, 247, 230, 0.72);
+}
+
+.pwa-appearance-evidence article.ready {
+  border-color: rgba(61, 173, 120, 0.34);
+  background: rgba(232, 248, 241, 0.82);
+}
+
+.pwa-appearance-evidence article span,
+.pwa-appearance-evidence article small {
+  display: block;
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 850;
+}
+
+.pwa-appearance-evidence article strong {
+  display: block;
+  margin: 3px 0;
+  color: var(--aqua-dark);
+  font-size: 0.84rem;
+}
+
 .pwa-gateway-evidence {
   display: grid;
   gap: 8px;
@@ -4953,6 +5002,7 @@ textarea {
   .pwa-test-form,
   .pwa-test-scope-grid,
   .pwa-mode-qa-list,
+  .pwa-appearance-evidence > div,
   .pwa-release-decision-form,
   .pwa-release-evidence-grid,
   .preference-toggles,

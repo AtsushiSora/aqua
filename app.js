@@ -1463,6 +1463,7 @@ function renderPwaReleaseDecision() {
   const evidenceItems = getPwaReleaseEvidenceItems(decision, coverage);
   const handoff = getPwaReleaseHandoffState(evidenceItems);
   const qaState = getPwaReleaseQaState(evidenceItems);
+  const appearanceQa = getPwaModeQaSummary(state.pwaTestResults || []);
   const gatewayDecision = getAiGatewayProductionDecisionEvidence();
   const gatewayExportEvidence = getPwaGatewayDecisionExportEvidence(gatewayDecision);
   document.querySelector("#pwa-release-decision-status-input").value = decision.status;
@@ -1520,6 +1521,23 @@ function renderPwaReleaseDecision() {
       <strong>${escapeHtml(decision.note || "未記録")}</strong>
       <small>本番URL、残タスク、公開判断の理由を残します</small>
     </article>
+    <div class="pwa-appearance-evidence">
+      <span>表示モードQA</span>
+      <strong>${escapeHtml(appearanceQa.every((item) => item.ready) ? "4モードと画像カスタム確認済み" : "表示モード確認が未完了")}</strong>
+      <div>
+        ${appearanceQa
+          .map(
+            (item) => `
+              <article class="${item.ready ? "ready" : "pending"}">
+                <span>${escapeHtml(item.label)}</span>
+                <strong>${escapeHtml(item.ready ? "OK" : "未完了")}</strong>
+                <small>${escapeHtml(item.note)}</small>
+              </article>
+            `,
+          )
+          .join("")}
+      </div>
+    </div>
     <div class="pwa-gateway-evidence ${gatewayDecision.ready ? "ready" : "pending"}">
       <span>Gateway本番判定</span>
       <strong>${escapeHtml(gatewayExportEvidence.title)}</strong>
@@ -4272,6 +4290,7 @@ function exportPwaTestResults() {
   const releaseDecision = normalizePwaReleaseDecision(state.pwaReleaseDecision || {});
   const coverage = getPwaReleaseCoverage(results);
   const gatewayDecisionEvidence = getAiGatewayProductionDecisionEvidence();
+  const appearanceQa = getPwaModeQaSummary(results);
   const evidence = getPwaReleaseEvidenceItems(releaseDecision, coverage);
   const readyForRelease = coverage.ready && releaseDecision.status === "ready" && evidence.every((item) => item.ready);
 
@@ -4290,6 +4309,10 @@ function exportPwaTestResults() {
         label: getPwaTestScopeLabel(scope),
         passed: results.some((result) => result.scope === scope && result.status === "passed"),
       })),
+    },
+    appearanceQa: {
+      ready: appearanceQa.every((item) => item.ready),
+      items: appearanceQa,
     },
     gatewayDecisionEvidence: getPwaGatewayDecisionExportEvidence(gatewayDecisionEvidence),
     releaseDecision: {
