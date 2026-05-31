@@ -2695,6 +2695,20 @@ textarea {
   font-weight: 850;
 }
 
+.ai-prompt-draft-evidence {
+  display: grid;
+  gap: 4px;
+  padding: 10px;
+  border: 1px solid rgba(17, 92, 110, 0.14);
+  border-radius: 8px;
+  background: rgba(231, 247, 243, 0.72);
+}
+
+.ai-prompt-draft-evidence strong {
+  margin-top: 0;
+  font-size: 0.94rem;
+}
+
 .ai-production-flow {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));

@@ -4113,8 +4113,11 @@ function escapeCsvCell(value) {
 function exportAiReviewData(format) {
   const entries = getVisibleAiEvaluationEntries();
   const notes = getVisibleAiPromptNotes();
+  const needsFixNotes = getAiNeedsFixPromptNotes(notes);
+  const needsFixNoteConditions = getAiNeedsFixNoteConditions(needsFixNotes);
   const promptDraftItems = getAiPromptV4DraftItems({
     notes,
+    needsFixNotes,
     needsFixEntries: entries.filter((entry) => entry.reviewLabel === "needs_fix"),
   });
   if (!entries.length && !notes.length && !promptDraftItems.length) {
@@ -4224,6 +4227,8 @@ function exportAiReviewData(format) {
     promptV4Draft: {
       version: "aquanote-care-v4-draft",
       items: promptDraftItems,
+      needsFixNotesCount: needsFixNotes.length,
+      needsFixNoteConditions,
     },
   };
   downloadFile(
@@ -5735,7 +5740,12 @@ function renderAiPromptDraft(entries) {
 
   const notes = Array.isArray(state.aiPromptNotes) ? state.aiPromptNotes : [];
   const needsFixEntries = entries.filter((entry) => entry.reviewLabel === "needs_fix");
-  const draftItems = getAiPromptV4DraftItems({ notes, needsFixEntries });
+  const needsFixNotes = getAiNeedsFixPromptNotes(notes);
+  const needsFixNoteConditions = getAiNeedsFixNoteConditions(needsFixNotes);
+  const draftItems = getAiPromptV4DraftItems({ notes, needsFixNotes, needsFixEntries });
+  const needsFixNoteConditionText = needsFixNoteConditions.length
+    ? `${needsFixNoteConditions.map((condition) => getAiPhotoConditionLabel(condition)).join(" / ")} を草案に反映`
+    : "要修正レビューを改善メモ化すると草案が強くなります";
 
   aiPromptDraft.innerHTML = `
     <article>
@@ -5752,20 +5762,34 @@ function renderAiPromptDraft(entries) {
           `
           : `<p>要修正レビューとプロンプト改善メモを保存すると、次のプロンプト草案がここに出ます。</p>`
       }
-      <small>要修正 ${needsFixEntries.length}件 / 改善メモ ${notes.length}件</small>
+      <div class="ai-prompt-draft-evidence">
+        <span>要修正メモ材料</span>
+        <strong>${needsFixNotes.length ? `${needsFixNotes.length}件` : "未保存"}</strong>
+        <p>${escapeHtml(needsFixNoteConditionText)}</p>
+      </div>
+      <small>要修正 ${needsFixEntries.length}件 / 改善メモ ${notes.length}件 / 要修正メモ ${needsFixNotes.length}件</small>
     </article>
   `;
 }
 
-function getAiPromptV4DraftItems({ notes, needsFixEntries }) {
+function getAiPromptV4DraftItems({ notes, needsFixNotes = [], needsFixEntries = [] }) {
   const items = [];
   const conditionCounts = getAiPhotoConditionCounts(needsFixEntries);
   const weakCondition = getAiWeakPhotoCondition(conditionCounts);
   const latestNote = notes[0]?.note || "";
+  const needsFixNoteConditions = getAiNeedsFixNoteConditions(needsFixNotes);
 
   if (weakCondition) {
     items.push(`${getAiPhotoConditionLabel(weakCondition.key)}では、${getAiWeakConditionSuggestion(weakCondition)}`);
   }
+
+  if (needsFixNotes.length) {
+    items.push("保存済みの実写真要修正メモを優先し、見える根拠・見えない範囲・撮り直し案を必ず分けて返す。");
+  }
+
+  needsFixNoteConditions.forEach((condition) => {
+    items.push(getAiNeedsFixNoteConditionSuggestion(condition));
+  });
 
   if (latestNote) {
     items.push(`直近の改善メモを反映: ${latestNote.replace(/\s+/g, " ").slice(0, 120)}`);
@@ -5783,7 +5807,32 @@ function getAiPromptV4DraftItems({ notes, needsFixEntries }) {
     items.push("要修正レビューの評価メモを増やし、言い過ぎた表現と不足した撮影条件を分けて整理する。");
   }
 
-  return [...new Set(items)].slice(0, 4);
+  return [...new Set(items)].slice(0, 5);
+}
+
+function getAiNeedsFixPromptNotes(notes = []) {
+  return notes.filter((note) => String(note.note || "").includes("実写真要修正メモ:"));
+}
+
+function getAiNeedsFixNoteConditions(notes = []) {
+  const conditions = ["dark", "small_fish", "algae", "reflection", "normal", "unspecified"];
+  return conditions.filter((condition) => {
+    const label = getAiPhotoConditionLabel(condition);
+    return notes.some((note) => String(note.note || "").includes(label));
+  });
+}
+
+function getAiNeedsFixNoteConditionSuggestion(condition) {
+  const suggestions = {
+    dark: "暗い写真の要修正メモがある場合は、暗さで確認できない部位を明記し、ライト点灯・正面再撮影を最初の撮り直し案にする。",
+    small_fish: "魚が小さい写真では、体表や泳ぎの断定を避け、拡大写真または短い動画の追加確認を提案する。",
+    algae: "コケ多めの写真では、水質値を写真だけで断定せず、コケの場所・照明時間・水換え履歴の確認へ寄せる。",
+    reflection: "反射あり写真では、反射で隠れた範囲を観察対象から外し、角度を変えた撮影を具体的に促す。",
+    normal: "通常写真でも、写真に写る根拠とユーザーに確認する行動を分け、過剰な診断表現を避ける。",
+    unspecified: "撮影条件が未指定の要修正メモは、まず暗さ・魚の大きさ・コケ・反射のどれに近いかを出力内で確認する。",
+  };
+
+  return suggestions[condition] || "要修正メモの撮影条件に合わせて、見える範囲と見えない範囲の分離を強める。";
 }
 
 function renderAiImageValidationSummary(entries) {
