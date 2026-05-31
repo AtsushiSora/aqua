@@ -705,6 +705,14 @@ aiEvaluationLog.addEventListener("input", (event) => {
     scheduleAiEvaluationSync();
   }
 });
+aiEvaluationLog.addEventListener("click", (event) => {
+  const retestButton = event.target.closest("[data-ai-draft-retest]");
+  if (!retestButton) {
+    return;
+  }
+
+  updateAiPromptDraftRetest(retestButton.dataset.aiDraftRetest, retestButton.dataset.aiDraftRetestStatus);
+});
 aiEvaluationLog.addEventListener("change", (event) => {
   const reviewField = event.target.closest("[data-ai-evaluation-review]");
   const conditionField = event.target.closest("[data-ai-evaluation-condition]");
@@ -3757,6 +3765,8 @@ function applyRemoteAiEvaluations(remoteEntries) {
     localById.set(localId, {
       ...nextEntry,
       note: current?.note && current.note !== nextEntry.note ? current.note : nextEntry.note,
+      promptDraftRetestStatus: current?.promptDraftRetestStatus || nextEntry.promptDraftRetestStatus,
+      promptDraftRetestedAt: current?.promptDraftRetestedAt || nextEntry.promptDraftRetestedAt,
     });
   });
 
@@ -4143,6 +4153,7 @@ function exportAiReviewData(format) {
         "promptVersion",
         "promptGeneration",
         "v4ValidationStatus",
+        "draftRetestStatus",
         "summary",
         "retakeTips",
         "note",
@@ -4160,6 +4171,7 @@ function exportAiReviewData(format) {
         entry.promptVersion,
         getAiPromptGenerationLabel(getAiPromptGeneration(entry.promptVersion)),
         getAiPromptValidationStatusLabel(getAiPromptValidationStatus(entry)),
+        getAiPromptDraftRetestLabel(entry.promptDraftRetestStatus),
         entry.summary,
         Array.isArray(entry.retakeTips) ? entry.retakeTips.join(" / ") : "",
         entry.note || "",
@@ -4179,6 +4191,7 @@ function exportAiReviewData(format) {
         "",
         "",
         "",
+        "",
         note.note,
       ]),
       ...promptDraftItems.map((item) => [
@@ -4194,6 +4207,7 @@ function exportAiReviewData(format) {
         "aquanote-care-v4-draft",
         "v4",
         "v4草案",
+        "",
         item,
         "",
         "",
@@ -4213,6 +4227,7 @@ function exportAiReviewData(format) {
               "aquanote-care-v4-draft",
               "v4",
               promptDraftReview.ready ? "草案反映OK" : "草案反映確認中",
+              "",
               promptDraftReview.summary,
               "",
               promptDraftReview.missingConditionLabels.join(" / "),
@@ -4252,6 +4267,7 @@ function exportAiReviewData(format) {
       needsFixNotesCount: needsFixNotes.length,
       needsFixNoteConditions,
       review: promptDraftReview,
+      retest: getAiPromptDraftRetestExport(entries, promptDraftReview),
     },
   };
   downloadFile(
@@ -5446,6 +5462,8 @@ function recordAiEvaluation({ payload, result, fallbackResult, source, error = "
     note: getAiEvaluationInitialNote(payload, result),
     photoCondition: "unspecified",
     reviewLabel: "unreviewed",
+    promptDraftRetestStatus: "none",
+    promptDraftRetestedAt: null,
   };
 
   state.aiEvaluationLog = [entry, ...(state.aiEvaluationLog || [])].slice(0, 8);
@@ -5472,6 +5490,27 @@ function updateAiEvaluationReview(entryId, reviewLabel = null, photoCondition = 
   if (authSession?.user) {
     scheduleAiEvaluationSync();
   }
+}
+
+function updateAiPromptDraftRetest(entryId, status) {
+  const item = state.aiEvaluationLog.find((entry) => entry.id === entryId);
+  if (!item) {
+    return;
+  }
+
+  item.promptDraftRetestStatus = getAllowedValue(status, ["none", "retest_needed", "retested"], "none");
+  item.promptDraftRetestedAt = item.promptDraftRetestStatus === "retested" ? new Date().toISOString() : null;
+
+  if (item.promptDraftRetestStatus === "retest_needed" && !String(item.note || "").includes("草案後再評価:")) {
+    item.note = `${item.note ? `${item.note}\n` : ""}草案後再評価: プロンプト草案の反映後に、同じ撮影条件で出力を見直す。`;
+  }
+
+  saveState();
+  renderAiEvaluationLog();
+  if (authSession?.user) {
+    scheduleAiEvaluationSync();
+  }
+  showToast(item.promptDraftRetestStatus === "retested" ? "草案後の再評価済みにしました" : "草案後の再評価対象にしました");
 }
 
 function getAiEvaluationInitialNote(payload, result) {
@@ -5646,6 +5685,25 @@ function renderAiEvaluationLog() {
               ${getAiPhotoConditionOptions(entry.photoCondition)}
             </select>
           </label>
+          ${
+            entry.source === "AI Gateway" && entry.target === "投稿写真"
+              ? `
+                <div class="ai-draft-retest ${entry.promptDraftRetestStatus === "retested" ? "is-done" : entry.promptDraftRetestStatus === "retest_needed" ? "is-needed" : ""}">
+                  <span>草案後再評価</span>
+                  <strong>${escapeHtml(getAiPromptDraftRetestLabel(entry.promptDraftRetestStatus))}</strong>
+                  <div class="ai-live-review-actions">
+                    <button class="text-button" type="button" data-ai-draft-retest="${escapeHtml(entry.id)}" data-ai-draft-retest-status="retest_needed">再評価対象</button>
+                    <button class="text-button" type="button" data-ai-draft-retest="${escapeHtml(entry.id)}" data-ai-draft-retest-status="retested">再評価済み</button>
+                  </div>
+                  ${
+                    entry.promptDraftRetestedAt
+                      ? `<small>${escapeHtml(formatFullDate(entry.promptDraftRetestedAt))}</small>`
+                      : ""
+                  }
+                </div>
+              `
+              : ""
+          }
           <label>
             <span>評価メモ</span>
             <textarea data-ai-evaluation-note="${escapeHtml(entry.id)}" rows="3" placeholder="実写真で気になった点、過不足、次に直すプロンプトを書きます">${escapeHtml(entry.note || "")}</textarea>
@@ -5918,6 +5976,48 @@ function getAiPromptDraftReview({ draftItems = [], needsFixNotes = [], needsFixN
   };
 }
 
+function getAiPromptDraftRetestSuggestion({ promptDraftReview, draftRetestNeededCount, draftRetestedCount, latestGatewayPhoto }) {
+  if (!latestGatewayPhoto) {
+    return "投稿写真をAI Gatewayで分析すると、草案後の再評価対象を残せます。";
+  }
+
+  if (!promptDraftReview.ready) {
+    return "まず要修正メモを増やし、草案反映レビューをOKに近づけてから再評価します。";
+  }
+
+  if (draftRetestNeededCount > draftRetestedCount) {
+    return "再評価対象が残っています。草案の改善点を見ながら、良い例/要修正/保留を付け直してください。";
+  }
+
+  if (draftRetestedCount > 0) {
+    return "草案反映後の再評価証跡があります。次は条件別に要修正が減ったか確認してください。";
+  }
+
+  return "草案反映OKです。最新のGateway写真を再評価対象にして、出力の変化を確認してください。";
+}
+
+function getAiPromptDraftRetestExport(entries = [], promptDraftReview = null) {
+  const gatewayPhotoEntries = entries.filter((entry) => entry.target === "投稿写真" && entry.source === "AI Gateway");
+  const retestNeeded = gatewayPhotoEntries.filter((entry) => entry.promptDraftRetestStatus === "retest_needed");
+  const retested = gatewayPhotoEntries.filter((entry) => entry.promptDraftRetestStatus === "retested");
+
+  return {
+    readyForRetest: promptDraftReview?.ready === true,
+    retestNeeded: retestNeeded.length,
+    retested: retested.length,
+    items: [...retestNeeded, ...retested].map((entry) => ({
+      id: entry.id,
+      status: entry.promptDraftRetestStatus,
+      statusLabel: getAiPromptDraftRetestLabel(entry.promptDraftRetestStatus),
+      photoCondition: entry.photoCondition,
+      photoConditionLabel: getAiPhotoConditionLabel(entry.photoCondition),
+      reviewLabel: entry.reviewLabel,
+      reviewedAt: entry.promptDraftRetestedAt || null,
+      summary: entry.summary,
+    })),
+  };
+}
+
 function renderAiImageValidationSummary(entries) {
   if (!aiImageValidationSummary) {
     return;
@@ -5936,6 +6036,17 @@ function renderAiImageValidationSummary(entries) {
   const latestGatewayPhoto = gatewayPhotoEntries[0] || null;
   const latestUnreviewedGatewayPhoto = gatewayPhotoEntries.find((entry) => entry.reviewLabel === "unreviewed") || null;
   const latestNeedsFixGatewayPhoto = gatewayPhotoEntries.find((entry) => entry.reviewLabel === "needs_fix") || null;
+  const draftRetestNeededCount = gatewayPhotoEntries.filter((entry) => entry.promptDraftRetestStatus === "retest_needed").length;
+  const draftRetestedCount = gatewayPhotoEntries.filter((entry) => entry.promptDraftRetestStatus === "retested").length;
+  const notes = Array.isArray(state.aiPromptNotes) ? state.aiPromptNotes : [];
+  const needsFixNotes = getAiNeedsFixPromptNotes(notes);
+  const needsFixNoteConditions = getAiNeedsFixNoteConditions(needsFixNotes);
+  const promptDraftItems = getAiPromptV4DraftItems({
+    notes,
+    needsFixNotes,
+    needsFixEntries: entries.filter((entry) => entry.reviewLabel === "needs_fix"),
+  });
+  const promptDraftReview = getAiPromptDraftReview({ draftItems: promptDraftItems, needsFixNotes, needsFixNoteConditions });
   const productionChecklist = getAiPromptV4ProductionChecklist({
     gatewayPhotoEntries,
     v4Entries,
@@ -5980,6 +6091,11 @@ function renderAiImageValidationSummary(entries) {
         <span>v4評価</span>
         <strong>${v4Entries.length ? `${v4Entries.length}件 / 要修正${v4NeedsFixCount}件` : "未評価"}</strong>
         <p>${escapeHtml(getAiPromptGenerationSuggestion(promptComparison, v4Entries.length))}</p>
+      </div>
+      <div class="ai-draft-retest-summary ${draftRetestedCount ? "is-done" : draftRetestNeededCount ? "is-needed" : ""}">
+        <span>草案後再評価</span>
+        <strong>${draftRetestedCount ? `再評価済み ${draftRetestedCount}件` : draftRetestNeededCount ? `対象 ${draftRetestNeededCount}件` : "未開始"}</strong>
+        <p>${escapeHtml(getAiPromptDraftRetestSuggestion({ promptDraftReview, draftRetestNeededCount, draftRetestedCount, latestGatewayPhoto }))}</p>
       </div>
       <div class="ai-condition-coverage">
         <span>条件別サンプル</span>
@@ -6463,6 +6579,15 @@ function getAiPhotoConditionLabel(value) {
     reflection: "反射あり",
   };
   return labels[value] || labels.unspecified;
+}
+
+function getAiPromptDraftRetestLabel(value) {
+  const labels = {
+    none: "未確認",
+    retest_needed: "再評価対象",
+    retested: "再評価済み",
+  };
+  return labels[value] || labels.none;
 }
 
 function saveAiPromptNote(options = {}) {
@@ -7612,6 +7737,8 @@ function normalizeAiEvaluationEntry(entry) {
       ? entry.reviewLabel
       : "unreviewed",
     note: entry.note || "",
+    promptDraftRetestStatus: getAllowedValue(entry.promptDraftRetestStatus, ["none", "retest_needed", "retested"], "none"),
+    promptDraftRetestedAt: entry.promptDraftRetestedAt || null,
   };
 }
 
