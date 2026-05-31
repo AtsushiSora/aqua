@@ -291,8 +291,6 @@ body[data-ui-mode="simple"] .home-controls {
 }
 
 body[data-ui-mode="simple"] .hero-band {
-  grid-template-columns: minmax(0, 0.92fr) minmax(240px, 0.68fr);
-  gap: 18px;
   border-width: 2px;
   background:
     linear-gradient(135deg, rgba(255, 255, 255, 0.94), rgba(232, 252, 246, 0.8)),
@@ -4791,12 +4789,18 @@ textarea {
   }
 
   .app-home-top {
+    gap: 10px;
     align-items: stretch;
     flex-direction: column;
     margin-top: 4px;
   }
 
+  .app-home-top h1 {
+    font-size: 1.38rem;
+  }
+
   .home-controls {
+    gap: 8px;
     justify-content: stretch;
   }
 
@@ -4809,11 +4813,37 @@ textarea {
 
   .ui-mode-switch {
     justify-content: space-between;
+    min-height: 42px;
+    padding: 6px 10px;
+  }
+
+  .ui-mode-switch select {
+    max-width: 178px;
+    text-align: right;
+  }
+
+  .design-cycle-button {
+    min-height: 42px;
+  }
+
+  .app-status-pill {
+    min-height: 42px;
+    padding: 8px 10px 8px 12px;
+  }
+
+  .app-status-pill span {
+    font-size: 0.82rem;
+  }
+
+  .app-status-pill strong {
+    min-width: 58px;
+    padding: 5px 8px;
+    font-size: 0.78rem;
   }
 
   .hero-band {
     padding: 18px;
-    min-height: 300px;
+    min-height: 264px;
   }
 
   .hero-media::after {
@@ -4822,7 +4852,13 @@ textarea {
   }
 
   .hero-copy h2 {
-    font-size: 1.75rem;
+    font-size: 1.58rem;
+  }
+
+  .hero-copy p:not(.eyebrow) {
+    max-width: 36ch;
+    font-size: 0.9rem;
+    line-height: 1.55;
   }
 
   .metric-grid {
@@ -4849,8 +4885,39 @@ textarea {
   }
 
   .quick-dock button {
-    min-height: 76px;
+    min-height: 72px;
+    padding: 10px;
+  }
+
+  .quick-dock span {
+    width: 32px;
+    height: 32px;
+  }
+
+  .quick-dock strong {
+    font-size: 0.92rem;
+  }
+
+  .quick-dock small {
+    font-size: 0.72rem;
+  }
+
+  body[data-ui-mode="simple"] .hero-band {
+    min-height: 246px;
+  }
+
+  body[data-ui-mode="simple"] .hero-copy p:not(.eyebrow) {
+    font-size: 0.92rem;
+  }
+
+  body[data-ui-mode="simple"] .quick-dock button {
+    grid-template-columns: 38px minmax(0, 1fr);
+    min-height: 78px;
     padding: 12px;
+  }
+
+  body[data-ui-mode="adult"] .quick-dock button {
+    min-height: 68px;
   }
 
   body[data-ui-mode="glance"] .quick-dock {
@@ -4858,8 +4925,12 @@ textarea {
     gap: 12px;
   }
 
+  body[data-ui-mode="glance"] .hero-band {
+    min-height: 278px;
+  }
+
   body[data-ui-mode="glance"] .quick-dock button {
-    width: min(100%, 108px);
+    width: min(100%, 104px);
     padding: 10px 8px;
   }
 
