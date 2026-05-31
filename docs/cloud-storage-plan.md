@@ -125,6 +125,7 @@ PWA Push subscription scaffold:
 - Extract watch/failed PWA device QA items into release action evidence. Done in the prototype.
 - Mark PWA device QA action items resolved when a later passing result exists. Done in the prototype.
 - Export required PWA scope status from the latest device QA result. Done in the prototype.
+- Start first-time users with empty dashboard metrics until they add logs. Done in the prototype.
 - Add a Netlify Function entrypoint for AI image/log analysis. Done in the prototype.
 - Show AI Gateway/model verification status in the AI view. Done in the prototype.
 - Send real post photos to the AI Gateway as high-detail image input and harden JSON parsing. Done in the prototype.

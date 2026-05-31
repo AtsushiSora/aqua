@@ -226,25 +226,6 @@ const defaultReminders = {
   },
 };
 
-const sampleLogs = [
-  {
-    id: "sample-feed",
-    type: "餌やり",
-    temp: "24.8",
-    ph: "6.9",
-    note: "魚の動きは良好。水面の泡は少なめ。",
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: "sample-water-change",
-    type: "水換え",
-    temp: "24.4",
-    ph: "6.8",
-    note: "1/3換水。フィルターは軽くすすぎ。",
-    createdAt: daysAgoIso(3),
-  },
-];
-
 const defaultState = {
   activeTankId: "tank-main",
   heroPhotoDataUrl: null,
@@ -294,7 +275,7 @@ const defaultState = {
       volume: "57L",
       residents: "ネオンテトラ、ヤマトヌマエビ、アヌビアス",
       tags: ["水草水槽", "熱帯魚", "CO2あり"],
-      logs: sampleLogs,
+      logs: [],
       latestAi: null,
       featuredPostId: "sample-reef",
       albumOrder: ["sample-reef"],
@@ -307,16 +288,7 @@ const defaultState = {
       volume: "18L",
       residents: "メダカ、睡蓮、浮草",
       tags: ["メダカ", "屋外", "ビオトープ"],
-      logs: [
-        {
-          id: "sample-pond-check",
-          type: "水質測定",
-          temp: "22.1",
-          ph: "7.2",
-          note: "雨上がり。透明度は良好、メダカもよく泳いでいる。",
-          createdAt: daysAgoIso(1),
-        },
-      ],
+      logs: [],
       latestAi: null,
       featuredPostId: "sample-medaka",
       albumOrder: ["sample-medaka", "sample-koi"],
@@ -1071,14 +1043,14 @@ document.querySelectorAll("[data-add-log]").forEach((button) => {
 });
 
 document.querySelector("[data-reset-logs]").addEventListener("click", () => {
-  if (!confirm("水槽、ログ、投稿をサンプル状態に戻しますか？")) {
+  if (!confirm("水槽、ログ、投稿を初期状態に戻しますか？")) {
     return;
   }
 
   state = cloneState(defaultState);
   saveState();
   renderApp();
-  showToast("サンプル状態に戻しました");
+  showToast("初期状態に戻しました");
 });
 
 aiForm.addEventListener("submit", async (event) => {
