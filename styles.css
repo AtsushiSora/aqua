@@ -4067,6 +4067,53 @@ textarea {
   font-size: 0.84rem;
 }
 
+.pwa-device-action-evidence {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid rgba(61, 173, 120, 0.3);
+  border-radius: 8px;
+  background: rgba(232, 248, 241, 0.78);
+}
+
+.pwa-device-action-evidence.pending {
+  border-color: rgba(226, 162, 72, 0.36);
+  background: rgba(255, 247, 230, 0.78);
+}
+
+.pwa-device-action-evidence > span,
+.pwa-device-action-evidence > strong {
+  color: var(--aqua-dark);
+  font-size: 0.86rem;
+  font-weight: 900;
+}
+
+.pwa-device-action-evidence article {
+  display: grid;
+  gap: 4px;
+  padding: 10px;
+  border: 1px solid rgba(226, 162, 72, 0.3);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.62);
+}
+
+.pwa-device-action-evidence article.failed {
+  border-color: rgba(211, 93, 93, 0.38);
+}
+
+.pwa-device-action-evidence span,
+.pwa-device-action-evidence small,
+.pwa-device-action-evidence p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 850;
+}
+
+.pwa-device-action-evidence p {
+  color: var(--ink);
+}
+
 .pwa-gateway-evidence {
   display: grid;
   gap: 8px;
@@ -4304,6 +4351,51 @@ textarea {
 .pwa-mode-qa-list strong {
   color: var(--aqua-dark);
   font-size: 0.9rem;
+}
+
+.pwa-device-action-list {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid rgba(61, 173, 120, 0.28);
+  border-radius: 8px;
+  background: rgba(232, 248, 241, 0.72);
+}
+
+.pwa-device-action-list.has-actions {
+  border-color: rgba(226, 162, 72, 0.38);
+  background: rgba(255, 247, 230, 0.78);
+}
+
+.pwa-device-action-list > span {
+  color: var(--aqua-dark);
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
+.pwa-device-action-list article {
+  display: grid;
+  gap: 4px;
+  padding: 10px;
+  border: 1px solid rgba(226, 162, 72, 0.3);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.64);
+}
+
+.pwa-device-action-list article.failed {
+  border-color: rgba(211, 93, 93, 0.38);
+}
+
+.pwa-device-action-list strong,
+.pwa-device-action-list small,
+.pwa-device-action-list p {
+  margin: 0;
+  font-size: 0.76rem;
+  font-weight: 850;
+}
+
+.pwa-device-action-list small {
+  color: var(--muted);
 }
 
 .pwa-test-item,

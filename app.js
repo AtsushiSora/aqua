@@ -1403,6 +1403,7 @@ function renderPwaTestReview(results) {
   const totalCount = results.length;
   const latestResult = results[0] || null;
   const modeQa = getPwaModeQaSummary(results);
+  const actionItems = getPwaDeviceQaActionItems(results);
   const ready = passedCount === scopes.length && failedCount === 0;
   const reviewLabel = ready ? "公開前OK" : totalCount ? "確認中" : "未記録";
   const reviewNote = ready
@@ -1451,6 +1452,24 @@ function renderPwaTestReview(results) {
         )
         .join("")}
     </div>
+    <div class="pwa-device-action-list ${actionItems.length ? "has-actions" : "is-clear"}">
+      <span>${actionItems.length ? "実機QAの対応メモ" : "実機QAの対応メモなし"}</span>
+      ${
+        actionItems.length
+          ? actionItems
+              .map(
+                (item) => `
+                  <article class="${escapeHtml(item.status)}">
+                    <strong>${escapeHtml(item.label)}</strong>
+                    <small>${escapeHtml(item.device)} / ${escapeHtml(item.browser)} / ${escapeHtml(formatFullDate(item.createdAt))}</small>
+                    <p>${escapeHtml(item.note)}</p>
+                  </article>
+                `,
+              )
+              .join("")
+          : "<p>要確認またはNGの実機テスト結果はありません。</p>"
+      }
+    </div>
   `;
 }
 
@@ -1470,6 +1489,21 @@ function getPwaModeQaSummary(results) {
       note: latestImageResult?.note || "背景画像とボタン背面画像を設定し、各モードで文字の読みやすさを確認",
     },
   ];
+}
+
+function getPwaDeviceQaActionItems(results) {
+  return results
+    .filter((result) => ["watch", "failed"].includes(result.status))
+    .slice(0, 5)
+    .map((result) => ({
+      id: result.id,
+      status: result.status,
+      label: `${getPwaTestScopeLabel(result.scope)} / ${getPwaTestStatusLabel(result.status)}`,
+      device: result.device || "端末未記録",
+      browser: result.browser || "ブラウザ未記録",
+      note: result.note || "原因、再現手順、次の修正内容を追記してください。",
+      createdAt: result.createdAt,
+    }));
 }
 
 function getPwaReleaseCoverage(results = state.pwaTestResults || []) {
@@ -1514,6 +1548,7 @@ function renderPwaReleaseDecision() {
   const handoff = getPwaReleaseHandoffState(evidenceItems);
   const qaState = getPwaReleaseQaState(evidenceItems);
   const appearanceQa = getPwaModeQaSummary(state.pwaTestResults || []);
+  const deviceQaActions = getPwaDeviceQaActionItems(state.pwaTestResults || []);
   const gatewayDecision = getAiGatewayProductionDecisionEvidence();
   const gatewayExportEvidence = getPwaGatewayDecisionExportEvidence(gatewayDecision);
   document.querySelector("#pwa-release-decision-status-input").value = decision.status;
@@ -1587,6 +1622,25 @@ function renderPwaReleaseDecision() {
           )
           .join("")}
       </div>
+    </div>
+    <div class="pwa-device-action-evidence ${deviceQaActions.length ? "pending" : "ready"}">
+      <span>実機QA対応</span>
+      <strong>${escapeHtml(deviceQaActions.length ? `${deviceQaActions.length}件の確認事項` : "要確認/NGなし")}</strong>
+      ${
+        deviceQaActions.length
+          ? deviceQaActions
+              .map(
+                (item) => `
+                  <article class="${escapeHtml(item.status)}">
+                    <span>${escapeHtml(item.label)}</span>
+                    <small>${escapeHtml(item.device)} / ${escapeHtml(item.browser)}</small>
+                    <p>${escapeHtml(item.note)}</p>
+                  </article>
+                `,
+              )
+              .join("")
+          : "<p>実機QAで要確認またはNGになった項目はありません。</p>"
+      }
     </div>
     <div class="pwa-gateway-evidence ${gatewayDecision.ready ? "ready" : "pending"}">
       <span>Gateway本番判定</span>
@@ -4341,6 +4395,7 @@ function exportPwaTestResults() {
   const coverage = getPwaReleaseCoverage(results);
   const gatewayDecisionEvidence = getAiGatewayProductionDecisionEvidence();
   const appearanceQa = getPwaModeQaSummary(results);
+  const deviceQaActions = getPwaDeviceQaActionItems(results);
   const evidence = getPwaReleaseEvidenceItems(releaseDecision, coverage);
   const readyForRelease = coverage.ready && releaseDecision.status === "ready" && evidence.every((item) => item.ready);
 
@@ -4363,6 +4418,10 @@ function exportPwaTestResults() {
     appearanceQa: {
       ready: appearanceQa.every((item) => item.ready),
       items: appearanceQa,
+    },
+    deviceQaActions: {
+      ready: deviceQaActions.length === 0,
+      items: deviceQaActions,
     },
     gatewayDecisionEvidence: getPwaGatewayDecisionExportEvidence(gatewayDecisionEvidence),
     releaseDecision: {
