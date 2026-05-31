@@ -6559,6 +6559,10 @@ function getAiPromptV4ProductionExport(entries) {
   const v4Entries = gatewayPhotoEntries.filter((entry) => getAiPromptGeneration(entry.promptVersion) === "v4");
   const promptComparison = getAiPromptGenerationComparison(gatewayPhotoEntries);
   const conditionCounts = getAiPhotoConditionCounts(gatewayPhotoEntries);
+  const notes = Array.isArray(state.aiPromptNotes) ? state.aiPromptNotes : [];
+  const retestAdjustmentConditions = getAiPromptNoteConditions(getAiRetestAdjustmentPromptNotes(notes));
+  const reReviewSummary = getAiDraftReReviewSummary(entries, retestAdjustmentConditions);
+  const reReviewDecision = getAiDraftReReviewDecision(reReviewSummary);
   const items = getAiPromptV4ProductionChecklist({
     gatewayPhotoEntries,
     v4Entries,
@@ -6571,6 +6575,7 @@ function getAiPromptV4ProductionExport(entries) {
     label: item.label,
   }));
   const completed = items.filter((item) => item.done).length;
+  const checklistReady = items.length > 0 && completed === items.length;
 
   return {
     promptVersion: aiApiStatus.promptVersion,
@@ -6580,7 +6585,8 @@ function getAiPromptV4ProductionExport(entries) {
     v4Reviewed: v4Entries.filter((entry) => ["good", "needs_fix", "watch"].includes(entry.reviewLabel)).length,
     completed,
     total: items.length,
-    ready: items.length > 0 && completed === items.length,
+    ready: checklistReady,
+    readyWithGatewayDecision: checklistReady && reReviewDecision.ready,
     items,
     conditionCoverage: AI_REQUIRED_PHOTO_CONDITIONS.map((key) => ({
       condition: key,
@@ -6593,6 +6599,20 @@ function getAiPromptV4ProductionExport(entries) {
       ).length,
     })),
     comparison: promptComparison,
+    gatewayDecisionEvidence: {
+      status: reReviewDecision.status,
+      ready: reReviewDecision.ready,
+      summary: reReviewDecision.summary,
+      nextAction: reReviewDecision.nextAction,
+      targetConditions: reReviewSummary.targetConditions,
+      targetConditionLabels: reReviewSummary.targetConditionLabels,
+      reReviewNeeded: reReviewSummary.reReviewNeeded,
+      reReviewed: reReviewSummary.reReviewed,
+      good: reReviewSummary.good,
+      needsFix: reReviewSummary.needsFix,
+      watch: reReviewSummary.watch,
+      exportedAt: new Date().toISOString(),
+    },
   };
 }
 
