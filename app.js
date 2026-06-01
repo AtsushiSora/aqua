@@ -108,6 +108,7 @@ const pwaTestNoteTemplateButton = document.querySelector("#pwa-test-note-templat
 const pwaReleaseDecisionForm = document.querySelector("#pwa-release-decision-form");
 const pwaReleaseDecisionChip = document.querySelector("#pwa-release-decision-chip");
 const pwaReleaseDecisionSummary = document.querySelector("#pwa-release-decision-summary");
+const productionSetupNextAction = document.querySelector("#production-setup-next-action");
 const productionSetupSummary = document.querySelector("#production-setup-summary");
 const accountUiModeInput = document.querySelector("#account-ui-mode-input");
 const homeUiModeInput = document.querySelector("#home-ui-mode-input");
@@ -1253,6 +1254,13 @@ function renderProductionSetupSummary() {
   }
 
   const setupSummary = getProductionSetupSummaryState();
+  if (productionSetupNextAction) {
+    productionSetupNextAction.className = `production-setup-next ${setupSummary.ready ? "ready" : "pending"}`;
+    productionSetupNextAction.innerHTML = `
+      <span>${escapeHtml(setupSummary.ready ? "本番前セットアップOK" : "次の作業")}</span>
+      <strong>${escapeHtml(setupSummary.nextAction)}</strong>
+    `;
+  }
   productionSetupSummary.innerHTML = setupSummary.items
     .map(
       (item) => `
@@ -1282,6 +1290,7 @@ function getProductionSetupSummaryState(results = state.pwaTestResults || []) {
     manualCount: counts.manual,
     missingCount: counts.missing,
     totalCount: items.length,
+    nextAction: getProductionSetupNextAction(items),
     items: items.map((item) => ({
       ...item,
       statusLabel: getProductionSetupStatusLabel(item.status),
@@ -1332,6 +1341,15 @@ function getProductionSetupSummaryItems(results = state.pwaTestResults || []) {
       note: pwaTestCount ? `${pwaTestCount}件の実機テスト記録` : "本番URLで実機テスト結果を保存します",
     },
   ];
+}
+
+function getProductionSetupNextAction(items) {
+  const nextItem = items.find((item) => item.status === "missing") || items.find((item) => item.status === "manual");
+  if (!nextItem) {
+    return "公開前セットアップはすべてOKです。PWA最終リリース判定とレビューJSONを書き出してください。";
+  }
+
+  return `${nextItem.label}: ${nextItem.note}`;
 }
 
 function getProductionSetupStatusLabel(status) {
