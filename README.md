@@ -13,7 +13,7 @@
 - `.env.example` に将来のSupabase接続で使う環境変数名を置いています。
 - `supabase-config.example.js` を `supabase-config.js` にコピーして値を入れると、アカウント画面のAuth接続を試せます。
 - `supabase/schema.sql` は途中で失敗しても再実行しやすいように、型、テーブル、インデックス、ポリシーを冪等化しています。
-- アカウント画面の「本番前セットアップ」で、Supabase SQL、Storage、AI Gateway、通知、PWA実機QAの残タスクと確認場所を確認できます。
+- アカウント画面の「本番前セットアップ」で、Supabase SQL、Storage、AI Gateway、通知、PWA実機QAの残タスク、確認場所、現在の確認状態を確認できます。
 
 ## 入っている機能
 

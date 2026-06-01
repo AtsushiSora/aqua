@@ -5304,6 +5304,64 @@ textarea {
   list-style: none;
 }
 
+.production-setup-summary {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.production-setup-summary article {
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid var(--glass-border);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.58);
+}
+
+.production-setup-summary article.ready {
+  border-color: rgba(18, 148, 142, 0.26);
+  background: rgba(231, 247, 243, 0.78);
+}
+
+.production-setup-summary article.manual {
+  border-color: rgba(207, 132, 38, 0.24);
+  background: rgba(255, 247, 232, 0.78);
+}
+
+.production-setup-summary article.missing {
+  border-color: rgba(205, 88, 68, 0.18);
+  background: rgba(255, 244, 240, 0.72);
+}
+
+.production-setup-summary span,
+.production-setup-summary strong,
+.production-setup-summary small {
+  display: block;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.production-setup-summary span {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 950;
+}
+
+.production-setup-summary strong {
+  margin: 5px 0;
+  color: var(--aqua-dark);
+  font-family: var(--font-jp);
+  font-size: 0.9rem;
+}
+
+.production-setup-summary small {
+  color: var(--muted);
+  font-size: 0.73rem;
+  font-weight: 800;
+  line-height: 1.45;
+}
+
 .production-setup-list li {
   counter-increment: setup-step;
   min-width: 0;
@@ -5693,6 +5751,7 @@ textarea {
   .manager-layout,
   .community-tools,
   .schema-grid,
+  .production-setup-summary,
   .production-setup-list,
   .post-grid,
   .guide-grid,
@@ -5941,6 +6000,7 @@ textarea {
   .ai-image-validation-summary dl,
   .ai-condition-coverage ul,
   .schema-grid,
+  .production-setup-summary,
   .production-setup-list,
   .post-grid,
   .ranking-list,

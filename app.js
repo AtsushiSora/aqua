@@ -108,6 +108,7 @@ const pwaTestNoteTemplateButton = document.querySelector("#pwa-test-note-templat
 const pwaReleaseDecisionForm = document.querySelector("#pwa-release-decision-form");
 const pwaReleaseDecisionChip = document.querySelector("#pwa-release-decision-chip");
 const pwaReleaseDecisionSummary = document.querySelector("#pwa-release-decision-summary");
+const productionSetupSummary = document.querySelector("#production-setup-summary");
 const accountUiModeInput = document.querySelector("#account-ui-mode-input");
 const homeUiModeInput = document.querySelector("#home-ui-mode-input");
 const homeUiModeCycleButton = document.querySelector("#home-ui-mode-cycle-button");
@@ -1217,6 +1218,7 @@ function renderAccount() {
   renderNotificationVerificationChecklist();
   renderPwaTestResults();
   renderPwaReleaseDecision();
+  renderProductionSetupSummary();
 
   const mediaCount = state.posts.filter((post) => hasPostMedia(post)).length;
   const commentCount = state.posts.reduce((total, post) => total + getDisplayCommentCount(post), 0);
@@ -1243,6 +1245,67 @@ function renderAccount() {
   `;
 
   renderAuthPanel();
+}
+
+function renderProductionSetupSummary() {
+  if (!productionSetupSummary) {
+    return;
+  }
+
+  const setupStatus = getSupabaseSetupStatus();
+  const pwaCoverage = getPwaReleaseCoverage();
+  const gatewayReady = aiApiStatus.configured === true;
+  const productionCheck = normalizeNotificationProductionCheck(state.notificationProductionCheck || {});
+  const notificationReady =
+    productionCheck.envStatus === "confirmed" &&
+    productionCheck.dryRunStatus === "confirmed" &&
+    productionCheck.sendStatus === "confirmed";
+  const mediaCount = state.posts.filter((post) => hasPostMedia(post)).length;
+  const pwaTestCount = Array.isArray(state.pwaTestResults) ? state.pwaTestResults.length : 0;
+  const items = [
+    {
+      label: "Supabase",
+      status: setupStatus.ready && authSession?.user ? "ready" : setupStatus.ready ? "manual" : "missing",
+      value: authSession?.user ? "ログイン中" : setupStatus.ready ? "接続準備済み" : "未設定",
+      note: authSession?.user ? "プロフィール同期まで確認できます" : setupStatus.message,
+    },
+    {
+      label: "Storage",
+      status: mediaCount ? "manual" : "missing",
+      value: mediaCount ? `${mediaCount}件のメディア` : "未確認",
+      note: mediaCount ? "Supabase Storage bucket側の保存確認が残ります" : "水槽写真または投稿メディアで確認します",
+    },
+    {
+      label: "AI Gateway",
+      status: gatewayReady ? "ready" : aiApiStatus.checkedAt ? "missing" : "manual",
+      value: gatewayReady ? "OK" : aiApiStatus.checkedAt ? "要確認" : "未確認",
+      note: gatewayReady ? `${aiApiStatus.gateway} / ${aiApiStatus.model}` : "AI画面のAI API検証で確認します",
+    },
+    {
+      label: "通知",
+      status: notificationReady ? "ready" : "manual",
+      value: notificationReady ? "OK" : getNotificationProductionNextAction(productionCheck),
+      note: productionCheck.checkedAt ? `${formatFullDate(productionCheck.checkedAt)} に確認` : "通知本番チェックの確認メモを保存します",
+    },
+    {
+      label: "PWA実機QA",
+      status: pwaCoverage.ready ? "ready" : pwaTestCount ? "manual" : "missing",
+      value: pwaCoverage.ready ? "OK" : `${pwaCoverage.passedCount}/${pwaCoverage.scopes.length} OK`,
+      note: pwaTestCount ? `${pwaTestCount}件の実機テスト記録` : "本番URLで実機テスト結果を保存します",
+    },
+  ];
+
+  productionSetupSummary.innerHTML = items
+    .map(
+      (item) => `
+        <article class="${escapeHtml(item.status)}">
+          <span>${escapeHtml(item.label)}</span>
+          <strong>${escapeHtml(item.value)}</strong>
+          <small>${escapeHtml(item.note)}</small>
+        </article>
+      `,
+    )
+    .join("");
 }
 
 function renderCustomAppearance() {
@@ -6756,6 +6819,7 @@ function renderAiApiStatus() {
       `,
     )
     .join("");
+  renderProductionSetupSummary();
 }
 
 function renderAiEvaluationLog() {
