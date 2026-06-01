@@ -112,6 +112,7 @@ const productionSetupNextAction = document.querySelector("#production-setup-next
 const productionSetupSummary = document.querySelector("#production-setup-summary");
 const productionSupabaseCheckForm = document.querySelector("#production-supabase-check-form");
 const productionStorageCheckForm = document.querySelector("#production-storage-check-form");
+const productionAiCheckForm = document.querySelector("#production-ai-check-form");
 const accountUiModeInput = document.querySelector("#account-ui-mode-input");
 const homeUiModeInput = document.querySelector("#home-ui-mode-input");
 const homeUiModeCycleButton = document.querySelector("#home-ui-mode-cycle-button");
@@ -278,6 +279,10 @@ const defaultState = {
     storageReviewer: "",
     storageNote: "",
     storageCheckedAt: null,
+    aiStatus: "unchecked",
+    aiReviewer: "",
+    aiNote: "",
+    aiCheckedAt: null,
   },
   notificationProductionCheck: {
     envStatus: "unchecked",
@@ -619,6 +624,7 @@ pwaTestExportButton.addEventListener("click", exportPwaTestResults);
 pwaReleaseDecisionForm.addEventListener("submit", handlePwaReleaseDecisionSubmit);
 productionSupabaseCheckForm.addEventListener("submit", handleProductionSupabaseCheckSubmit);
 productionStorageCheckForm.addEventListener("submit", handleProductionStorageCheckSubmit);
+productionAiCheckForm.addEventListener("submit", handleProductionAiCheckSubmit);
 pwaTestLog.addEventListener("click", async (event) => {
   const button = event.target.closest("[data-pwa-test-delete]");
   if (!button) {
@@ -1279,6 +1285,11 @@ function renderProductionSetupSummary() {
     document.querySelector("#production-storage-reviewer-input").value = setupCheck.storageReviewer || state.account.name || "";
     document.querySelector("#production-storage-note-input").value = setupCheck.storageNote;
   }
+  if (productionAiCheckForm) {
+    document.querySelector("#production-ai-status-input").value = setupCheck.aiStatus;
+    document.querySelector("#production-ai-reviewer-input").value = setupCheck.aiReviewer || state.account.name || "";
+    document.querySelector("#production-ai-note-input").value = setupCheck.aiNote;
+  }
   if (productionSetupNextAction) {
     productionSetupNextAction.className = `production-setup-next ${setupSummary.ready ? "ready" : "pending"}`;
     productionSetupNextAction.innerHTML = `
@@ -1327,6 +1338,20 @@ function handleProductionStorageCheckSubmit(event) {
   showToast("Storage確認を保存しました");
 }
 
+function handleProductionAiCheckSubmit(event) {
+  event.preventDefault();
+  state.productionSetupCheck = normalizeProductionSetupCheck({
+    ...state.productionSetupCheck,
+    aiStatus: document.querySelector("#production-ai-status-input").value,
+    aiReviewer: document.querySelector("#production-ai-reviewer-input").value,
+    aiNote: document.querySelector("#production-ai-note-input").value,
+    aiCheckedAt: new Date().toISOString(),
+  });
+  saveState();
+  renderProductionSetupSummary();
+  showToast("AI Gateway確認を保存しました");
+}
+
 function getProductionSetupSummaryState(results = state.pwaTestResults || []) {
   const items = getProductionSetupSummaryItems(results);
   const counts = items.reduce(
@@ -1360,6 +1385,8 @@ function getProductionSetupSummaryItems(results = state.pwaTestResults || []) {
   const supabaseIssue = setupCheck.supabaseStatus === "issues";
   const storageReady = setupCheck.storageStatus === "confirmed";
   const storageIssue = setupCheck.storageStatus === "issues";
+  const aiReady = setupCheck.aiStatus === "confirmed";
+  const aiIssue = setupCheck.aiStatus === "issues";
   const productionCheck = normalizeNotificationProductionCheck(state.notificationProductionCheck || {});
   const notificationReady =
     productionCheck.envStatus === "confirmed" &&
@@ -1386,9 +1413,11 @@ function getProductionSetupSummaryItems(results = state.pwaTestResults || []) {
     },
     {
       label: "AI Gateway",
-      status: gatewayReady ? "ready" : aiApiStatus.checkedAt ? "missing" : "manual",
-      value: gatewayReady ? "OK" : aiApiStatus.checkedAt ? "要確認" : "未確認",
-      note: gatewayReady ? `${aiApiStatus.gateway} / ${aiApiStatus.model}` : "AI画面のAI API検証で確認します",
+      status: aiReady ? "ready" : aiIssue ? "missing" : gatewayReady ? "ready" : aiApiStatus.checkedAt ? "missing" : "manual",
+      value: aiReady ? "確認済み" : aiIssue ? "要対応" : gatewayReady ? "OK" : aiApiStatus.checkedAt ? "要確認" : "未確認",
+      note: setupCheck.aiNote || (gatewayReady ? `${aiApiStatus.gateway} / ${aiApiStatus.model}` : "AI画面のAI API検証で確認します"),
+      reviewer: setupCheck.aiReviewer,
+      checkedAt: setupCheck.aiCheckedAt,
     },
     {
       label: "通知",
@@ -9493,6 +9522,10 @@ function normalizeProductionSetupCheck(check) {
     storageReviewer: String(check.storageReviewer || "").trim(),
     storageNote: String(check.storageNote || "").trim(),
     storageCheckedAt: check.storageCheckedAt || null,
+    aiStatus: getAllowedValue(check.aiStatus, ["unchecked", "confirmed", "issues"], "unchecked"),
+    aiReviewer: String(check.aiReviewer || "").trim(),
+    aiNote: String(check.aiNote || "").trim(),
+    aiCheckedAt: check.aiCheckedAt || null,
   };
 }
 

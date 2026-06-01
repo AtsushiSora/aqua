@@ -1261,6 +1261,25 @@
                   </label>
                   <button class="ghost-button full-field" type="submit">Storage確認を保存</button>
                 </form>
+                <form class="production-setup-check-form" id="production-ai-check-form">
+                  <label>
+                    <span>AI Gateway確認</span>
+                    <select id="production-ai-status-input">
+                      <option value="unchecked">未確認</option>
+                      <option value="confirmed">確認済み</option>
+                      <option value="issues">要対応</option>
+                    </select>
+                  </label>
+                  <label>
+                    <span>確認者</span>
+                    <input id="production-ai-reviewer-input" type="text" placeholder="確認者名">
+                  </label>
+                  <label class="full-field">
+                    <span>確認メモ</span>
+                    <textarea id="production-ai-note-input" rows="2" placeholder="OPENAI_BASE_URL / OPENAI_API_KEY、AI API検証、実写真分析結果など"></textarea>
+                  </label>
+                  <button class="ghost-button full-field" type="submit">AI確認を保存</button>
+                </form>
               </div>
               <ol class="production-setup-list">
                 <li>
