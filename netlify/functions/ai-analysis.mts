@@ -11,6 +11,7 @@ type AnalysisRequest = {
     kind?: string;
     animals?: string;
     plants?: string;
+    equipment?: string;
     residents?: string;
     volumeLabel?: string;
   };

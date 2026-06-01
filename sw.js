@@ -1,4 +1,4 @@
-const CACHE_NAME = "aquanote-production-v13";
+const CACHE_NAME = "aquanote-production-v14";
 const ASSETS = [
   "./",
   "./index.html",
