@@ -122,7 +122,6 @@ const dashboardTitle = document.querySelector("#dashboard-title");
 const heroTitle = document.querySelector(".hero-copy h2");
 const heroLead = document.querySelector(".hero-copy h2 + p");
 const quickDockButtons = document.querySelectorAll(".quick-dock button");
-const supabaseConfig = window.AQUANOTE_SUPABASE_CONFIG || {};
 const pushConfig = window.AQUANOTE_PUSH_CONFIG || {};
 const UI_MODES = ["standard", "simple", "glance", "adult"];
 const PWA_REQUIRED_SCOPES = ["login", "install", "notification", "offline", "ui_modes", "custom_images"];
@@ -2203,6 +2202,7 @@ function getUiModeLabel(value) {
 }
 
 function renderAuthPanel() {
+  const setupStatus = getSupabaseSetupStatus();
   const configured = Boolean(supabaseClient);
   const signedIn = Boolean(authSession?.user);
 
@@ -2212,7 +2212,7 @@ function renderAuthPanel() {
   authSignOutButton.disabled = !signedIn;
 
   if (!configured) {
-    authNote.textContent = "supabase-config.js を追加すると、ログインと新規登録を試せます。未設定でもローカル保存は使えます。";
+    authNote.textContent = setupStatus.message;
     return;
   }
 
@@ -2544,7 +2544,11 @@ function getNotificationProductionNextAction(check) {
 
 async function handleAuthSubmit(action) {
   if (!supabaseClient) {
-    showToast("Supabase設定がまだありません");
+    supabaseClient = await ensureSupabaseClient();
+  }
+
+  if (!supabaseClient) {
+    showToast(getSupabaseSetupStatus().message);
     renderAuthPanel();
     return;
   }
@@ -2588,7 +2592,11 @@ async function handleAuthSubmit(action) {
 
 async function signOutSupabase() {
   if (!supabaseClient) {
-    showToast("Supabase設定がまだありません");
+    supabaseClient = await ensureSupabaseClient();
+  }
+
+  if (!supabaseClient) {
+    showToast(getSupabaseSetupStatus().message);
     return;
   }
 
@@ -4516,8 +4524,9 @@ function applyRemoteProfile(profile) {
 }
 
 function createSupabaseClient() {
-  const url = supabaseConfig.url || supabaseConfig.supabaseUrl;
-  const key = supabaseConfig.publishableKey || supabaseConfig.anonKey;
+  const config = getSupabaseConfig();
+  const url = config.url || config.supabaseUrl;
+  const key = config.publishableKey || config.anonKey;
 
   if (!url || !key || !window.supabase?.createClient) {
     return null;
@@ -4526,7 +4535,76 @@ function createSupabaseClient() {
   return window.supabase.createClient(url, key);
 }
 
+function getSupabaseConfig() {
+  return window.AQUANOTE_SUPABASE_CONFIG || {};
+}
+
+function getSupabaseSetupStatus() {
+  const config = getSupabaseConfig();
+  const hasUrl = Boolean(config.url || config.supabaseUrl);
+  const hasKey = Boolean(config.publishableKey || config.anonKey);
+  const hasSdk = Boolean(window.supabase?.createClient);
+
+  if (!hasUrl || !hasKey) {
+    return {
+      ready: false,
+      message: "supabase-config.js が読み込まれていません。ローカルサーバーで開き直すか、画面を再読み込みしてください。",
+    };
+  }
+
+  if (!hasSdk) {
+    return {
+      ready: false,
+      message: "Supabase SDKを読み込めません。ネット接続またはCDN読み込みを確認してください。",
+    };
+  }
+
+  return {
+    ready: true,
+    message: "Supabase Authへメールとパスワードで接続します。",
+  };
+}
+
+function loadScript(src) {
+  return new Promise((resolve, reject) => {
+    const script = document.createElement("script");
+    script.src = src;
+    script.async = false;
+    script.onload = resolve;
+    script.onerror = reject;
+    document.head.append(script);
+  });
+}
+
+async function ensureSupabaseClient() {
+  if (supabaseClient) {
+    return supabaseClient;
+  }
+
+  if (!getSupabaseConfig().url && !getSupabaseConfig().supabaseUrl) {
+    try {
+      await loadScript(`supabase-config.js?ts=${Date.now()}`);
+    } catch (error) {
+      return null;
+    }
+  }
+
+  if (!window.supabase?.createClient) {
+    try {
+      await loadScript("https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2");
+    } catch (error) {
+      return null;
+    }
+  }
+
+  return createSupabaseClient();
+}
+
 async function initSupabaseAuth() {
+  if (!supabaseClient) {
+    supabaseClient = await ensureSupabaseClient();
+  }
+
   if (!supabaseClient) {
     renderAuthPanel();
     return;
