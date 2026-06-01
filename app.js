@@ -959,9 +959,8 @@ tankForm.addEventListener("submit", (event) => {
   const kind = document.querySelector("#tank-kind-input").value;
   const size = document.querySelector("#tank-size-input").value.trim() || "サイズ未設定";
   const volume = document.querySelector("#tank-volume-input").value.trim() || "容量未設定";
-  const animals = getSpeciesListValue("tank-animals-list");
-  const plants = getSpeciesListValue("tank-plants-list");
-  const residents = formatTankResidents({ animals, plants });
+  const residents = getSpeciesListValue("tank-species-list");
+  const { animals, plants } = getTankResidentParts({ residents });
   const tank = {
     id: createId("tank"),
     name,
@@ -982,8 +981,7 @@ tankForm.addEventListener("submit", (event) => {
   state.activeTankId = tank.id;
   saveState();
   tankForm.reset();
-  resetSpeciesList("tank-animals-list");
-  resetSpeciesList("tank-plants-list");
+  resetSpeciesList("tank-species-list");
   resetTankIdentifyAssist();
   renderApp();
   showToast("水槽を追加しました");
@@ -1003,9 +1001,10 @@ tankEditForm.addEventListener("submit", (event) => {
   tank.kind = document.querySelector("#edit-tank-kind").value;
   tank.size = document.querySelector("#edit-tank-size").value.trim() || "サイズ未設定";
   tank.volume = document.querySelector("#edit-tank-volume").value.trim() || "容量未設定";
-  tank.animals = getSpeciesListValue("edit-tank-animals-list");
-  tank.plants = getSpeciesListValue("edit-tank-plants-list");
-  tank.residents = formatTankResidents(tank);
+  tank.residents = getSpeciesListValue("edit-tank-species-list");
+  const residentParts = getTankResidentParts(tank);
+  tank.animals = residentParts.animals;
+  tank.plants = residentParts.plants;
   tank.tags = tags.length ? tags : [tank.kind];
 
   saveState();
@@ -5419,7 +5418,7 @@ function renderTankProfile() {
   aquariumVisual.classList.toggle("has-cover", Boolean(featuredImage));
   aquariumVisual.style.backgroundImage = featuredImage ? `url("${featuredImage}")` : "";
   document.querySelector("#tank-profile-name").textContent = tank.name;
-  document.querySelector("#tank-profile-detail").textContent = `${tank.size} / ${tank.volume} / 生き物: ${tank.animals || "未設定"} / 水草: ${tank.plants || "未設定"}`;
+  document.querySelector("#tank-profile-detail").textContent = `${tank.size} / ${tank.volume} / ${formatTankResidents(tank)}`;
   document.querySelector("#tank-profile-tags").innerHTML = tank.tags
     .map((tag) => `<span class="chip">${escapeHtml(tag)}</span>`)
     .join("");
@@ -5428,8 +5427,7 @@ function renderTankProfile() {
   document.querySelector("#edit-tank-kind").value = tank.kind;
   document.querySelector("#edit-tank-size").value = tank.size;
   document.querySelector("#edit-tank-volume").value = tank.volume;
-  setSpeciesListValues("edit-tank-animals-list", tank.animals || "");
-  setSpeciesListValues("edit-tank-plants-list", tank.plants || "");
+  setSpeciesListValues("edit-tank-species-list", formatTankResidents(tank));
   document.querySelector("#edit-tank-tags").value = tank.tags.join(", ");
   document.querySelector("#delete-tank-button").disabled = state.tanks.length <= 1;
 }
@@ -6333,18 +6331,18 @@ function applyTankResidentCandidates(result) {
   }
 
   if (animals.length) {
-    appendSpeciesValues("tank-animals-list", animals);
+    appendSpeciesValues("tank-species-list", animals);
   }
 
   if (plants.length) {
-    appendSpeciesValues("tank-plants-list", plants);
+    appendSpeciesValues("tank-species-list", plants);
   }
 
   const sourceLabel = result.source === "local" ? "種類からの候補" : "写真からの候補";
   const confidenceLabel = result.source !== "local" && Number.isFinite(Number(result.confidence))
     ? ` / 信頼度${Math.round(Number(result.confidence) * 100)}%`
     : "";
-  tankIdentifyStatus.textContent = `${sourceLabel}: 生き物 ${animals.join("、") || "なし"} / 水草 ${plants.join("、") || "なし"}${confidenceLabel}`;
+  tankIdentifyStatus.textContent = `${sourceLabel}: ${candidates.join("、")}${confidenceLabel}`;
   showToast("生き物・水草の候補を入力しました");
 }
 
@@ -9790,8 +9788,7 @@ function escapeCssIdentifier(value) {
 }
 
 setDefaultLogDate();
-resetSpeciesList("tank-animals-list");
-resetSpeciesList("tank-plants-list");
+resetSpeciesList("tank-species-list");
 renderPostImagePreview();
 renderApp();
 initSupabaseAuth();
