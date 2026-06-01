@@ -325,24 +325,53 @@ body[data-ui-mode="simple"] .quick-dock {
 }
 
 body[data-ui-mode="simple"] .quick-dock button {
-  grid-template-columns: 44px minmax(0, 1fr);
-  min-height: 88px;
-  padding: 16px;
+  grid-template-columns: 1fr;
+  grid-template-rows: auto auto auto;
+  place-items: center;
+  min-height: 116px;
+  padding: 18px 14px;
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.68), transparent),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.82), transparent),
+    linear-gradient(135deg, rgba(12, 159, 176, 0.08), rgba(240, 113, 103, 0.06)),
     rgba(255, 255, 255, 0.94);
+  text-align: center;
+}
+
+body[data-ui-mode="simple"] .quick-dock span {
+  grid-row: auto;
+  width: 56px;
+  height: 56px;
+  font-size: 1.28rem;
 }
 
 body[data-ui-mode="simple"] .quick-dock strong {
-  font-size: 1.06rem;
+  margin-top: 4px;
+  font-size: 1.16rem;
 }
 
 body[data-ui-mode="simple"] .quick-dock small {
-  font-size: 0.82rem;
+  font-size: 0.88rem;
+}
+
+body[data-ui-mode="simple"] .metric-grid {
+  gap: 12px;
+}
+
+body[data-ui-mode="simple"] .metric-card {
+  min-height: 144px;
+  display: grid;
+  align-content: center;
+  text-align: center;
 }
 
 body[data-ui-mode="simple"] .metric-card strong {
-  font-size: 1.62rem;
+  font-size: 1.82rem;
+}
+
+body[data-ui-mode="simple"] .task-row,
+body[data-ui-mode="simple"] .reminder-row {
+  min-height: 58px;
+  padding: 14px;
 }
 
 body[data-ui-mode="simple"] .panel,
@@ -375,6 +404,7 @@ body[data-ui-mode="adult"] .sync-status-button.is-synced {
 }
 
 body[data-ui-mode="adult"] .hero-band {
+  min-height: clamp(280px, 32vw, 390px);
   background:
     linear-gradient(115deg, rgba(12, 30, 32, 0.26), rgba(241, 244, 240, 0.1)),
     var(--waterline);
@@ -401,17 +431,36 @@ body[data-ui-mode="adult"] .quick-dock {
 }
 
 body[data-ui-mode="adult"] .quick-dock button {
-  min-height: 76px;
+  min-height: 64px;
+  grid-template-columns: 34px minmax(0, 1fr);
+  padding: 10px;
   border-color: rgba(29, 85, 88, 0.12);
 }
 
 body[data-ui-mode="adult"] .quick-dock span {
+  width: 30px;
+  height: 30px;
   background: rgba(29, 85, 88, 0.1);
   color: var(--aqua-dark);
 }
 
 body[data-ui-mode="adult"] .metric-card {
-  min-height: 132px;
+  min-height: 112px;
+  padding: 14px;
+}
+
+body[data-ui-mode="adult"] .metric-grid,
+body[data-ui-mode="adult"] .content-grid {
+  gap: 10px;
+}
+
+body[data-ui-mode="adult"] .panel {
+  padding: 16px;
+}
+
+body[data-ui-mode="adult"] .hero-photo-card {
+  width: min(260px, 30vw);
+  background: rgba(23, 35, 33, 0.66);
 }
 
 body[data-ui-mode="adult"] .ui-mode-switch,
@@ -469,13 +518,21 @@ body[data-ui-mode="glance"] .app-home-top h1 {
 }
 
 body[data-ui-mode="glance"] .quick-dock {
-  grid-template-columns: repeat(4, minmax(82px, 1fr));
+  width: min(100%, 620px);
+  grid-template-columns: repeat(4, minmax(92px, 1fr));
   justify-items: center;
-  gap: 14px;
+  gap: 18px;
+  padding: 18px;
+  border: 1px solid rgba(137, 247, 255, 0.16);
+  border-radius: 34px;
+  background:
+    radial-gradient(circle at 20% 10%, rgba(137, 247, 255, 0.14), transparent 28%),
+    rgba(3, 8, 12, 0.72);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), var(--shadow-soft);
 }
 
 body[data-ui-mode="glance"] .quick-dock button {
-  width: min(100%, 118px);
+  width: min(100%, 124px);
   aspect-ratio: 1;
   min-height: 0;
   grid-template-columns: 1fr;
@@ -520,25 +577,26 @@ body[data-ui-mode="glance"] .hero-copy p:not(.eyebrow) {
 
 body[data-ui-mode="glance"] .quick-dock span {
   grid-row: auto;
-  width: 34px;
-  height: 34px;
+  width: 42px;
+  height: 42px;
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.16);
   color: #f7fbfb;
+  font-size: 1.12rem;
 }
 
 body[data-ui-mode="glance"] .quick-dock strong {
   margin-top: 2px;
-  font-size: 0.86rem;
+  font-size: 0.9rem;
 }
 
 body[data-ui-mode="glance"] .quick-dock small {
   color: rgba(247, 251, 251, 0.76);
-  font-size: 0.68rem;
+  font-size: 0.7rem;
 }
 
 body[data-ui-mode="glance"] .metric-card {
-  min-height: 126px;
+  min-height: 138px;
   display: grid;
   align-content: center;
   border-radius: 999px;
@@ -555,7 +613,13 @@ body[data-ui-mode="glance"] .metric-card::before {
 
 body[data-ui-mode="glance"] .metric-card strong {
   color: #f7fbfb;
-  font-size: 1.55rem;
+  font-size: 1.68rem;
+}
+
+body[data-ui-mode="glance"] .metric-card small {
+  max-width: 16ch;
+  margin-inline: auto;
+  color: rgba(247, 251, 251, 0.72);
 }
 
 body[data-ui-mode="glance"] .metric-card.alert {
@@ -5505,18 +5569,24 @@ textarea {
   }
 
   body[data-ui-mode="simple"] .quick-dock button {
-    grid-template-columns: 38px minmax(0, 1fr);
-    min-height: 78px;
+    grid-template-columns: 1fr;
+    min-height: 104px;
     padding: 12px;
   }
 
+  body[data-ui-mode="simple"] .quick-dock span {
+    width: 48px;
+    height: 48px;
+  }
+
   body[data-ui-mode="adult"] .quick-dock button {
-    min-height: 68px;
+    min-height: 62px;
   }
 
   body[data-ui-mode="glance"] .quick-dock {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 12px;
+    gap: 14px;
+    padding: 14px;
   }
 
   body[data-ui-mode="glance"] .hero-band {
@@ -5524,7 +5594,7 @@ textarea {
   }
 
   body[data-ui-mode="glance"] .quick-dock button {
-    width: min(100%, 104px);
+    width: min(100%, 112px);
     padding: 10px 8px;
   }
 
