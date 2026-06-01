@@ -1252,8 +1252,46 @@ function renderProductionSetupSummary() {
     return;
   }
 
+  const setupSummary = getProductionSetupSummaryState();
+  productionSetupSummary.innerHTML = setupSummary.items
+    .map(
+      (item) => `
+        <article class="${escapeHtml(item.status)}">
+          <span>${escapeHtml(item.label)}</span>
+          <strong>${escapeHtml(item.value)}</strong>
+          <small>${escapeHtml(item.note)}</small>
+        </article>
+      `,
+    )
+    .join("");
+}
+
+function getProductionSetupSummaryState(results = state.pwaTestResults || []) {
+  const items = getProductionSetupSummaryItems(results);
+  const counts = items.reduce(
+    (summary, item) => ({
+      ...summary,
+      [item.status]: summary[item.status] + 1,
+    }),
+    { ready: 0, manual: 0, missing: 0 },
+  );
+
+  return {
+    ready: counts.ready === items.length,
+    readyCount: counts.ready,
+    manualCount: counts.manual,
+    missingCount: counts.missing,
+    totalCount: items.length,
+    items: items.map((item) => ({
+      ...item,
+      statusLabel: getProductionSetupStatusLabel(item.status),
+    })),
+  };
+}
+
+function getProductionSetupSummaryItems(results = state.pwaTestResults || []) {
   const setupStatus = getSupabaseSetupStatus();
-  const pwaCoverage = getPwaReleaseCoverage();
+  const pwaCoverage = getPwaReleaseCoverage(results);
   const gatewayReady = aiApiStatus.configured === true;
   const productionCheck = normalizeNotificationProductionCheck(state.notificationProductionCheck || {});
   const notificationReady =
@@ -1261,8 +1299,8 @@ function renderProductionSetupSummary() {
     productionCheck.dryRunStatus === "confirmed" &&
     productionCheck.sendStatus === "confirmed";
   const mediaCount = state.posts.filter((post) => hasPostMedia(post)).length;
-  const pwaTestCount = Array.isArray(state.pwaTestResults) ? state.pwaTestResults.length : 0;
-  const items = [
+  const pwaTestCount = Array.isArray(results) ? results.length : 0;
+  return [
     {
       label: "Supabase",
       status: setupStatus.ready && authSession?.user ? "ready" : setupStatus.ready ? "manual" : "missing",
@@ -1294,18 +1332,15 @@ function renderProductionSetupSummary() {
       note: pwaTestCount ? `${pwaTestCount}件の実機テスト記録` : "本番URLで実機テスト結果を保存します",
     },
   ];
+}
 
-  productionSetupSummary.innerHTML = items
-    .map(
-      (item) => `
-        <article class="${escapeHtml(item.status)}">
-          <span>${escapeHtml(item.label)}</span>
-          <strong>${escapeHtml(item.value)}</strong>
-          <small>${escapeHtml(item.note)}</small>
-        </article>
-      `,
-    )
-    .join("");
+function getProductionSetupStatusLabel(status) {
+  const labels = {
+    ready: "OK",
+    manual: "要確認",
+    missing: "未確認",
+  };
+  return labels[status] || labels.missing;
 }
 
 function renderCustomAppearance() {
@@ -4796,6 +4831,7 @@ function exportPwaTestResults() {
   const coverage = getPwaReleaseCoverage(results);
   const scopeStatuses = getPwaScopeStatuses(results);
   const gatewayDecisionEvidence = getAiGatewayProductionDecisionEvidence();
+  const prelaunchSetup = getProductionSetupSummaryState(results);
   const appearanceQa = getPwaModeQaSummary(results);
   const deviceQaActions = getPwaDeviceQaActionItems(results);
   const allDeviceQaActions = getPwaDeviceQaActionItems(results, { includeResolved: true });
@@ -4852,6 +4888,7 @@ function exportPwaTestResults() {
       items: deviceQaActions,
       history: allDeviceQaActions,
     },
+    prelaunchSetup,
     gatewayDecisionEvidence: getPwaGatewayDecisionExportEvidence(gatewayDecisionEvidence),
     handoffChecklist,
     handoffMemo,
