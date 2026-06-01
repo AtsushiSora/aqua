@@ -133,7 +133,7 @@ const PWA_SCOPE_QA_HINTS = {
   install: ["ホーム画面追加", "アイコン起動", "スタンドアロン表示"],
   notification: ["通知許可", "Push購読", "dry-run解除後の受信"],
   offline: ["機内モード再読み込み", "オフラインページ", "復帰後の再表示"],
-  ui_modes: ["ベーシック", "かんたん", "一目", "大人", "ライブ"],
+  ui_modes: ["ベーシック", "かんたん", "一目", "大人", "ライブ演出", "横スクロールなし", "動きを減らす設定"],
   custom_images: ["背景画像", "ボタン背面", "文字の読みやすさ"],
 };
 const PWA_SCOPE_NOTE_TEMPLATES = {
@@ -141,7 +141,7 @@ const PWA_SCOPE_NOTE_TEMPLATES = {
   install: "ホーム画面追加: OK / アイコン起動: OK / スタンドアロン表示: OK",
   notification: "通知許可: OK / Push購読: OK / dry-run解除後の受信: 未確認",
   offline: "機内モード再読み込み: OK / オフラインページ: OK / 復帰後の再表示: OK",
-  ui_modes: "ベーシック: OK / かんたん: OK / 一目: OK / 大人: OK / ライブ: OK",
+  ui_modes: "ベーシック: OK / かんたん: OK / 一目: OK / 大人: OK / ライブ演出: OK / 横スクロールなし: OK / 動きを減らす設定: OK",
   custom_images: "背景画像: OK / ボタン背面: OK / 文字の読みやすさ: OK",
 };
 const AI_REQUIRED_PHOTO_CONDITIONS = ["dark", "small_fish", "algae", "reflection"];
