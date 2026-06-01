@@ -334,6 +334,7 @@ let highlightedSearchResult = null;
 let supabaseClient = createSupabaseClient();
 let authSession = null;
 let cloudSyncInProgress = false;
+let lastProfileSyncErrorMessage = "";
 let notificationDeliveryHistory = [];
 let activeNotificationDeliveryFilter = "all";
 let activeNotificationDeliveryDetailId = null;
@@ -2598,7 +2599,7 @@ async function syncCloudState(options = {}) {
     const profileSynced = await syncProfileToSupabase({ silent: true });
     if (!profileSynced) {
       if (!options.silent) {
-        showToast("プロフィール同期に失敗しました");
+        showToast(lastProfileSyncErrorMessage || "プロフィール同期に失敗しました");
       }
       return false;
     }
@@ -4493,14 +4494,17 @@ async function syncProfileToSupabase(options = {}) {
     .maybeSingle();
 
   if (error) {
+    lastProfileSyncErrorMessage = getProfileSyncErrorMessage(error);
     state.account.syncStatus = "local";
     saveState({ keepSyncStatus: true });
     renderAccount();
     if (!options.silent) {
-      showToast(error.message || "プロフィール同期に失敗しました");
+      showToast(lastProfileSyncErrorMessage);
     }
     return false;
   }
+
+  lastProfileSyncErrorMessage = "";
 
   if (data) {
     applyRemoteProfile(data);
@@ -4517,6 +4521,19 @@ async function syncProfileToSupabase(options = {}) {
   }
 
   return true;
+}
+
+function getProfileSyncErrorMessage(error) {
+  if (isLiveUiModeConstraintError(error)) {
+    return "Supabaseでライブモード用SQLを実行してください。READMEの既存Supabase反映手順を確認してください。";
+  }
+
+  return error?.message || "プロフィール同期に失敗しました";
+}
+
+function isLiveUiModeConstraintError(error) {
+  const text = `${error?.message || ""} ${error?.details || ""} ${error?.hint || ""} ${error?.code || ""}`;
+  return /ui_mode|profiles_ui_mode_check|23514/i.test(text) && state.account?.uiMode === "live";
 }
 
 function getProfilePayload(user) {
