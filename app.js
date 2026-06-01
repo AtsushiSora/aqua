@@ -110,6 +110,7 @@ const pwaReleaseDecisionChip = document.querySelector("#pwa-release-decision-chi
 const pwaReleaseDecisionSummary = document.querySelector("#pwa-release-decision-summary");
 const productionSetupNextAction = document.querySelector("#production-setup-next-action");
 const productionSetupSummary = document.querySelector("#production-setup-summary");
+const productionSupabaseCheckForm = document.querySelector("#production-supabase-check-form");
 const productionStorageCheckForm = document.querySelector("#production-storage-check-form");
 const accountUiModeInput = document.querySelector("#account-ui-mode-input");
 const homeUiModeInput = document.querySelector("#home-ui-mode-input");
@@ -269,6 +270,10 @@ const defaultState = {
   },
   pwaTestResults: [],
   productionSetupCheck: {
+    supabaseStatus: "unchecked",
+    supabaseReviewer: "",
+    supabaseNote: "",
+    supabaseCheckedAt: null,
     storageStatus: "unchecked",
     storageReviewer: "",
     storageNote: "",
@@ -612,6 +617,7 @@ importDataInput.addEventListener("change", importAppData);
 pwaTestForm.addEventListener("submit", handlePwaTestSubmit);
 pwaTestExportButton.addEventListener("click", exportPwaTestResults);
 pwaReleaseDecisionForm.addEventListener("submit", handlePwaReleaseDecisionSubmit);
+productionSupabaseCheckForm.addEventListener("submit", handleProductionSupabaseCheckSubmit);
 productionStorageCheckForm.addEventListener("submit", handleProductionStorageCheckSubmit);
 pwaTestLog.addEventListener("click", async (event) => {
   const button = event.target.closest("[data-pwa-test-delete]");
@@ -1262,11 +1268,16 @@ function renderProductionSetupSummary() {
   }
 
   const setupSummary = getProductionSetupSummaryState();
-  const storageCheck = normalizeProductionSetupCheck(state.productionSetupCheck || {});
+  const setupCheck = normalizeProductionSetupCheck(state.productionSetupCheck || {});
+  if (productionSupabaseCheckForm) {
+    document.querySelector("#production-supabase-status-input").value = setupCheck.supabaseStatus;
+    document.querySelector("#production-supabase-reviewer-input").value = setupCheck.supabaseReviewer || state.account.name || "";
+    document.querySelector("#production-supabase-note-input").value = setupCheck.supabaseNote;
+  }
   if (productionStorageCheckForm) {
-    document.querySelector("#production-storage-status-input").value = storageCheck.storageStatus;
-    document.querySelector("#production-storage-reviewer-input").value = storageCheck.storageReviewer || state.account.name || "";
-    document.querySelector("#production-storage-note-input").value = storageCheck.storageNote;
+    document.querySelector("#production-storage-status-input").value = setupCheck.storageStatus;
+    document.querySelector("#production-storage-reviewer-input").value = setupCheck.storageReviewer || state.account.name || "";
+    document.querySelector("#production-storage-note-input").value = setupCheck.storageNote;
   }
   if (productionSetupNextAction) {
     productionSetupNextAction.className = `production-setup-next ${setupSummary.ready ? "ready" : "pending"}`;
@@ -1286,6 +1297,20 @@ function renderProductionSetupSummary() {
       `,
     )
     .join("");
+}
+
+function handleProductionSupabaseCheckSubmit(event) {
+  event.preventDefault();
+  state.productionSetupCheck = normalizeProductionSetupCheck({
+    ...state.productionSetupCheck,
+    supabaseStatus: document.querySelector("#production-supabase-status-input").value,
+    supabaseReviewer: document.querySelector("#production-supabase-reviewer-input").value,
+    supabaseNote: document.querySelector("#production-supabase-note-input").value,
+    supabaseCheckedAt: new Date().toISOString(),
+  });
+  saveState();
+  renderProductionSetupSummary();
+  showToast("Supabase確認を保存しました");
 }
 
 function handleProductionStorageCheckSubmit(event) {
@@ -1330,9 +1355,11 @@ function getProductionSetupSummaryItems(results = state.pwaTestResults || []) {
   const setupStatus = getSupabaseSetupStatus();
   const pwaCoverage = getPwaReleaseCoverage(results);
   const gatewayReady = aiApiStatus.configured === true;
-  const storageCheck = normalizeProductionSetupCheck(state.productionSetupCheck || {});
-  const storageReady = storageCheck.storageStatus === "confirmed";
-  const storageIssue = storageCheck.storageStatus === "issues";
+  const setupCheck = normalizeProductionSetupCheck(state.productionSetupCheck || {});
+  const supabaseReady = setupCheck.supabaseStatus === "confirmed";
+  const supabaseIssue = setupCheck.supabaseStatus === "issues";
+  const storageReady = setupCheck.storageStatus === "confirmed";
+  const storageIssue = setupCheck.storageStatus === "issues";
   const productionCheck = normalizeNotificationProductionCheck(state.notificationProductionCheck || {});
   const notificationReady =
     productionCheck.envStatus === "confirmed" &&
@@ -1343,17 +1370,19 @@ function getProductionSetupSummaryItems(results = state.pwaTestResults || []) {
   return [
     {
       label: "Supabase",
-      status: setupStatus.ready && authSession?.user ? "ready" : setupStatus.ready ? "manual" : "missing",
-      value: authSession?.user ? "ログイン中" : setupStatus.ready ? "接続準備済み" : "未設定",
-      note: authSession?.user ? "プロフィール同期まで確認できます" : setupStatus.message,
+      status: supabaseReady ? "ready" : supabaseIssue ? "missing" : setupStatus.ready && authSession?.user ? "ready" : setupStatus.ready ? "manual" : "missing",
+      value: supabaseReady ? "SQL確認済み" : supabaseIssue ? "要対応" : authSession?.user ? "ログイン中" : setupStatus.ready ? "接続準備済み" : "未設定",
+      note: setupCheck.supabaseNote || (authSession?.user ? "プロフィール同期まで確認できます" : setupStatus.message),
+      reviewer: setupCheck.supabaseReviewer,
+      checkedAt: setupCheck.supabaseCheckedAt,
     },
     {
       label: "Storage",
       status: storageReady ? "ready" : storageIssue ? "missing" : mediaCount ? "manual" : "missing",
       value: storageReady ? "OK" : storageIssue ? "要対応" : mediaCount ? `${mediaCount}件のメディア` : "未確認",
-      note: storageCheck.storageNote || (mediaCount ? "Supabase Storage bucket側の保存確認が残ります" : "水槽写真または投稿メディアで確認します"),
-      reviewer: storageCheck.storageReviewer,
-      checkedAt: storageCheck.storageCheckedAt,
+      note: setupCheck.storageNote || (mediaCount ? "Supabase Storage bucket側の保存確認が残ります" : "水槽写真または投稿メディアで確認します"),
+      reviewer: setupCheck.storageReviewer,
+      checkedAt: setupCheck.storageCheckedAt,
     },
     {
       label: "AI Gateway",
@@ -9456,6 +9485,10 @@ function normalizeNotificationProductionCheck(check) {
 
 function normalizeProductionSetupCheck(check) {
   return {
+    supabaseStatus: getAllowedValue(check.supabaseStatus, ["unchecked", "confirmed", "issues"], "unchecked"),
+    supabaseReviewer: String(check.supabaseReviewer || "").trim(),
+    supabaseNote: String(check.supabaseNote || "").trim(),
+    supabaseCheckedAt: check.supabaseCheckedAt || null,
     storageStatus: getAllowedValue(check.storageStatus, ["unchecked", "confirmed", "issues"], "unchecked"),
     storageReviewer: String(check.storageReviewer || "").trim(),
     storageNote: String(check.storageNote || "").trim(),
