@@ -1258,7 +1258,7 @@ body[data-ui-mode="glance"][data-custom-buttons="true"] .icon-button {
   position: relative;
   min-height: clamp(360px, 46vw, 560px);
   display: flex;
-  align-items: flex-end;
+  align-items: flex-start;
   padding: clamp(22px, 3.5vw, 40px);
   background: var(--nav);
   border: 1px solid rgba(255, 255, 255, 0.34);
@@ -1734,7 +1734,7 @@ body[data-ui-mode="glance"][data-custom-buttons="true"] .icon-button {
 
 .reminder-row {
   display: grid;
-  grid-template-columns: auto minmax(150px, 0.8fr) minmax(230px, 1.2fr);
+  grid-template-columns: auto minmax(0, 1fr);
   gap: 12px;
   align-items: start;
   min-height: 72px;
@@ -1771,31 +1771,39 @@ body[data-ui-mode="glance"][data-custom-buttons="true"] .icon-button {
 }
 
 .reminder-controls {
+  grid-column: 2;
   display: grid;
-  grid-template-columns: minmax(116px, 0.9fr) minmax(96px, 0.7fr);
+  grid-template-columns: minmax(0, 1fr);
   gap: 8px;
 }
 
 .reminder-controls select,
 .reminder-controls input {
+  width: 100%;
+  min-width: 0;
   min-height: 38px;
   font-size: 0.88rem;
 }
 
 .weekday-picker {
   grid-column: 1 / -1;
-  display: grid;
-  grid-template-columns: repeat(7, minmax(28px, 1fr));
+  display: flex;
+  flex-wrap: wrap;
   gap: 5px;
 }
 
 .weekday-picker label {
+  flex: 1 0 24px;
   position: relative;
   display: block;
 }
 
-.weekday-picker input {
+.reminder-row .weekday-picker input[type="checkbox"] {
   position: absolute;
+  width: 0;
+  height: 0;
+  min-height: 0;
+  margin: 0;
   opacity: 0;
   pointer-events: none;
 }
