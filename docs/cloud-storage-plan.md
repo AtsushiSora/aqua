@@ -128,6 +128,7 @@ PWA Push subscription scaffold:
 - Start first-time users with empty dashboard metrics until they add logs. Done in the prototype.
 - Feature the user's own aquarium photo as the large home hero and avoid sample imagery for first-time users. Done in the prototype.
 - Add final PWA release handoff checks to the account view and review JSON. Done in the prototype.
+- Add a concise PWA release handoff memo to the account view and review JSON. Done in the prototype.
 - Add a Netlify Function entrypoint for AI image/log analysis. Done in the prototype.
 - Show AI Gateway/model verification status in the AI view. Done in the prototype.
 - Send real post photos to the AI Gateway as high-detail image input and harden JSON parsing. Done in the prototype.

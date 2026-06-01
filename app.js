@@ -1571,6 +1571,14 @@ function renderPwaReleaseDecision() {
     deviceQaActions,
     gatewayDecision,
   });
+  const handoffMemo = getPwaReleaseHandoffMemo({
+    decision,
+    coverage,
+    handoffChecklist,
+    gatewayDecision,
+    deviceQaActions,
+    appearanceQa,
+  });
   document.querySelector("#pwa-release-decision-status-input").value = decision.status;
   document.querySelector("#pwa-release-review-status-input").value = decision.reviewStatus;
   document.querySelector("#pwa-release-result-status-input").value = decision.resultStatus;
@@ -1692,6 +1700,14 @@ function renderPwaReleaseDecision() {
           )
           .join("")}
       </ol>
+    </div>
+    <div class="pwa-release-handoff-memo ${handoffMemo.ready ? "ready" : "pending"}">
+      <span>引き渡しメモ</span>
+      <strong>${escapeHtml(handoffMemo.title)}</strong>
+      <ul>
+        ${handoffMemo.lines.map((line) => `<li>${escapeHtml(line)}</li>`).join("")}
+      </ul>
+      <small>${escapeHtml(handoffMemo.note)}</small>
     </div>
     <div class="pwa-release-evidence-grid">
       ${evidenceItems
@@ -1947,6 +1963,31 @@ function getPwaReleaseHandoffChecklist({ decision, coverage, deviceQaActions, ga
     title: pending.length ? `残り${pending.length}件で引き渡し完了` : "公開引き渡し準備OK",
     note: pending.length ? pending.map((item) => item.label).join(" / ") : "本番URL、QA、判定、証跡、同期が揃っています。",
     items,
+  };
+}
+
+function getPwaReleaseHandoffMemo({ decision, coverage, handoffChecklist, gatewayDecision, deviceQaActions, appearanceQa }) {
+  const pendingLabels = handoffChecklist.items.filter((item) => !item.ready).map((item) => item.label);
+  const appearanceReady = appearanceQa.every((item) => item.ready);
+  const gatewayNote = gatewayDecision.ready ? "AI Gateway本番判定OK" : gatewayDecision.summary;
+  const qaNote = `${coverage.passedCount}/${coverage.scopes.length}項目OK${deviceQaActions.length ? ` / 未解消${deviceQaActions.length}件` : ""}`;
+  const ready = handoffChecklist.ready;
+
+  return {
+    ready,
+    title: ready ? "リリースノートに転記できます" : "残タスク付きで共有できます",
+    note: ready
+      ? "公開作業者へこの内容を渡せます。"
+      : "未完了項目を解消したら、もう一度JSONを書き出します。",
+    lines: [
+      `判定: ${getPwaReleaseDecisionLabel(decision.status)} / ${getPwaReleaseReviewStatusLabel(decision.reviewStatus)} / ${getPwaReleaseResultStatusLabel(decision.resultStatus)}`,
+      `本番URL: ${decision.productionUrl || "未記録"}`,
+      `実機QA: ${qaNote}`,
+      `表示QA: ${appearanceReady ? "4モードと画像カスタム確認済み" : "4モードまたは画像カスタムが未完了"}`,
+      `Gateway: ${gatewayNote}`,
+      `確認者: ${decision.reviewer || "未記録"}`,
+      `残タスク: ${pendingLabels.length ? pendingLabels.join(" / ") : "なし"}`,
+    ],
   };
 }
 
@@ -4492,6 +4533,14 @@ function exportPwaTestResults() {
     deviceQaActions,
     gatewayDecision: gatewayDecisionEvidence,
   });
+  const handoffMemo = getPwaReleaseHandoffMemo({
+    decision: releaseDecision,
+    coverage,
+    handoffChecklist,
+    gatewayDecision: gatewayDecisionEvidence,
+    deviceQaActions,
+    appearanceQa,
+  });
   const readyForRelease = coverage.ready && releaseDecision.status === "ready" && evidence.every((item) => item.ready);
 
   const payload = {
@@ -4525,6 +4574,7 @@ function exportPwaTestResults() {
     },
     gatewayDecisionEvidence: getPwaGatewayDecisionExportEvidence(gatewayDecisionEvidence),
     handoffChecklist,
+    handoffMemo,
     releaseDecision: {
       ...releaseDecision,
       statusLabel: getPwaReleaseDecisionLabel(releaseDecision.status),

@@ -4286,6 +4286,49 @@ textarea {
   overflow-wrap: anywhere;
 }
 
+.pwa-release-handoff-memo {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid rgba(17, 92, 110, 0.18);
+  border-radius: 8px;
+  background: rgba(248, 252, 251, 0.82);
+}
+
+.pwa-release-handoff-memo.ready {
+  border-color: rgba(61, 173, 120, 0.34);
+  background: rgba(232, 248, 241, 0.84);
+}
+
+.pwa-release-handoff-memo > span,
+.pwa-release-handoff-memo > strong,
+.pwa-release-handoff-memo > small {
+  color: var(--aqua-dark);
+  font-size: 0.86rem;
+  font-weight: 900;
+}
+
+.pwa-release-handoff-memo > small {
+  color: var(--muted);
+  font-size: 0.76rem;
+}
+
+.pwa-release-handoff-memo ul {
+  display: grid;
+  gap: 5px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.pwa-release-handoff-memo li {
+  color: var(--ink);
+  font-size: 0.78rem;
+  font-weight: 850;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
 .pwa-release-decision-summary article.ready {
   border-color: rgba(61, 173, 120, 0.34);
 }
