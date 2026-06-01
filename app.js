@@ -389,6 +389,7 @@ let activeAlbumSort = "featured";
 let highlightedSearchResult = null;
 let supabaseClient = createSupabaseClient();
 let authSession = null;
+let cloudSyncInProgress = false;
 let notificationDeliveryHistory = [];
 let activeNotificationDeliveryFilter = "all";
 let activeNotificationDeliveryDetailId = null;
@@ -566,12 +567,9 @@ accountForm.addEventListener("submit", async (event) => {
   saveState();
 
   if (authSession?.user) {
-    const profileSynced = await syncProfileToSupabase();
-    if (profileSynced) {
-      if (state.account.notificationChannel === "push") {
-        await syncPushSubscriptionToSupabase({ silent: true });
-      }
-      await syncNotificationDeliveriesToSupabase({ silent: true });
+    const cloudSynced = await syncCloudState();
+    if (cloudSynced && state.account.notificationChannel === "push") {
+      await syncPushSubscriptionToSupabase({ silent: true });
     }
     return;
   }
@@ -2579,10 +2577,7 @@ async function handleAuthSubmit(action) {
   saveState({ keepSyncStatus: true });
 
   if (authSession?.user) {
-    await loadProfileFromSupabase();
-    await loadNotificationDeliveryHistory({ silent: true });
-    await loadPwaDeviceTestsFromSupabase();
-    await loadPwaReleaseDecisionFromSupabase();
+    await loadCloudStateFromSupabase({ silent: true });
     await syncProfileToSupabase({ silent: true });
   }
 
@@ -2624,101 +2619,138 @@ async function syncCloudState(options = {}) {
     return false;
   }
 
-  const profileSynced = await syncProfileToSupabase({ silent: true });
-  if (!profileSynced) {
+  if (cloudSyncInProgress) {
     if (!options.silent) {
-      showToast("プロフィール同期に失敗しました");
+      showToast("クラウド同期中です");
     }
+    return true;
+  }
+
+  cloudSyncInProgress = true;
+
+  try {
+    const profileSynced = await syncProfileToSupabase({ silent: true });
+    if (!profileSynced) {
+      if (!options.silent) {
+        showToast("プロフィール同期に失敗しました");
+      }
+      return false;
+    }
+
+    const tanksSynced = await syncTanksToSupabase({ silent: true });
+    if (!tanksSynced) {
+      if (!options.silent) {
+        showToast("水槽同期に失敗しました");
+      }
+      return false;
+    }
+
+    const logsSynced = await syncLogsToSupabase({ silent: true });
+    if (!logsSynced) {
+      if (!options.silent) {
+        showToast("管理ログ同期に失敗しました");
+      }
+      return false;
+    }
+
+    const remindersSynced = await syncRemindersToSupabase({ silent: true });
+    if (!remindersSynced) {
+      if (!options.silent) {
+        showToast("リマインダー同期に失敗しました");
+      }
+      return false;
+    }
+
+    const notificationDeliveriesSynced = await syncNotificationDeliveriesToSupabase({ silent: true });
+    if (!notificationDeliveriesSynced) {
+      if (!options.silent) {
+        showToast("通知配信予約の同期に失敗しました");
+      }
+      return false;
+    }
+
+    const communitySynced = await syncCommunityToSupabase({ silent: true });
+    if (!communitySynced) {
+      if (!options.silent) {
+        showToast("投稿とコメントの同期に失敗しました");
+      }
+      return false;
+    }
+
+    const aiSynced = await syncAiResultsToSupabase({ silent: true });
+    if (!aiSynced) {
+      if (!options.silent) {
+        showToast("AI分析結果の同期に失敗しました");
+      }
+      return false;
+    }
+
+    const aiEvaluationsSynced = await syncAiEvaluationsToSupabase({ silent: true });
+    if (!aiEvaluationsSynced) {
+      if (!options.silent) {
+        showToast("AI評価メモの同期に失敗しました");
+      }
+      return false;
+    }
+
+    const aiPromptNotesSynced = await syncAiPromptNotesToSupabase({ silent: true });
+    if (!aiPromptNotesSynced) {
+      if (!options.silent) {
+        showToast("プロンプト改善メモの同期に失敗しました");
+      }
+      return false;
+    }
+
+    const pwaDeviceTestsSynced = await syncPwaDeviceTestsToSupabase({ silent: true });
+    if (!pwaDeviceTestsSynced) {
+      if (!options.silent) {
+        showToast("PWA実機テスト結果の同期に失敗しました");
+      }
+      return false;
+    }
+
+    const pwaReleaseDecisionSynced = await syncPwaReleaseDecisionToSupabase({ silent: true });
+    if (!pwaReleaseDecisionSynced) {
+      if (!options.silent) {
+        showToast("PWA最終リリース判定の同期に失敗しました");
+      }
+      return false;
+    }
+
+    state.account.syncStatus = "synced";
+    state.account.lastSyncedAt = new Date().toISOString();
+    saveState({ keepSyncStatus: true });
+    renderApp();
+
+    if (!options.silent) {
+      showToast("AquaNoteデータをSupabaseに同期しました");
+    }
+
+    return true;
+  } finally {
+    cloudSyncInProgress = false;
+  }
+}
+
+async function loadCloudStateFromSupabase(options = {}) {
+  if (!supabaseClient || !authSession?.user) {
     return false;
   }
 
-  const tanksSynced = await syncTanksToSupabase({ silent: true });
-  if (!tanksSynced) {
-    if (!options.silent) {
-      showToast("水槽同期に失敗しました");
-    }
-    return false;
-  }
-
-  const logsSynced = await syncLogsToSupabase({ silent: true });
-  if (!logsSynced) {
-    if (!options.silent) {
-      showToast("管理ログ同期に失敗しました");
-    }
-    return false;
-  }
-
-  const remindersSynced = await syncRemindersToSupabase({ silent: true });
-  if (!remindersSynced) {
-    if (!options.silent) {
-      showToast("リマインダー同期に失敗しました");
-    }
-    return false;
-  }
-
-  const notificationDeliveriesSynced = await syncNotificationDeliveriesToSupabase({ silent: true });
-  if (!notificationDeliveriesSynced) {
-    if (!options.silent) {
-      showToast("通知配信予約の同期に失敗しました");
-    }
-    return false;
-  }
-
-  const communitySynced = await syncCommunityToSupabase({ silent: true });
-  if (!communitySynced) {
-    if (!options.silent) {
-      showToast("投稿とコメントの同期に失敗しました");
-    }
-    return false;
-  }
-
-  const aiSynced = await syncAiResultsToSupabase({ silent: true });
-  if (!aiSynced) {
-    if (!options.silent) {
-      showToast("AI分析結果の同期に失敗しました");
-    }
-    return false;
-  }
-
-  const aiEvaluationsSynced = await syncAiEvaluationsToSupabase({ silent: true });
-  if (!aiEvaluationsSynced) {
-    if (!options.silent) {
-      showToast("AI評価メモの同期に失敗しました");
-    }
-    return false;
-  }
-
-  const aiPromptNotesSynced = await syncAiPromptNotesToSupabase({ silent: true });
-  if (!aiPromptNotesSynced) {
-    if (!options.silent) {
-      showToast("プロンプト改善メモの同期に失敗しました");
-    }
-    return false;
-  }
-
-  const pwaDeviceTestsSynced = await syncPwaDeviceTestsToSupabase({ silent: true });
-  if (!pwaDeviceTestsSynced) {
-    if (!options.silent) {
-      showToast("PWA実機テスト結果の同期に失敗しました");
-    }
-    return false;
-  }
-
-  const pwaReleaseDecisionSynced = await syncPwaReleaseDecisionToSupabase({ silent: true });
-  if (!pwaReleaseDecisionSynced) {
-    if (!options.silent) {
-      showToast("PWA最終リリース判定の同期に失敗しました");
-    }
-    return false;
-  }
-
-  state.account.syncStatus = "synced";
-  state.account.lastSyncedAt = new Date().toISOString();
-  saveState({ keepSyncStatus: true });
-  renderApp();
+  await loadProfileFromSupabase();
+  await loadTanksFromSupabase();
+  await loadLogsFromSupabase();
+  await loadRemindersFromSupabase();
+  await loadNotificationDeliveryHistory({ silent: true });
+  await loadCommunityFromSupabase();
+  await loadAiResultsFromSupabase();
+  await loadAiEvaluationsFromSupabase();
+  await loadAiPromptNotesFromSupabase();
+  await loadPwaDeviceTestsFromSupabase();
+  await loadPwaReleaseDecisionFromSupabase();
 
   if (!options.silent) {
-    showToast("AquaNoteデータをSupabaseに同期しました");
+    showToast("Supabaseからデータを読み込みました");
   }
 
   return true;
@@ -2898,6 +2930,14 @@ async function loadCommentsFromSupabase(postCloudIds) {
 
 function getPostCloudIds(posts = state.posts) {
   return posts.map((post) => post.cloudId).filter(Boolean);
+}
+
+function getSyncablePosts() {
+  return state.posts.filter((post) => !isSampleRecordId(post.id));
+}
+
+function isSampleRecordId(id) {
+  return String(id || "").startsWith("sample-");
 }
 
 async function loadPostStatsFromSupabase(postCloudIds = getPostCloudIds()) {
@@ -3396,7 +3436,7 @@ async function syncCommunityToSupabase(options = {}) {
     return false;
   }
 
-  const postCloudIds = getPostCloudIds();
+  const postCloudIds = getPostCloudIds(getSyncablePosts());
   await loadMediaFromSupabase(postCloudIds);
   await loadPostStatsFromSupabase(postCloudIds);
   await loadPostLikesFromSupabase(postCloudIds);
@@ -3414,7 +3454,7 @@ async function syncCommunityToSupabase(options = {}) {
 }
 
 async function syncPostsToSupabase(options = {}) {
-  const payloads = state.posts.map((post) => getPostPayload(post, authSession.user));
+  const payloads = getSyncablePosts().map((post) => getPostPayload(post, authSession.user));
   if (!payloads.length) {
     return true;
   }
@@ -3439,7 +3479,7 @@ async function syncPostsToSupabase(options = {}) {
 }
 
 async function syncCommentsToSupabase(options = {}) {
-  const payloads = state.posts.flatMap((post) => {
+  const payloads = getSyncablePosts().flatMap((post) => {
     if (!post.cloudId) {
       return [];
     }
@@ -3471,7 +3511,7 @@ async function syncCommentsToSupabase(options = {}) {
 }
 
 async function syncMediaToSupabase(options = {}) {
-  const postsWithMedia = state.posts.filter((post) => post.cloudId && hasLocalPostMedia(post));
+  const postsWithMedia = getSyncablePosts().filter((post) => post.cloudId && hasLocalPostMedia(post));
   if (!postsWithMedia.length) {
     return true;
   }
@@ -3898,7 +3938,7 @@ function getAiResultPayloads(user) {
     }));
 
   const postResults = state.posts
-    .filter((post) => post.cloudId && post.latestAi)
+    .filter((post) => !isSampleRecordId(post.id) && post.cloudId && post.latestAi)
     .map((post) => {
       const tank = state.tanks.find((item) => item.id === post.tankId);
       return getAiResultPayload({
@@ -4614,46 +4654,20 @@ async function initSupabaseAuth() {
   authSession = data.session || null;
 
   supabaseClient.auth.onAuthStateChange(async (_event, session) => {
-    authSession = session;
-    if (session?.user) {
-      state.account.signedIn = true;
-      state.account.email = session.user.email || state.account.email;
-      saveState({ keepSyncStatus: true });
-      await loadProfileFromSupabase();
-      await loadTanksFromSupabase();
-      await loadLogsFromSupabase();
-      await loadRemindersFromSupabase();
-      await loadNotificationDeliveryHistory({ silent: true });
-      await loadCommunityFromSupabase();
-      await loadAiResultsFromSupabase();
-      await loadAiEvaluationsFromSupabase();
-      await loadAiPromptNotesFromSupabase();
-      await loadPwaDeviceTestsFromSupabase();
-      await loadPwaReleaseDecisionFromSupabase();
-    } else {
-      state.account.signedIn = false;
-      notificationDeliveryHistory = [];
-      clearCurrentUserLikes();
-      saveState({ keepSyncStatus: true });
-    }
-    renderAccount();
+    await applyAuthSession(session);
   });
+
+  await applyAuthSession(authSession);
+}
+
+async function applyAuthSession(session) {
+  authSession = session;
 
   if (authSession?.user) {
     state.account.signedIn = true;
     state.account.email = authSession.user.email || state.account.email;
     saveState({ keepSyncStatus: true });
-    await loadProfileFromSupabase();
-    await loadTanksFromSupabase();
-    await loadLogsFromSupabase();
-    await loadRemindersFromSupabase();
-    await loadNotificationDeliveryHistory({ silent: true });
-    await loadCommunityFromSupabase();
-    await loadAiResultsFromSupabase();
-    await loadAiEvaluationsFromSupabase();
-    await loadAiPromptNotesFromSupabase();
-    await loadPwaDeviceTestsFromSupabase();
-    await loadPwaReleaseDecisionFromSupabase();
+    await loadCloudStateFromSupabase({ silent: true });
   } else {
     state.account.signedIn = false;
     notificationDeliveryHistory = [];
