@@ -5221,6 +5221,16 @@ function formatTankResidents(tank = {}) {
   return parts.length ? parts.join("、") : "生き物・水草未設定";
 }
 
+function getTankDetailItems(tank) {
+  return [
+    { label: "種類", value: tank.kind || "未設定" },
+    { label: "サイズ", value: tank.size || "未設定" },
+    { label: "容量", value: tank.volume || "未設定" },
+    { label: "生き物・水草", value: formatTankResidents(tank) },
+    { label: "設備", value: tank.equipment || "未設定" },
+  ];
+}
+
 function getGuideSearchItems() {
   return [...document.querySelectorAll("[data-guide-kind]")].map((card, index) => {
     const title = card.querySelector("h2")?.textContent || "ガイド";
@@ -5426,7 +5436,17 @@ function renderTankProfile() {
   aquariumVisual.classList.toggle("has-cover", Boolean(featuredImage));
   aquariumVisual.style.backgroundImage = featuredImage ? `url("${featuredImage}")` : "";
   document.querySelector("#tank-profile-name").textContent = tank.name;
-  document.querySelector("#tank-profile-detail").textContent = `${tank.size} / ${tank.volume} / ${formatTankResidents(tank)} / 設備: ${tank.equipment || "未設定"}`;
+  document.querySelector("#tank-profile-detail").textContent = `${tank.kind} / ${tank.size} / ${tank.volume}`;
+  document.querySelector("#tank-detail-grid").innerHTML = getTankDetailItems(tank)
+    .map(
+      (item) => `
+        <article>
+          <span>${escapeHtml(item.label)}</span>
+          <strong>${escapeHtml(item.value)}</strong>
+        </article>
+      `,
+    )
+    .join("");
   document.querySelector("#tank-profile-tags").innerHTML = tank.tags
     .map((tag) => `<span class="chip">${escapeHtml(tag)}</span>`)
     .join("");

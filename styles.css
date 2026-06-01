@@ -2079,6 +2079,43 @@ body[data-ui-mode="glance"][data-custom-buttons="true"] .icon-button {
   margin-bottom: 14px;
 }
 
+.tank-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin: 14px 0;
+}
+
+.tank-detail-grid article {
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid var(--glass-border);
+  border-radius: 8px;
+  background: rgba(248, 250, 248, 0.72);
+}
+
+.tank-detail-grid span,
+.tank-detail-grid strong {
+  display: block;
+}
+
+.tank-detail-grid span {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 900;
+}
+
+.tank-detail-grid strong {
+  margin-top: 3px;
+  overflow-wrap: anywhere;
+  font-size: 0.92rem;
+  line-height: 1.35;
+}
+
+.tank-detail-grid article:last-child:nth-child(odd) {
+  grid-column: 1 / -1;
+}
+
 .profile-edit-form {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -5539,6 +5576,10 @@ textarea {
   }
 
   .tank-photo-assist {
+    grid-template-columns: 1fr;
+  }
+
+  .tank-detail-grid {
     grid-template-columns: 1fr;
   }
 
