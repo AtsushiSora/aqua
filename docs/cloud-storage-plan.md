@@ -130,6 +130,7 @@ PWA Push subscription scaffold:
 - Add final PWA release handoff checks to the account view and review JSON. Done in the prototype.
 - Add a concise PWA release handoff memo to the account view and review JSON. Done in the prototype.
 - Add tester-facing PWA release steps to the account view and review JSON. Done in the prototype.
+- Add cloud-sync evidence for PWA device tests and release decisions to the account view and review JSON. Done in the prototype.
 - Add a Netlify Function entrypoint for AI image/log analysis. Done in the prototype.
 - Show AI Gateway/model verification status in the AI view. Done in the prototype.
 - Send real post photos to the AI Gateway as high-detail image input and harden JSON parsing. Done in the prototype.
@@ -184,9 +185,9 @@ Production release evidence:
 - Improve condition-level incomplete-action guidance for Gateway production review.
 - Review needs-fix examples and turn them into prompt improvement notes.
 - Run PWA installation, notification, offline, UI mode, and custom-image checks on the production URL.
-- Review synced `pwa_device_tests` rows before production launch.
+- Confirm synced `pwa_device_tests` rows with live QA data before production launch.
 - Capture the final production release decision after the required PWA checks pass.
-- Review synced `pwa_release_decisions` before production launch.
+- Confirm synced `pwa_release_decisions` with live QA data before production launch.
 - Export the final PWA review evidence for release notes.
 - Confirm the production review handoff flow with live QA data.
 - Confirm the tester operation flow on the live URL.

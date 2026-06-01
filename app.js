@@ -1580,6 +1580,10 @@ function renderPwaReleaseDecision() {
     appearanceQa,
   });
   const testerScript = getPwaReleaseTesterScript({ decision, coverage });
+  const cloudReview = getPwaReleaseCloudReview({
+    decision,
+    results: state.pwaTestResults || [],
+  });
   document.querySelector("#pwa-release-decision-status-input").value = decision.status;
   document.querySelector("#pwa-release-review-status-input").value = decision.reviewStatus;
   document.querySelector("#pwa-release-result-status-input").value = decision.resultStatus;
@@ -1726,6 +1730,24 @@ function renderPwaReleaseDecision() {
           )
           .join("")}
       </ol>
+    </div>
+    <div class="pwa-release-cloud-review ${cloudReview.ready ? "ready" : "pending"}">
+      <span>クラウド確認</span>
+      <strong>${escapeHtml(cloudReview.title)}</strong>
+      <small>${escapeHtml(cloudReview.note)}</small>
+      <div>
+        ${cloudReview.items
+          .map(
+            (item) => `
+              <article class="${item.ready ? "ready" : "pending"}">
+                <span>${escapeHtml(item.label)}</span>
+                <strong>${escapeHtml(item.value)}</strong>
+                <small>${escapeHtml(item.note)}</small>
+              </article>
+            `,
+          )
+          .join("")}
+      </div>
     </div>
     <div class="pwa-release-evidence-grid">
       ${evidenceItems
@@ -2019,6 +2041,48 @@ function getPwaReleaseTesterScript({ decision, coverage }) {
       action: PWA_SCOPE_QA_HINTS[scope].join(" / "),
       record: `${getPwaTestScopeLabel(scope)}の結果を${coverage.scopes.includes(scope) ? "OK・要確認・NGで保存" : "実機テスト結果に保存"}`,
     })),
+  };
+}
+
+function getPwaReleaseCloudReview({ decision, results }) {
+  const syncedTestCount = results.filter((result) => result.cloudId).length;
+  const totalTestCount = results.length;
+  const allTestsSynced = totalTestCount > 0 && syncedTestCount === totalTestCount;
+  const decisionSynced = Boolean(decision.cloudId);
+  const lastSync = state.account.lastSyncedAt ? formatFullDate(state.account.lastSyncedAt) : "未記録";
+  const items = [
+    {
+      label: "実機テスト",
+      ready: allTestsSynced,
+      value: `${syncedTestCount}/${totalTestCount}`,
+      note: totalTestCount ? "Supabase同期済み件数" : "実機テスト結果未記録",
+    },
+    {
+      label: "最終判定",
+      ready: decisionSynced,
+      value: decisionSynced ? "同期済み" : "未同期",
+      note: decisionSynced ? "pwa_release_decisions に保存済み" : "ログイン中に判定メモを保存",
+    },
+    {
+      label: "最終同期",
+      ready: state.account.syncStatus === "synced",
+      value: getSyncStatusLabel(state.account),
+      note: lastSync,
+    },
+    {
+      label: "レビューJSON",
+      ready: Boolean(decision.reviewExportedAt),
+      value: decision.reviewExportedAt ? "書き出し済み" : "未書き出し",
+      note: decision.reviewExportedAt ? formatFullDate(decision.reviewExportedAt) : "JSONボタンで証跡を書き出す",
+    },
+  ];
+  const pending = items.filter((item) => !item.ready);
+
+  return {
+    ready: pending.length === 0,
+    title: pending.length ? `クラウド確認 ${items.length - pending.length}/${items.length}` : "クラウド証跡OK",
+    note: pending.length ? pending.map((item) => item.label).join(" / ") : "同期済みデータとJSON証跡を確認できます。",
+    items,
   };
 }
 
@@ -4573,6 +4637,10 @@ function exportPwaTestResults() {
     appearanceQa,
   });
   const testerScript = getPwaReleaseTesterScript({ decision: releaseDecision, coverage });
+  const cloudReview = getPwaReleaseCloudReview({
+    decision: releaseDecision,
+    results,
+  });
   const readyForRelease = coverage.ready && releaseDecision.status === "ready" && evidence.every((item) => item.ready);
 
   const payload = {
@@ -4608,6 +4676,7 @@ function exportPwaTestResults() {
     handoffChecklist,
     handoffMemo,
     testerScript,
+    cloudReview,
     releaseDecision: {
       ...releaseDecision,
       statusLabel: getPwaReleaseDecisionLabel(releaseDecision.status),

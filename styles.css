@@ -4375,6 +4375,66 @@ textarea {
   overflow-wrap: anywhere;
 }
 
+.pwa-release-cloud-review {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid rgba(226, 162, 72, 0.34);
+  border-radius: 8px;
+  background: rgba(255, 247, 230, 0.74);
+}
+
+.pwa-release-cloud-review.ready {
+  border-color: rgba(61, 173, 120, 0.34);
+  background: rgba(232, 248, 241, 0.84);
+}
+
+.pwa-release-cloud-review > span,
+.pwa-release-cloud-review > strong,
+.pwa-release-cloud-review > small {
+  color: var(--aqua-dark);
+  font-size: 0.86rem;
+  font-weight: 900;
+}
+
+.pwa-release-cloud-review > small {
+  color: var(--muted);
+  font-size: 0.76rem;
+}
+
+.pwa-release-cloud-review > div {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.pwa-release-cloud-review article {
+  display: grid;
+  gap: 3px;
+  padding: 9px 10px;
+  border: 1px solid rgba(226, 162, 72, 0.28);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.62);
+}
+
+.pwa-release-cloud-review article.ready {
+  border-color: rgba(61, 173, 120, 0.28);
+}
+
+.pwa-release-cloud-review article span,
+.pwa-release-cloud-review article small {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 850;
+  overflow-wrap: anywhere;
+}
+
+.pwa-release-cloud-review article strong {
+  color: var(--aqua-dark);
+  font-size: 0.84rem;
+  overflow-wrap: anywhere;
+}
+
 .pwa-release-decision-summary article.ready {
   border-color: rgba(61, 173, 120, 0.34);
 }
