@@ -4987,8 +4987,11 @@ textarea {
 
 .modal.is-open {
   display: grid;
-  place-items: center;
+  align-items: start;
+  justify-items: center;
   padding: 18px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .modal-backdrop {
@@ -5004,7 +5007,11 @@ textarea {
   position: relative;
   z-index: 1;
   width: min(560px, 100%);
+  max-height: calc(100dvh - 36px);
   padding: 18px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
 }
 
 .media-detail-panel {
@@ -5099,6 +5106,7 @@ textarea {
 .post-form {
   display: grid;
   gap: 14px;
+  padding-bottom: 6px;
 }
 
 .post-preview {

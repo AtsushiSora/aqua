@@ -8660,6 +8660,7 @@ function openPostModal(postId = null) {
   renderPostImagePreview();
   modal.classList.add("is-open");
   modal.setAttribute("aria-hidden", "false");
+  modal.querySelector(".modal-panel")?.scrollTo({ top: 0 });
 }
 
 function resetPostForm() {
