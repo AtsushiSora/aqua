@@ -258,7 +258,7 @@ AI画面の「AI比較ログ」には、Gateway結果とローカル分析の差
 要修正に分類したGateway写真は、条件、差分、撮り直し観点を改善メモ履歴へ変換できます。
 実写真検証サマリーでは、v4本番チェックとしてGateway設定、撮影条件カバー、分類済みレビュー、撮り直し観点を確認できます。
 
-既存のSupabase環境へ反映する場合は、`profiles.ui_mode` を追加してからプロフィール同期を確認してください。
+既存のSupabase環境へ反映する場合は、`supabase/migrations/20260601_add_live_ui_mode.sql` をSQL Editorで実行し、`profiles.ui_mode` に `live` を保存できる状態にしてからプロフィール同期を確認してください。
 
 主な環境変数:
 

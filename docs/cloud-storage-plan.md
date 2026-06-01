@@ -57,7 +57,7 @@ Reason:
 14. Sync browser Push subscriptions to `push_subscriptions`. Done in the prototype.
 15. Keep JSON export/import as a fallback during beta.
 
-Existing Supabase projects should add `profiles.ui_mode` with `standard`, `simple`, `glance`, `adult`, and `live` values before enabling profile sync for UI mode preferences.
+Existing Supabase projects should run `supabase/migrations/20260601_add_live_ui_mode.sql` so `profiles.ui_mode` accepts `standard`, `simple`, `glance`, `adult`, and `live` before enabling profile sync for UI mode preferences.
 
 ## Auth and permission rules
 
