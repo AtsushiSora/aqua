@@ -12,6 +12,7 @@
 - [supabase/schema.sql](supabase/schema.sql) に Supabase / Postgres 用のテーブルとRLSポリシー草案を置いています。
 - `.env.example` に将来のSupabase接続で使う環境変数名を置いています。
 - `supabase-config.example.js` を `supabase-config.js` にコピーして値を入れると、アカウント画面のAuth接続を試せます。
+- `supabase/schema.sql` は途中で失敗しても再実行しやすいように、型、テーブル、インデックス、ポリシーを冪等化しています。
 
 ## 入っている機能
 

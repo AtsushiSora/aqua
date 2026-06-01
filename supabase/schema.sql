@@ -3,12 +3,35 @@
 
 create extension if not exists pgcrypto;
 
-create type profile_visibility as enum ('public', 'friends', 'private');
-create type account_plan as enum ('free', 'plus', 'pro');
-create type media_kind as enum ('image', 'video');
-create type reminder_schedule as enum ('daily', 'weekly', 'interval');
+do $$
+begin
+  create type profile_visibility as enum ('public', 'friends', 'private');
+exception
+  when duplicate_object then null;
+end $$;
 
-create table public.profiles (
+do $$
+begin
+  create type account_plan as enum ('free', 'plus', 'pro');
+exception
+  when duplicate_object then null;
+end $$;
+
+do $$
+begin
+  create type media_kind as enum ('image', 'video');
+exception
+  when duplicate_object then null;
+end $$;
+
+do $$
+begin
+  create type reminder_schedule as enum ('daily', 'weekly', 'interval');
+exception
+  when duplicate_object then null;
+end $$;
+
+create table if not exists public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,
   handle text not null unique check (handle ~ '^[a-z0-9_]{3,24}$'),
   display_name text not null,
@@ -25,7 +48,7 @@ create table public.profiles (
   updated_at timestamptz not null default now()
 );
 
-create table public.tanks (
+create table if not exists public.tanks (
   id uuid primary key default gen_random_uuid(),
   owner_id uuid not null references public.profiles(id) on delete cascade,
   local_id text not null,
@@ -41,7 +64,7 @@ create table public.tanks (
   unique (owner_id, local_id)
 );
 
-create table public.logs (
+create table if not exists public.logs (
   id uuid primary key default gen_random_uuid(),
   tank_id uuid not null references public.tanks(id) on delete cascade,
   owner_id uuid not null references public.profiles(id) on delete cascade,
@@ -55,7 +78,7 @@ create table public.logs (
   unique (owner_id, tank_id, local_id)
 );
 
-create table public.posts (
+create table if not exists public.posts (
   id uuid primary key default gen_random_uuid(),
   tank_id uuid references public.tanks(id) on delete set null,
   owner_id uuid not null references public.profiles(id) on delete cascade,
@@ -69,11 +92,20 @@ create table public.posts (
   unique (owner_id, local_id)
 );
 
-alter table public.tanks
-  add constraint tanks_featured_post_fk
-  foreign key (featured_post_id) references public.posts(id) on delete set null;
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint
+    where conname = 'tanks_featured_post_fk'
+      and conrelid = 'public.tanks'::regclass
+  ) then
+    alter table public.tanks
+      add constraint tanks_featured_post_fk
+      foreign key (featured_post_id) references public.posts(id) on delete set null;
+  end if;
+end $$;
 
-create table public.media (
+create table if not exists public.media (
   id uuid primary key default gen_random_uuid(),
   post_id uuid not null references public.posts(id) on delete cascade,
   owner_id uuid not null references public.profiles(id) on delete cascade,
@@ -87,7 +119,7 @@ create table public.media (
   unique (post_id)
 );
 
-create table public.comments (
+create table if not exists public.comments (
   id uuid primary key default gen_random_uuid(),
   post_id uuid not null references public.posts(id) on delete cascade,
   author_id uuid not null references public.profiles(id) on delete cascade,
@@ -98,14 +130,14 @@ create table public.comments (
   unique (author_id, post_id, local_id)
 );
 
-create table public.post_likes (
+create table if not exists public.post_likes (
   post_id uuid not null references public.posts(id) on delete cascade,
   user_id uuid not null references public.profiles(id) on delete cascade,
   created_at timestamptz not null default now(),
   primary key (post_id, user_id)
 );
 
-create table public.reminders (
+create table if not exists public.reminders (
   id uuid primary key default gen_random_uuid(),
   owner_id uuid not null references public.profiles(id) on delete cascade,
   task_key text not null,
@@ -122,7 +154,7 @@ create table public.reminders (
   unique (owner_id, task_key)
 );
 
-create table public.notification_deliveries (
+create table if not exists public.notification_deliveries (
   id uuid primary key default gen_random_uuid(),
   owner_id uuid not null references public.profiles(id) on delete cascade,
   task_key text not null,
@@ -137,7 +169,7 @@ create table public.notification_deliveries (
   unique (owner_id, task_key, scheduled_for)
 );
 
-create table public.push_subscriptions (
+create table if not exists public.push_subscriptions (
   id uuid primary key default gen_random_uuid(),
   owner_id uuid not null references public.profiles(id) on delete cascade,
   endpoint text not null,
@@ -150,7 +182,7 @@ create table public.push_subscriptions (
   unique (owner_id, endpoint)
 );
 
-create table public.ai_results (
+create table if not exists public.ai_results (
   id uuid primary key default gen_random_uuid(),
   owner_id uuid not null references public.profiles(id) on delete cascade,
   tank_id uuid references public.tanks(id) on delete cascade,
@@ -165,7 +197,7 @@ create table public.ai_results (
   unique (owner_id, local_id)
 );
 
-create table public.ai_evaluations (
+create table if not exists public.ai_evaluations (
   id uuid primary key default gen_random_uuid(),
   owner_id uuid not null references public.profiles(id) on delete cascade,
   local_id text not null,
@@ -187,7 +219,7 @@ create table public.ai_evaluations (
   unique (owner_id, local_id)
 );
 
-create table public.ai_prompt_notes (
+create table if not exists public.ai_prompt_notes (
   id uuid primary key default gen_random_uuid(),
   owner_id uuid not null references public.profiles(id) on delete cascade,
   local_id text not null,
@@ -198,13 +230,13 @@ create table public.ai_prompt_notes (
   unique (owner_id, local_id)
 );
 
-create table public.pwa_device_tests (
+create table if not exists public.pwa_device_tests (
   id uuid primary key default gen_random_uuid(),
   owner_id uuid not null references public.profiles(id) on delete cascade,
   local_id text not null,
   device text not null default '未記録',
   browser text not null default '未記録',
-  test_scope text not null default 'install' check (test_scope in ('install', 'notification', 'offline', 'ui_modes', 'login')),
+  test_scope text not null default 'install' check (test_scope in ('install', 'notification', 'offline', 'ui_modes', 'custom_images', 'login')),
   status text not null default 'watch' check (status in ('passed', 'watch', 'failed')),
   note text not null default '',
   tested_at timestamptz not null default now(),
@@ -212,7 +244,23 @@ create table public.pwa_device_tests (
   unique (owner_id, local_id)
 );
 
-create table public.pwa_release_decisions (
+do $$
+begin
+  if exists (
+    select 1 from pg_constraint
+    where conname = 'pwa_device_tests_test_scope_check'
+      and conrelid = 'public.pwa_device_tests'::regclass
+  ) then
+    alter table public.pwa_device_tests
+      drop constraint pwa_device_tests_test_scope_check;
+  end if;
+
+  alter table public.pwa_device_tests
+    add constraint pwa_device_tests_test_scope_check
+    check (test_scope in ('install', 'notification', 'offline', 'ui_modes', 'custom_images', 'login'));
+end $$;
+
+create table if not exists public.pwa_release_decisions (
   id uuid primary key default gen_random_uuid(),
   owner_id uuid not null references public.profiles(id) on delete cascade,
   status text not null default 'draft' check (status in ('draft', 'ready', 'hold')),
@@ -227,7 +275,7 @@ create table public.pwa_release_decisions (
   unique (owner_id)
 );
 
-create view public.post_stats
+create or replace view public.post_stats
 with (security_invoker = true) as
 select
   posts.id as post_id,
@@ -239,22 +287,22 @@ left join public.post_likes on post_likes.post_id = posts.id
 left join public.comments on comments.post_id = posts.id
 group by posts.id;
 
-create index tanks_owner_idx on public.tanks(owner_id);
-create index logs_tank_recorded_idx on public.logs(tank_id, recorded_at desc);
-create index posts_tank_created_idx on public.posts(tank_id, created_at desc);
-create index posts_owner_idx on public.posts(owner_id);
-create index media_post_idx on public.media(post_id);
-create index comments_post_created_idx on public.comments(post_id, created_at desc);
-create index reminders_owner_idx on public.reminders(owner_id);
-create index notification_deliveries_owner_scheduled_idx on public.notification_deliveries(owner_id, scheduled_for)
+create index if not exists tanks_owner_idx on public.tanks(owner_id);
+create index if not exists logs_tank_recorded_idx on public.logs(tank_id, recorded_at desc);
+create index if not exists posts_tank_created_idx on public.posts(tank_id, created_at desc);
+create index if not exists posts_owner_idx on public.posts(owner_id);
+create index if not exists media_post_idx on public.media(post_id);
+create index if not exists comments_post_created_idx on public.comments(post_id, created_at desc);
+create index if not exists reminders_owner_idx on public.reminders(owner_id);
+create index if not exists notification_deliveries_owner_scheduled_idx on public.notification_deliveries(owner_id, scheduled_for)
 where status = 'pending';
-create index push_subscriptions_owner_enabled_idx on public.push_subscriptions(owner_id)
+create index if not exists push_subscriptions_owner_enabled_idx on public.push_subscriptions(owner_id)
 where enabled = true;
-create index ai_results_tank_checked_idx on public.ai_results(tank_id, checked_at desc);
-create index ai_evaluations_owner_evaluated_idx on public.ai_evaluations(owner_id, evaluated_at desc);
-create index ai_prompt_notes_owner_created_idx on public.ai_prompt_notes(owner_id, created_at desc);
-create index pwa_device_tests_owner_tested_idx on public.pwa_device_tests(owner_id, tested_at desc);
-create index pwa_release_decisions_owner_updated_idx on public.pwa_release_decisions(owner_id, updated_at desc);
+create index if not exists ai_results_tank_checked_idx on public.ai_results(tank_id, checked_at desc);
+create index if not exists ai_evaluations_owner_evaluated_idx on public.ai_evaluations(owner_id, evaluated_at desc);
+create index if not exists ai_prompt_notes_owner_created_idx on public.ai_prompt_notes(owner_id, created_at desc);
+create index if not exists pwa_device_tests_owner_tested_idx on public.pwa_device_tests(owner_id, tested_at desc);
+create index if not exists pwa_release_decisions_owner_updated_idx on public.pwa_release_decisions(owner_id, updated_at desc);
 
 alter table public.profiles enable row level security;
 alter table public.tanks enable row level security;
@@ -271,6 +319,34 @@ alter table public.ai_evaluations enable row level security;
 alter table public.ai_prompt_notes enable row level security;
 alter table public.pwa_device_tests enable row level security;
 alter table public.pwa_release_decisions enable row level security;
+
+drop policy if exists "Public profiles are readable" on public.profiles;
+drop policy if exists "Users insert own profile" on public.profiles;
+drop policy if exists "Users update own profile" on public.profiles;
+drop policy if exists "Users delete own profile" on public.profiles;
+drop policy if exists "Public tanks are readable" on public.tanks;
+drop policy if exists "Users manage own tanks" on public.tanks;
+drop policy if exists "Users read own logs" on public.logs;
+drop policy if exists "Users manage own logs" on public.logs;
+drop policy if exists "Public posts are readable" on public.posts;
+drop policy if exists "Users manage own posts" on public.posts;
+drop policy if exists "Public media records are readable" on public.media;
+drop policy if exists "Users manage own media records" on public.media;
+drop policy if exists "Public comments are readable" on public.comments;
+drop policy if exists "Users create own comments" on public.comments;
+drop policy if exists "Users update own comments" on public.comments;
+drop policy if exists "Users delete own comments" on public.comments;
+drop policy if exists "Public likes are readable" on public.post_likes;
+drop policy if exists "Users manage own likes" on public.post_likes;
+drop policy if exists "Users manage own reminders" on public.reminders;
+drop policy if exists "Users manage own notification deliveries" on public.notification_deliveries;
+drop policy if exists "Users manage own push subscriptions" on public.push_subscriptions;
+drop policy if exists "Users read own ai results" on public.ai_results;
+drop policy if exists "Users manage own ai results" on public.ai_results;
+drop policy if exists "Users manage own ai evaluations" on public.ai_evaluations;
+drop policy if exists "Users manage own ai prompt notes" on public.ai_prompt_notes;
+drop policy if exists "Users manage own pwa device tests" on public.pwa_device_tests;
+drop policy if exists "Users manage own pwa release decisions" on public.pwa_release_decisions;
 
 create policy "Public profiles are readable"
 on public.profiles for select
@@ -438,6 +514,11 @@ values (
   array['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'video/mp4', 'video/quicktime', 'video/webm']
 )
 on conflict (id) do nothing;
+
+drop policy if exists "Users read own aquanote media objects" on storage.objects;
+drop policy if exists "Users insert own aquanote media objects" on storage.objects;
+drop policy if exists "Users update own aquanote media objects" on storage.objects;
+drop policy if exists "Users delete own aquanote media objects" on storage.objects;
 
 create policy "Users read own aquanote media objects"
 on storage.objects for select
