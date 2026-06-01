@@ -5352,6 +5352,18 @@ textarea {
   line-height: 1.65;
 }
 
+.production-setup-list .production-setup-target {
+  margin-top: 10px;
+  padding: 7px 8px;
+  border: 1px solid rgba(18, 148, 142, 0.16);
+  border-radius: 8px;
+  background: rgba(231, 247, 243, 0.72);
+  color: var(--aqua-dark);
+  font-size: 0.74rem;
+  font-weight: 950;
+  line-height: 1.45;
+}
+
 .production-setup-list code {
   padding: 1px 4px;
   border-radius: 5px;
