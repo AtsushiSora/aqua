@@ -78,6 +78,38 @@ body::after {
   pointer-events: none;
 }
 
+@keyframes liveWaterDrift {
+  0% {
+    background-position: 0 0, 0 0, 0 0;
+  }
+
+  100% {
+    background-position: 180px 0, -140px 80px, 96px 0;
+  }
+}
+
+@keyframes livePhotoFloat {
+  0%,
+  100% {
+    transform: scale(1.03) translate3d(0, 0, 0);
+  }
+
+  50% {
+    transform: scale(1.08) translate3d(-1.8%, 1.2%, 0);
+  }
+}
+
+@keyframes liveControlFloat {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
 body[data-ui-mode="simple"] {
   --bg: #f2fbfa;
   --surface: #ffffff;
@@ -151,6 +183,30 @@ body[data-ui-mode="glance"] {
   background: #060b0f;
 }
 
+body[data-ui-mode="live"] {
+  --bg: #e8f8f6;
+  --surface: #ffffff;
+  --surface-soft: #effbf8;
+  --ink: #102c31;
+  --muted: #4f676c;
+  --line: #c8e7e3;
+  --aqua: #10a8ba;
+  --aqua-dark: #086c78;
+  --nav: #0b3b43;
+  --green: #54a96f;
+  --coral: #e1695e;
+  --amber: #c9912d;
+  --cream: #f5fff8;
+  --pink: #fff0eb;
+  --glass: rgba(242, 255, 252, 0.84);
+  --glass-strong: rgba(255, 255, 255, 0.96);
+  --glass-border: rgba(8, 108, 120, 0.18);
+  --aqua-wash: rgba(16, 168, 186, 0.13);
+  --waterline: repeating-linear-gradient(112deg, transparent 0 46px, rgba(16, 168, 186, 0.1) 48px, transparent 74px);
+  --shadow: 0 20px 46px rgba(8, 68, 76, 0.12);
+  --shadow-soft: 0 12px 30px rgba(8, 68, 76, 0.08);
+}
+
 body[data-ui-mode="simple"]::before {
   background:
     linear-gradient(180deg, rgba(242, 251, 250, 0.66), rgba(242, 251, 250, 0.9)),
@@ -196,6 +252,22 @@ body[data-ui-mode="glance"]::after {
   background-size: 74px 74px, 96px 96px;
 }
 
+body[data-ui-mode="live"]::before {
+  background:
+    linear-gradient(180deg, rgba(232, 248, 246, 0.34), rgba(232, 248, 246, 0.86)),
+    linear-gradient(126deg, rgba(16, 168, 186, 0.2), transparent 46%),
+    url("assets/site-concept.png") center / cover no-repeat;
+  opacity: 0.5;
+}
+
+body[data-ui-mode="live"]::after {
+  background:
+    repeating-linear-gradient(100deg, transparent 0 68px, rgba(255, 255, 255, 0.22) 70px, transparent 96px),
+    repeating-linear-gradient(175deg, transparent 0 42px, rgba(16, 168, 186, 0.1) 44px, transparent 58px),
+    linear-gradient(115deg, transparent 0 58%, rgba(255, 255, 255, 0.2) 58% 59%, transparent 59% 100%);
+  animation: liveWaterDrift 18s linear infinite;
+}
+
 body[data-custom-background="true"]::before {
   background:
     linear-gradient(180deg, rgba(7, 27, 31, 0.24), rgba(246, 248, 246, 0.8)),
@@ -210,6 +282,14 @@ body[data-ui-mode="glance"][data-custom-background="true"]::before {
     linear-gradient(180deg, rgba(6, 11, 15, 0.48), rgba(6, 11, 15, 0.9)),
     var(--custom-background-image) center / cover no-repeat;
   opacity: 1;
+}
+
+body[data-ui-mode="live"][data-custom-background="true"]::before {
+  background:
+    linear-gradient(180deg, rgba(6, 45, 49, 0.18), rgba(232, 248, 246, 0.74)),
+    linear-gradient(126deg, rgba(16, 168, 186, 0.2), transparent 46%),
+    var(--custom-background-image) center / cover no-repeat;
+  opacity: 0.82;
 }
 
 button,
@@ -709,6 +789,132 @@ body[data-ui-mode="glance"] .ui-mode-switch select {
 body[data-ui-mode="glance"] .design-cycle-button {
   background: radial-gradient(circle at 28% 18%, #f7fbfb, var(--aqua) 30%, #167dff 80%);
   color: #061014;
+}
+
+body[data-ui-mode="live"] .sidebar,
+body[data-ui-mode="live"] .topbar,
+body[data-ui-mode="live"] .panel,
+body[data-ui-mode="live"] .rail-card,
+body[data-ui-mode="live"] .metric-card,
+body[data-ui-mode="live"] .ai-form,
+body[data-ui-mode="live"] .ai-result,
+body[data-ui-mode="live"] .ai-api-panel,
+body[data-ui-mode="live"] .ai-evaluation-panel {
+  border-color: rgba(8, 108, 120, 0.18);
+  background: var(--glass);
+  box-shadow: var(--shadow-soft);
+}
+
+body[data-ui-mode="live"] .brand-mark,
+body[data-ui-mode="live"] .primary-button,
+body[data-ui-mode="live"] .sync-status-button.is-synced {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.42), transparent),
+    linear-gradient(135deg, #10a8ba, #54a96f);
+}
+
+body[data-ui-mode="live"] .hero-band {
+  min-height: clamp(400px, 48vw, 580px);
+  border-color: rgba(255, 255, 255, 0.42);
+  background:
+    repeating-linear-gradient(105deg, transparent 0 56px, rgba(255, 255, 255, 0.14) 58px, transparent 86px),
+    linear-gradient(120deg, rgba(6, 45, 49, 0.38), rgba(16, 168, 186, 0.08));
+}
+
+body[data-ui-mode="live"] .hero-band::before {
+  background:
+    repeating-linear-gradient(105deg, transparent 0 74px, rgba(255, 255, 255, 0.16) 76px, transparent 106px),
+    repeating-linear-gradient(178deg, transparent 0 44px, rgba(16, 168, 186, 0.12) 46px, transparent 62px);
+  animation: liveWaterDrift 16s linear infinite;
+}
+
+body[data-ui-mode="live"] .hero-media::after {
+  background:
+    linear-gradient(90deg, rgba(6, 37, 43, 0.7) 0%, rgba(6, 37, 43, 0.34) 48%, rgba(6, 37, 43, 0.08) 100%),
+    repeating-linear-gradient(102deg, transparent 0 82px, rgba(255, 255, 255, 0.16) 84px, transparent 112px),
+    linear-gradient(0deg, rgba(6, 37, 43, 0.32), transparent 58%);
+  animation: liveWaterDrift 20s linear infinite;
+}
+
+body[data-ui-mode="live"] .hero-media img {
+  animation: livePhotoFloat 18s ease-in-out infinite;
+  will-change: transform;
+}
+
+body[data-ui-mode="live"] .hero-media.is-placeholder {
+  background:
+    repeating-linear-gradient(104deg, rgba(255, 255, 255, 0.18) 0 2px, transparent 2px 72px),
+    linear-gradient(145deg, #c7f5ef, #5ac0bb 56%, #0d4a57);
+  background-size: 180px 100%, cover;
+  animation: liveWaterDrift 20s linear infinite;
+}
+
+body[data-ui-mode="live"] .hero-copy h2,
+body[data-ui-mode="live"] .view-head h1,
+body[data-ui-mode="live"] .app-home-top h1 {
+  color: #0d3137;
+}
+
+body[data-ui-mode="live"] .hero-copy h2 {
+  color: #ffffff;
+}
+
+body[data-ui-mode="live"] .hero-copy p:not(.eyebrow) {
+  max-width: 48ch;
+  color: rgba(255, 255, 255, 0.9);
+  font-weight: 800;
+}
+
+body[data-ui-mode="live"] .quick-dock {
+  gap: 14px;
+}
+
+body[data-ui-mode="live"] .quick-dock button {
+  min-height: 104px;
+  grid-template-columns: 48px minmax(0, 1fr);
+  align-content: center;
+  border-color: rgba(8, 108, 120, 0.18);
+  background:
+    repeating-linear-gradient(112deg, transparent 0 48px, rgba(255, 255, 255, 0.22) 50px, transparent 74px),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.78), rgba(236, 255, 251, 0.94));
+  animation: liveControlFloat 5.8s ease-in-out infinite;
+}
+
+body[data-ui-mode="live"] .quick-dock button:nth-child(2) {
+  animation-delay: -1.3s;
+}
+
+body[data-ui-mode="live"] .quick-dock button:nth-child(3) {
+  animation-delay: -2.2s;
+}
+
+body[data-ui-mode="live"] .quick-dock button:nth-child(4) {
+  animation-delay: -3.1s;
+}
+
+body[data-ui-mode="live"] .quick-dock span {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.76), transparent),
+    rgba(16, 168, 186, 0.16);
+}
+
+body[data-ui-mode="live"] .metric-card {
+  min-height: 136px;
+  background:
+    repeating-linear-gradient(112deg, transparent 0 52px, rgba(16, 168, 186, 0.08) 54px, transparent 78px),
+    rgba(255, 255, 255, 0.86);
+}
+
+body[data-ui-mode="live"] .metric-card::before {
+  height: 5px;
+  background: linear-gradient(90deg, var(--aqua), var(--green));
+}
+
+body[data-ui-mode="live"] .design-cycle-button {
+  background: linear-gradient(135deg, #10a8ba, #54a96f);
 }
 
 .brand-mark {
@@ -5396,6 +5602,10 @@ textarea {
     grid-template-columns: repeat(2, minmax(96px, 1fr));
   }
 
+  body[data-ui-mode="live"] .quick-dock {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .metric-grid,
   .content-grid,
   .manager-layout,
@@ -5602,6 +5812,25 @@ textarea {
     min-height: 112px;
   }
 
+  body[data-ui-mode="live"] .hero-band {
+    min-height: 430px;
+  }
+
+  body[data-ui-mode="live"] .quick-dock {
+    gap: 12px;
+  }
+
+  body[data-ui-mode="live"] .quick-dock button {
+    min-height: 88px;
+    grid-template-columns: 40px minmax(0, 1fr);
+    padding: 12px;
+  }
+
+  body[data-ui-mode="live"] .quick-dock span {
+    width: 36px;
+    height: 36px;
+  }
+
   .metric-grid,
   .content-grid,
   .mini-feed,
@@ -5742,5 +5971,16 @@ textarea {
   .toast {
     right: 12px;
     bottom: 78px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body[data-ui-mode="live"]::after,
+  body[data-ui-mode="live"] .hero-band::before,
+  body[data-ui-mode="live"] .hero-media::after,
+  body[data-ui-mode="live"] .hero-media img,
+  body[data-ui-mode="live"] .hero-media.is-placeholder,
+  body[data-ui-mode="live"] .quick-dock button {
+    animation: none;
   }
 }

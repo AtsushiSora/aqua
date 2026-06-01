@@ -38,7 +38,7 @@ create table if not exists public.profiles (
   email text,
   visibility profile_visibility not null default 'public',
   plan account_plan not null default 'free',
-  ui_mode text not null default 'standard' check (ui_mode in ('standard', 'simple', 'glance', 'adult')),
+  ui_mode text not null default 'standard' check (ui_mode in ('standard', 'simple', 'glance', 'adult', 'live')),
   notification_channel text not null default 'browser' check (notification_channel in ('browser', 'push', 'email', 'none')),
   browser_notifications_enabled boolean not null default true,
   email_notifications_enabled boolean not null default false,
@@ -47,6 +47,13 @@ create table if not exists public.profiles (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+alter table public.profiles
+drop constraint if exists profiles_ui_mode_check;
+
+alter table public.profiles
+add constraint profiles_ui_mode_check
+check (ui_mode in ('standard', 'simple', 'glance', 'adult', 'live'));
 
 create table if not exists public.tanks (
   id uuid primary key default gen_random_uuid(),
