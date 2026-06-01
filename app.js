@@ -237,9 +237,9 @@ const defaultState = {
   heroPhotoDataUrl: null,
   account: {
     signedIn: false,
-    name: "アクア太郎",
-    handle: "aquataro",
-    email: "aquataro@example.com",
+    name: "ゲストユーザー",
+    handle: "guest",
+    email: "",
     visibility: "public",
     plan: "free",
     uiMode: "standard",
@@ -275,101 +275,24 @@ const defaultState = {
   tanks: [
     {
       id: "tank-main",
-      name: "リビング水草水槽",
+      name: "はじめての水槽",
       kind: "水草水槽",
-      size: "60cm",
-      volume: "57L",
-      animals: "ネオンテトラ、ヤマトヌマエビ",
-      plants: "アヌビアス",
-      residents: "ネオンテトラ、ヤマトヌマエビ、アヌビアス",
-      equipment: "外部フィルター、LEDライト、CO2",
-      tags: ["水草水槽", "熱帯魚", "CO2あり"],
+      size: "サイズ未設定",
+      volume: "容量未設定",
+      animals: "",
+      plants: "",
+      residents: "",
+      equipment: "",
+      tags: [],
       logs: [],
       latestAi: null,
-      featuredPostId: "sample-reef",
-      albumOrder: ["sample-reef"],
-    },
-    {
-      id: "tank-pond",
-      name: "ベランダ睡蓮鉢",
-      kind: "メダカ鉢",
-      size: "35cm",
-      volume: "18L",
-      animals: "メダカ",
-      plants: "睡蓮、浮草",
-      residents: "メダカ、睡蓮、浮草",
-      equipment: "睡蓮鉢、ソーラーエアレーション",
-      tags: ["メダカ", "屋外", "ビオトープ"],
-      logs: [],
-      latestAi: null,
-      featuredPostId: "sample-medaka",
-      albumOrder: ["sample-medaka", "sample-koi"],
+      featuredPostId: null,
+      albumOrder: [],
     },
   ],
-  posts: [
-    {
-      id: "sample-reef",
-      title: "流木レイアウトを少し変更",
-      tag: "水草水槽",
-      text: "後景草が伸びてきたので、左奥に高さを出しました。",
-      imageClass: "reef",
-      tankId: "tank-main",
-      likes: 128,
-      createdAt: daysAgoIso(2),
-      comments: [
-        {
-          id: "sample-comment-reef-1",
-          author: "mizu_note",
-          text: "左奥の高さが出ていて奥行きがきれいです。",
-          createdAt: daysAgoIso(1),
-        },
-      ],
-    },
-    {
-      id: "sample-medaka",
-      title: "屋外ビオトープの春",
-      tag: "メダカ",
-      text: "睡蓮の葉が増えて、メダカが日陰で休めるようになりました。",
-      imageClass: "medaka",
-      tankId: "tank-pond",
-      likes: 214,
-      createdAt: daysAgoIso(1),
-      comments: [
-        {
-          id: "sample-comment-medaka-1",
-          author: "biotope_days",
-          text: "睡蓮鉢の影が涼しそうで良いですね。",
-          createdAt: daysAgoIso(1),
-        },
-        {
-          id: "sample-comment-medaka-2",
-          author: "aqua_taro",
-          text: "屋外管理の参考になります。",
-          createdAt: daysAgoIso(2),
-        },
-      ],
-    },
-    {
-      id: "sample-koi",
-      title: "池の透明度チェック",
-      tag: "池",
-      text: "雨の後なので少し濁りあり。明日もう一度確認します。",
-      imageClass: "koi",
-      tankId: "tank-pond",
-      likes: 96,
-      createdAt: daysAgoIso(3),
-      comments: [
-        {
-          id: "sample-comment-koi-1",
-          author: "pond_keeper",
-          text: "雨の翌日は同じ場所で写真を残すと比較しやすいです。",
-          createdAt: daysAgoIso(1),
-        },
-      ],
-    },
-  ],
+  posts: [],
   tasks: {
-    feedMorning: true,
+    feedMorning: false,
     checkTemp: false,
     checkAlgae: false,
   },
@@ -3843,7 +3766,7 @@ function getTankPayload(tank, user) {
     kind: tank.kind || "水槽",
     size_label: tank.size || null,
     volume_label: tank.volume || null,
-    residents: formatTankResidents(tank),
+    residents: getTankResidentValue(tank) || null,
     animal_names: tank.animals || null,
     plant_names: tank.plants || null,
     equipment_names: tank.equipment || null,
@@ -4211,7 +4134,7 @@ function applyRemoteTanks(remoteTanks) {
     });
     nextTank.animals = remoteParts.animals;
     nextTank.plants = remoteParts.plants;
-    nextTank.residents = formatTankResidents(nextTank);
+    nextTank.residents = getTankResidentValue(nextTank);
     nextTank.equipment = remoteTank.equipment_names || nextTank.equipment || "";
     nextTank.tags = Array.isArray(remoteTank.tags) && remoteTank.tags.length ? remoteTank.tags : [nextTank.kind];
 
@@ -5207,6 +5130,12 @@ function getTankResidentParts(tank = {}) {
 }
 
 function formatTankResidents(tank = {}) {
+  const value = getTankResidentValue(tank);
+
+  return value || "生き物・水草未設定";
+}
+
+function getTankResidentValue(tank = {}) {
   const { animals, plants } = getTankResidentParts(tank);
   const parts = [];
 
@@ -5218,7 +5147,7 @@ function formatTankResidents(tank = {}) {
     parts.push(plants);
   }
 
-  return parts.length ? parts.join("、") : "生き物・水草未設定";
+  return parts.join("、");
 }
 
 function getTankDetailItems(tank) {
@@ -5455,7 +5384,7 @@ function renderTankProfile() {
   document.querySelector("#edit-tank-kind").value = tank.kind;
   document.querySelector("#edit-tank-size").value = tank.size;
   document.querySelector("#edit-tank-volume").value = tank.volume;
-  setSpeciesListValues("edit-tank-species-list", formatTankResidents(tank));
+  setSpeciesListValues("edit-tank-species-list", getTankResidentValue(tank));
   setSpeciesListValues("edit-tank-equipment-list", tank.equipment || "");
   document.querySelector("#edit-tank-tags").value = tank.tags.join(", ");
   document.querySelector("#delete-tank-button").disabled = state.tanks.length <= 1;
@@ -5605,7 +5534,7 @@ function addPostComment(postId, text) {
 
   post.comments.push({
     id: createId("comment"),
-    author: state.account.name || "アクア太郎",
+    author: state.account.name || defaultState.account.name,
     text: commentText.slice(0, 120),
     createdAt: new Date().toISOString(),
   });
@@ -8189,7 +8118,7 @@ function getAiTankPayload(tank) {
     kind: tank.kind,
     animals: tank.animals,
     plants: tank.plants,
-    residents: formatTankResidents(tank),
+    residents: getTankResidentValue(tank),
     equipment: tank.equipment,
     volumeLabel: tank.volume,
   };
@@ -9154,19 +9083,26 @@ function normalizeState(saved) {
     normalized.tanks = cloneState(defaultState).tanks;
   }
 
-  normalized.tanks = normalized.tanks.map((tank) => ({
-    ...tank,
-    ...getTankResidentParts(tank),
-    volume: tank.volume || "容量未設定",
-    residents: formatTankResidents(tank),
-    equipment: normalizeSpeciesValues(tank.equipment || tank.equipment_names || "").join("、"),
-    tags: Array.isArray(tank.tags) ? tank.tags : [tank.kind || "水槽"],
-    logs: Array.isArray(tank.logs) ? tank.logs.map(normalizeLog) : [],
-    latestAi: tank.latestAi ? normalizeAiResult(tank.latestAi) : null,
-    featuredPostId: tank.featuredPostId || null,
-    albumOrder: Array.isArray(tank.albumOrder) ? tank.albumOrder : [],
-    cloudId: tank.cloudId || null,
-  }));
+  normalized.tanks = normalized.tanks.map((tank) => {
+    const residentParts = getTankResidentParts(tank);
+    const nextTank = {
+      ...tank,
+      ...residentParts,
+    };
+
+    return {
+      ...nextTank,
+      volume: nextTank.volume || "容量未設定",
+      residents: getTankResidentValue(nextTank),
+      equipment: normalizeSpeciesValues(nextTank.equipment || nextTank.equipment_names || "").join("、"),
+      tags: Array.isArray(nextTank.tags) ? nextTank.tags : [nextTank.kind || "水槽"],
+      logs: Array.isArray(nextTank.logs) ? nextTank.logs.map(normalizeLog) : [],
+      latestAi: nextTank.latestAi ? normalizeAiResult(nextTank.latestAi) : null,
+      featuredPostId: nextTank.featuredPostId || null,
+      albumOrder: Array.isArray(nextTank.albumOrder) ? nextTank.albumOrder : [],
+      cloudId: nextTank.cloudId || null,
+    };
+  });
   normalized.posts = normalized.posts.map((post, index) => {
     const fallbackTank = normalized.tanks[index % normalized.tanks.length] || normalized.tanks[0];
     const tankId = normalized.tanks.some((tank) => tank.id === post.tankId) ? post.tankId : fallbackTank.id;
