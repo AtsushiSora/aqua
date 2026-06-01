@@ -1971,6 +1971,59 @@ body[data-ui-mode="glance"][data-custom-buttons="true"] .icon-button {
   grid-column: 1 / -1;
 }
 
+.species-field {
+  display: grid;
+  gap: 8px;
+}
+
+.species-field-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: end;
+}
+
+.species-field-head span {
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 900;
+}
+
+.species-field-head small {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-align: right;
+}
+
+.species-list {
+  display: grid;
+  gap: 8px;
+}
+
+.species-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 42px;
+  gap: 8px;
+  align-items: center;
+}
+
+.species-row input {
+  width: 100%;
+}
+
+.species-remove-button {
+  width: 42px;
+  height: 42px;
+  padding: 0;
+  border-radius: 8px;
+}
+
+.species-add-button {
+  justify-self: start;
+  padding-left: 0;
+}
+
 .tank-photo-assist {
   display: grid;
   grid-template-columns: minmax(110px, 0.45fr) minmax(0, 1fr);

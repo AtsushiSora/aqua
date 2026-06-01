@@ -944,6 +944,13 @@ heroPhotoInput.addEventListener("change", async () => {
 });
 
 tankIdentifyPhotoInput.addEventListener("change", handleTankIdentifyPhotoChange);
+document.querySelectorAll("[data-species-add]").forEach((button) => {
+  button.addEventListener("click", () => {
+    const list = document.getElementById(button.dataset.speciesAdd);
+    const row = addSpeciesRow(list);
+    row.querySelector("input")?.focus();
+  });
+});
 
 tankForm.addEventListener("submit", (event) => {
   event.preventDefault();
@@ -952,8 +959,8 @@ tankForm.addEventListener("submit", (event) => {
   const kind = document.querySelector("#tank-kind-input").value;
   const size = document.querySelector("#tank-size-input").value.trim() || "サイズ未設定";
   const volume = document.querySelector("#tank-volume-input").value.trim() || "容量未設定";
-  const animals = document.querySelector("#tank-animals-input").value.trim();
-  const plants = document.querySelector("#tank-plants-input").value.trim();
+  const animals = getSpeciesListValue("tank-animals-list");
+  const plants = getSpeciesListValue("tank-plants-list");
   const residents = formatTankResidents({ animals, plants });
   const tank = {
     id: createId("tank"),
@@ -975,6 +982,8 @@ tankForm.addEventListener("submit", (event) => {
   state.activeTankId = tank.id;
   saveState();
   tankForm.reset();
+  resetSpeciesList("tank-animals-list");
+  resetSpeciesList("tank-plants-list");
   resetTankIdentifyAssist();
   renderApp();
   showToast("水槽を追加しました");
@@ -994,8 +1003,8 @@ tankEditForm.addEventListener("submit", (event) => {
   tank.kind = document.querySelector("#edit-tank-kind").value;
   tank.size = document.querySelector("#edit-tank-size").value.trim() || "サイズ未設定";
   tank.volume = document.querySelector("#edit-tank-volume").value.trim() || "容量未設定";
-  tank.animals = document.querySelector("#edit-tank-animals").value.trim();
-  tank.plants = document.querySelector("#edit-tank-plants").value.trim();
+  tank.animals = getSpeciesListValue("edit-tank-animals-list");
+  tank.plants = getSpeciesListValue("edit-tank-plants-list");
   tank.residents = formatTankResidents(tank);
   tank.tags = tags.length ? tags : [tank.kind];
 
@@ -5419,8 +5428,8 @@ function renderTankProfile() {
   document.querySelector("#edit-tank-kind").value = tank.kind;
   document.querySelector("#edit-tank-size").value = tank.size;
   document.querySelector("#edit-tank-volume").value = tank.volume;
-  document.querySelector("#edit-tank-animals").value = tank.animals || "";
-  document.querySelector("#edit-tank-plants").value = tank.plants || "";
+  setSpeciesListValues("edit-tank-animals-list", tank.animals || "");
+  setSpeciesListValues("edit-tank-plants-list", tank.plants || "");
   document.querySelector("#edit-tank-tags").value = tank.tags.join(", ");
   document.querySelector("#delete-tank-button").disabled = state.tanks.length <= 1;
 }
@@ -6314,8 +6323,6 @@ async function identifyTankResidentsWithApi({ imageDataUrl, tankName, tankKind }
 }
 
 function applyTankResidentCandidates(result) {
-  const animalsInput = document.querySelector("#tank-animals-input");
-  const plantsInput = document.querySelector("#tank-plants-input");
   const animals = Array.isArray(result.animals) ? result.animals : [];
   const plants = Array.isArray(result.plants) ? result.plants : [];
   const candidates = [...animals, ...plants];
@@ -6326,11 +6333,11 @@ function applyTankResidentCandidates(result) {
   }
 
   if (animals.length) {
-    animalsInput.value = mergeCommaValues(animalsInput.value, animals).join("、");
+    appendSpeciesValues("tank-animals-list", animals);
   }
 
   if (plants.length) {
-    plantsInput.value = mergeCommaValues(plantsInput.value, plants).join("、");
+    appendSpeciesValues("tank-plants-list", plants);
   }
 
   const sourceLabel = result.source === "local" ? "種類からの候補" : "写真からの候補";
@@ -6402,6 +6409,117 @@ function mergeCommaValues(currentValue, candidates) {
     ...candidates,
   ];
   return [...new Set(values)].slice(0, 12);
+}
+
+function getSpeciesListValue(listId) {
+  return getSpeciesListValues(listId).join("、");
+}
+
+function getSpeciesListValues(listId) {
+  const list = document.getElementById(listId);
+  if (!list) {
+    return [];
+  }
+
+  return [...list.querySelectorAll("input")]
+    .map((input) => input.value.trim())
+    .filter(Boolean);
+}
+
+function setSpeciesListValues(listId, value) {
+  const list = document.getElementById(listId);
+  if (!list) {
+    return;
+  }
+
+  list.innerHTML = "";
+  normalizeSpeciesValues(value).forEach((item) => addSpeciesRow(list, item));
+  addSpeciesRow(list);
+  updateSpeciesRemoveButtons(list);
+}
+
+function resetSpeciesList(listId) {
+  setSpeciesListValues(listId, "");
+}
+
+function appendSpeciesValues(listId, candidates) {
+  const nextValues = mergeCommaValues(getSpeciesListValue(listId), normalizeSpeciesValues(candidates));
+  setSpeciesListValues(listId, nextValues);
+}
+
+function normalizeSpeciesValues(value) {
+  const source = Array.isArray(value) ? value : String(value || "").split(/[、,\n]/);
+
+  return [...new Set(
+    source
+      .map((item) => String(item || "").trim())
+      .filter(Boolean),
+  )].slice(0, 20);
+}
+
+function addSpeciesRow(list, value = "") {
+  if (!list) {
+    return document.createElement("div");
+  }
+
+  const row = document.createElement("div");
+  row.className = "species-row";
+  const input = document.createElement("input");
+  input.type = "text";
+  input.value = value;
+  input.placeholder = list.dataset.placeholder || "例: メダカ";
+  input.autocomplete = "off";
+
+  const removeButton = document.createElement("button");
+  removeButton.className = "icon-button species-remove-button";
+  removeButton.type = "button";
+  removeButton.setAttribute("aria-label", "この種類を削除");
+  removeButton.title = "削除";
+  removeButton.textContent = "×";
+
+  input.addEventListener("input", () => {
+    expandSpeciesRowsFromInput(list, row, input);
+    updateSpeciesRemoveButtons(list);
+  });
+
+  removeButton.addEventListener("click", () => {
+    row.remove();
+    if (!list.querySelector(".species-row")) {
+      addSpeciesRow(list);
+    }
+    updateSpeciesRemoveButtons(list);
+  });
+
+  row.append(input, removeButton);
+  list.append(row);
+  updateSpeciesRemoveButtons(list);
+  return row;
+}
+
+function expandSpeciesRowsFromInput(list, row, input) {
+  const values = normalizeSpeciesValues(input.value);
+  if (values.length > 1) {
+    input.value = values[0];
+    values.slice(1).forEach((item) => addSpeciesRow(list, item));
+  }
+
+  if (input.value.trim() && row === list.lastElementChild) {
+    addSpeciesRow(list);
+  }
+
+  const lastInput = list.lastElementChild?.querySelector("input");
+  if (lastInput?.value.trim()) {
+    addSpeciesRow(list);
+  }
+}
+
+function updateSpeciesRemoveButtons(list) {
+  const rows = [...list.querySelectorAll(".species-row")];
+  rows.forEach((row) => {
+    const input = row.querySelector("input");
+    const button = row.querySelector("button");
+    button.disabled = rows.length === 1 && !input.value.trim();
+  });
 }
 
 function renderTankIdentifyPreview() {
@@ -9672,6 +9790,8 @@ function escapeCssIdentifier(value) {
 }
 
 setDefaultLogDate();
+resetSpeciesList("tank-animals-list");
+resetSpeciesList("tank-plants-list");
 renderPostImagePreview();
 renderApp();
 initSupabaseAuth();

@@ -351,14 +351,22 @@
                 <span>容量</span>
                 <input id="tank-volume-input" type="text" placeholder="例: 18L">
               </label>
-              <label>
-                <span>生き物</span>
-                <input id="tank-animals-input" type="text" placeholder="例: メダカ、ネオンテトラ、ヤマトヌマエビ">
-              </label>
-              <label>
-                <span>水草</span>
-                <input id="tank-plants-input" type="text" placeholder="例: 睡蓮、浮草、アヌビアス">
-              </label>
+              <div class="species-field full-field">
+                <div class="species-field-head">
+                  <span>生き物</span>
+                  <small>魚、エビ、貝などを1種類ずつ追加</small>
+                </div>
+                <div class="species-list" id="tank-animals-list" data-placeholder="例: メダカ"></div>
+                <button class="text-button species-add-button" type="button" data-species-add="tank-animals-list">種類を追加</button>
+              </div>
+              <div class="species-field full-field">
+                <div class="species-field-head">
+                  <span>水草</span>
+                  <small>水草や浮草を1種類ずつ追加</small>
+                </div>
+                <div class="species-list" id="tank-plants-list" data-placeholder="例: アヌビアス"></div>
+                <button class="text-button species-add-button" type="button" data-species-add="tank-plants-list">種類を追加</button>
+              </div>
               <div class="tank-photo-assist full-field">
                 <div class="tank-photo-preview" id="tank-identify-preview">
                   <span>写真未選択</span>
@@ -452,14 +460,22 @@
                   <span>容量</span>
                   <input id="edit-tank-volume" type="text">
                 </label>
-                <label class="full-field">
-                  <span>生き物</span>
-                  <input id="edit-tank-animals" type="text">
-                </label>
-                <label class="full-field">
-                  <span>水草</span>
-                  <input id="edit-tank-plants" type="text">
-                </label>
+                <div class="species-field full-field">
+                  <div class="species-field-head">
+                    <span>生き物</span>
+                    <small>魚、エビ、貝などを1種類ずつ追加</small>
+                  </div>
+                  <div class="species-list" id="edit-tank-animals-list" data-placeholder="例: ネオンテトラ"></div>
+                  <button class="text-button species-add-button" type="button" data-species-add="edit-tank-animals-list">種類を追加</button>
+                </div>
+                <div class="species-field full-field">
+                  <div class="species-field-head">
+                    <span>水草</span>
+                    <small>水草や浮草を1種類ずつ追加</small>
+                  </div>
+                  <div class="species-list" id="edit-tank-plants-list" data-placeholder="例: アヌビアス"></div>
+                  <button class="text-button species-add-button" type="button" data-species-add="edit-tank-plants-list">種類を追加</button>
+                </div>
                 <label class="full-field">
                   <span>タグ</span>
                   <input id="edit-tank-tags" type="text" placeholder="例: 水草水槽, 熱帯魚, CO2あり">
