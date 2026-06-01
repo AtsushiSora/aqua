@@ -1565,6 +1565,12 @@ function renderPwaReleaseDecision() {
   ).length;
   const gatewayDecision = getAiGatewayProductionDecisionEvidence();
   const gatewayExportEvidence = getPwaGatewayDecisionExportEvidence(gatewayDecision);
+  const handoffChecklist = getPwaReleaseHandoffChecklist({
+    decision,
+    coverage,
+    deviceQaActions,
+    gatewayDecision,
+  });
   document.querySelector("#pwa-release-decision-status-input").value = decision.status;
   document.querySelector("#pwa-release-review-status-input").value = decision.reviewStatus;
   document.querySelector("#pwa-release-result-status-input").value = decision.resultStatus;
@@ -1669,6 +1675,23 @@ function renderPwaReleaseDecision() {
         <span>${gatewayDecision.ready ? "次の確認" : "未完了アクション"}</span>
         ${gatewayExportEvidence.incompleteActions.map((action) => `<p>${escapeHtml(action)}</p>`).join("")}
       </div>
+    </div>
+    <div class="pwa-release-handoff-checklist ${handoffChecklist.ready ? "ready" : "pending"}">
+      <span>公開引き渡し</span>
+      <strong>${escapeHtml(handoffChecklist.title)}</strong>
+      <small>${escapeHtml(handoffChecklist.note)}</small>
+      <ol>
+        ${handoffChecklist.items
+          .map(
+            (item) => `
+              <li class="${item.ready ? "ready" : "pending"}">
+                <strong>${escapeHtml(item.label)}</strong>
+                <span>${escapeHtml(item.note)}</span>
+              </li>
+            `,
+          )
+          .join("")}
+      </ol>
     </div>
     <div class="pwa-release-evidence-grid">
       ${evidenceItems
@@ -1874,6 +1897,56 @@ function getPwaReleaseHandoffState(evidenceItems) {
     ready: false,
     title: nextActions[0],
     note: nextActions.length > 1 ? `残り ${nextActions.length}件: ${nextActions.slice(1).join(" / ")}` : "この項目が完了すると公開前レビューに近づきます。",
+  };
+}
+
+function getPwaReleaseHandoffChecklist({ decision, coverage, deviceQaActions, gatewayDecision }) {
+  const items = [
+    {
+      label: "本番URLを固定",
+      ready: Boolean(decision.productionUrl),
+      note: decision.productionUrl || "最終確認する公開URLを入力",
+    },
+    {
+      label: "実機QAを完了",
+      ready: coverage.ready && deviceQaActions.length === 0,
+      note: coverage.ready
+        ? deviceQaActions.length
+          ? `${deviceQaActions.length}件の要確認/NGを後続OKで解消`
+          : "必須項目はすべてOK"
+        : `${coverage.passedCount}/${coverage.scopes.length}項目OK`,
+    },
+    {
+      label: "Gateway判定を確認",
+      ready: gatewayDecision.ready,
+      note: gatewayDecision.ready ? "AI Gateway本番判定OK" : gatewayDecision.nextAction || gatewayDecision.summary,
+    },
+    {
+      label: "公開判断を保存",
+      ready: decision.status === "ready" && Boolean(decision.reviewer) && Boolean(decision.note),
+      note:
+        decision.status === "ready" && decision.reviewer
+          ? decision.note || "判断理由をメモに残す"
+          : "公開OK、確認者、判断理由を保存",
+    },
+    {
+      label: "証跡JSONを書き出し",
+      ready: Boolean(decision.reviewExportedAt),
+      note: decision.reviewExportedAt ? `${formatFullDate(decision.reviewExportedAt)} に書き出し済み` : "JSONボタンでレビュー結果を書き出す",
+    },
+    {
+      label: "クラウド同期を確認",
+      ready: Boolean(decision.cloudId),
+      note: decision.cloudId ? "Supabase同期済み" : "ログイン中に判定メモを保存して同期",
+    },
+  ];
+  const pending = items.filter((item) => !item.ready);
+
+  return {
+    ready: pending.length === 0,
+    title: pending.length ? `残り${pending.length}件で引き渡し完了` : "公開引き渡し準備OK",
+    note: pending.length ? pending.map((item) => item.label).join(" / ") : "本番URL、QA、判定、証跡、同期が揃っています。",
+    items,
   };
 }
 
@@ -4413,6 +4486,12 @@ function exportPwaTestResults() {
   const deviceQaActions = getPwaDeviceQaActionItems(results);
   const allDeviceQaActions = getPwaDeviceQaActionItems(results, { includeResolved: true });
   const evidence = getPwaReleaseEvidenceItems(releaseDecision, coverage);
+  const handoffChecklist = getPwaReleaseHandoffChecklist({
+    decision: releaseDecision,
+    coverage,
+    deviceQaActions,
+    gatewayDecision: gatewayDecisionEvidence,
+  });
   const readyForRelease = coverage.ready && releaseDecision.status === "ready" && evidence.every((item) => item.ready);
 
   const payload = {
@@ -4445,6 +4524,7 @@ function exportPwaTestResults() {
       history: allDeviceQaActions,
     },
     gatewayDecisionEvidence: getPwaGatewayDecisionExportEvidence(gatewayDecisionEvidence),
+    handoffChecklist,
     releaseDecision: {
       ...releaseDecision,
       statusLabel: getPwaReleaseDecisionLabel(releaseDecision.status),

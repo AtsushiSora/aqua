@@ -4222,6 +4222,70 @@ textarea {
   line-height: 1.45;
 }
 
+.pwa-release-handoff-checklist {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid rgba(226, 162, 72, 0.34);
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.58), transparent),
+    rgba(255, 247, 230, 0.78);
+}
+
+.pwa-release-handoff-checklist.ready {
+  border-color: rgba(61, 173, 120, 0.34);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.58), transparent),
+    rgba(232, 248, 241, 0.82);
+}
+
+.pwa-release-handoff-checklist > span,
+.pwa-release-handoff-checklist > strong,
+.pwa-release-handoff-checklist > small {
+  color: var(--aqua-dark);
+  font-size: 0.86rem;
+  font-weight: 900;
+}
+
+.pwa-release-handoff-checklist > small {
+  color: var(--muted);
+  font-size: 0.76rem;
+}
+
+.pwa-release-handoff-checklist ol {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.pwa-release-handoff-checklist li {
+  display: grid;
+  gap: 3px;
+  padding: 9px 10px;
+  border: 1px solid rgba(226, 162, 72, 0.28);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.62);
+}
+
+.pwa-release-handoff-checklist li.ready {
+  border-color: rgba(61, 173, 120, 0.28);
+}
+
+.pwa-release-handoff-checklist li strong {
+  color: var(--aqua-dark);
+  font-size: 0.8rem;
+}
+
+.pwa-release-handoff-checklist li span {
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-weight: 850;
+  overflow-wrap: anywhere;
+}
+
 .pwa-release-decision-summary article.ready {
   border-color: rgba(61, 173, 120, 0.34);
 }
