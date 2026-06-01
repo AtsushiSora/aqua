@@ -1579,6 +1579,7 @@ function renderPwaReleaseDecision() {
     deviceQaActions,
     appearanceQa,
   });
+  const testerScript = getPwaReleaseTesterScript({ decision, coverage });
   document.querySelector("#pwa-release-decision-status-input").value = decision.status;
   document.querySelector("#pwa-release-review-status-input").value = decision.reviewStatus;
   document.querySelector("#pwa-release-result-status-input").value = decision.resultStatus;
@@ -1708,6 +1709,23 @@ function renderPwaReleaseDecision() {
         ${handoffMemo.lines.map((line) => `<li>${escapeHtml(line)}</li>`).join("")}
       </ul>
       <small>${escapeHtml(handoffMemo.note)}</small>
+    </div>
+    <div class="pwa-release-tester-script">
+      <span>テスター手順</span>
+      <strong>${escapeHtml(testerScript.title)}</strong>
+      <ol>
+        ${testerScript.steps
+          .map(
+            (step) => `
+              <li>
+                <strong>${escapeHtml(step.label)}</strong>
+                <span>${escapeHtml(step.action)}</span>
+                <small>${escapeHtml(step.record)}</small>
+              </li>
+            `,
+          )
+          .join("")}
+      </ol>
     </div>
     <div class="pwa-release-evidence-grid">
       ${evidenceItems
@@ -1988,6 +2006,19 @@ function getPwaReleaseHandoffMemo({ decision, coverage, handoffChecklist, gatewa
       `確認者: ${decision.reviewer || "未記録"}`,
       `残タスク: ${pendingLabels.length ? pendingLabels.join(" / ") : "なし"}`,
     ],
+  };
+}
+
+function getPwaReleaseTesterScript({ decision, coverage }) {
+  const productionUrl = decision.productionUrl || "本番URL未記録";
+  return {
+    title: productionUrl === "本番URL未記録" ? "本番URLを入れてから実機確認" : `${productionUrl} を実機確認`,
+    steps: PWA_REQUIRED_SCOPES.map((scope, index) => ({
+      scope,
+      label: `${index + 1}. ${getPwaTestScopeLabel(scope)}`,
+      action: PWA_SCOPE_QA_HINTS[scope].join(" / "),
+      record: `${getPwaTestScopeLabel(scope)}の結果を${coverage.scopes.includes(scope) ? "OK・要確認・NGで保存" : "実機テスト結果に保存"}`,
+    })),
   };
 }
 
@@ -4541,6 +4572,7 @@ function exportPwaTestResults() {
     deviceQaActions,
     appearanceQa,
   });
+  const testerScript = getPwaReleaseTesterScript({ decision: releaseDecision, coverage });
   const readyForRelease = coverage.ready && releaseDecision.status === "ready" && evidence.every((item) => item.ready);
 
   const payload = {
@@ -4575,6 +4607,7 @@ function exportPwaTestResults() {
     gatewayDecisionEvidence: getPwaGatewayDecisionExportEvidence(gatewayDecisionEvidence),
     handoffChecklist,
     handoffMemo,
+    testerScript,
     releaseDecision: {
       ...releaseDecision,
       statusLabel: getPwaReleaseDecisionLabel(releaseDecision.status),

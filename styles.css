@@ -4329,6 +4329,52 @@ textarea {
   overflow-wrap: anywhere;
 }
 
+.pwa-release-tester-script {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid rgba(17, 92, 110, 0.18);
+  border-radius: 8px;
+  background: rgba(237, 251, 255, 0.72);
+}
+
+.pwa-release-tester-script > span,
+.pwa-release-tester-script > strong {
+  color: var(--aqua-dark);
+  font-size: 0.86rem;
+  font-weight: 900;
+}
+
+.pwa-release-tester-script ol {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.pwa-release-tester-script li {
+  display: grid;
+  gap: 3px;
+  padding: 9px 10px;
+  border: 1px solid rgba(17, 92, 110, 0.12);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.64);
+}
+
+.pwa-release-tester-script li strong {
+  color: var(--aqua-dark);
+  font-size: 0.8rem;
+}
+
+.pwa-release-tester-script li span,
+.pwa-release-tester-script li small {
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-weight: 850;
+  overflow-wrap: anywhere;
+}
+
 .pwa-release-decision-summary article.ready {
   border-color: rgba(61, 173, 120, 0.34);
 }
