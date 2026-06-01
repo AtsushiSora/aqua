@@ -1429,11 +1429,15 @@ function getPwaModeQaSummary(results) {
       label: "5モード表示",
       ready: scopeStatuses.ui_modes === "passed",
       note: latestModeResult?.note || "ベーシック、かんたん、一目、大人、ライブモードでホーム、投稿、AI、アカウントを確認",
+      checks: PWA_SCOPE_QA_HINTS.ui_modes,
+      noteTemplate: PWA_SCOPE_NOTE_TEMPLATES.ui_modes,
     },
     {
       label: "画像カスタム",
       ready: scopeStatuses.custom_images === "passed",
       note: latestImageResult?.note || "背景画像とボタン背面画像を設定し、各モードで文字の読みやすさを確認",
+      checks: PWA_SCOPE_QA_HINTS.custom_images,
+      noteTemplate: PWA_SCOPE_NOTE_TEMPLATES.custom_images,
     },
   ];
 }
@@ -4770,6 +4774,8 @@ function exportPwaTestResults() {
         status: scopeStatuses[scope],
         statusLabel: getPwaTestStatusLabel(scopeStatuses[scope]),
         passed: scopeStatuses[scope] === "passed",
+        checks: PWA_SCOPE_QA_HINTS[scope] || [],
+        noteTemplate: PWA_SCOPE_NOTE_TEMPLATES[scope] || "",
       })),
     },
     appearanceQa: {
