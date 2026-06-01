@@ -110,6 +110,7 @@ const pwaReleaseDecisionChip = document.querySelector("#pwa-release-decision-chi
 const pwaReleaseDecisionSummary = document.querySelector("#pwa-release-decision-summary");
 const productionSetupNextAction = document.querySelector("#production-setup-next-action");
 const productionSetupSummary = document.querySelector("#production-setup-summary");
+const productionStorageCheckForm = document.querySelector("#production-storage-check-form");
 const accountUiModeInput = document.querySelector("#account-ui-mode-input");
 const homeUiModeInput = document.querySelector("#home-ui-mode-input");
 const homeUiModeCycleButton = document.querySelector("#home-ui-mode-cycle-button");
@@ -267,6 +268,12 @@ const defaultState = {
     lastSyncedAt: null,
   },
   pwaTestResults: [],
+  productionSetupCheck: {
+    storageStatus: "unchecked",
+    storageReviewer: "",
+    storageNote: "",
+    storageCheckedAt: null,
+  },
   notificationProductionCheck: {
     envStatus: "unchecked",
     dryRunStatus: "unchecked",
@@ -605,6 +612,7 @@ importDataInput.addEventListener("change", importAppData);
 pwaTestForm.addEventListener("submit", handlePwaTestSubmit);
 pwaTestExportButton.addEventListener("click", exportPwaTestResults);
 pwaReleaseDecisionForm.addEventListener("submit", handlePwaReleaseDecisionSubmit);
+productionStorageCheckForm.addEventListener("submit", handleProductionStorageCheckSubmit);
 pwaTestLog.addEventListener("click", async (event) => {
   const button = event.target.closest("[data-pwa-test-delete]");
   if (!button) {
@@ -1254,6 +1262,12 @@ function renderProductionSetupSummary() {
   }
 
   const setupSummary = getProductionSetupSummaryState();
+  const storageCheck = normalizeProductionSetupCheck(state.productionSetupCheck || {});
+  if (productionStorageCheckForm) {
+    document.querySelector("#production-storage-status-input").value = storageCheck.storageStatus;
+    document.querySelector("#production-storage-reviewer-input").value = storageCheck.storageReviewer || state.account.name || "";
+    document.querySelector("#production-storage-note-input").value = storageCheck.storageNote;
+  }
   if (productionSetupNextAction) {
     productionSetupNextAction.className = `production-setup-next ${setupSummary.ready ? "ready" : "pending"}`;
     productionSetupNextAction.innerHTML = `
@@ -1272,6 +1286,20 @@ function renderProductionSetupSummary() {
       `,
     )
     .join("");
+}
+
+function handleProductionStorageCheckSubmit(event) {
+  event.preventDefault();
+  state.productionSetupCheck = normalizeProductionSetupCheck({
+    ...state.productionSetupCheck,
+    storageStatus: document.querySelector("#production-storage-status-input").value,
+    storageReviewer: document.querySelector("#production-storage-reviewer-input").value,
+    storageNote: document.querySelector("#production-storage-note-input").value,
+    storageCheckedAt: new Date().toISOString(),
+  });
+  saveState();
+  renderProductionSetupSummary();
+  showToast("Storage確認を保存しました");
 }
 
 function getProductionSetupSummaryState(results = state.pwaTestResults || []) {
@@ -1302,6 +1330,9 @@ function getProductionSetupSummaryItems(results = state.pwaTestResults || []) {
   const setupStatus = getSupabaseSetupStatus();
   const pwaCoverage = getPwaReleaseCoverage(results);
   const gatewayReady = aiApiStatus.configured === true;
+  const storageCheck = normalizeProductionSetupCheck(state.productionSetupCheck || {});
+  const storageReady = storageCheck.storageStatus === "confirmed";
+  const storageIssue = storageCheck.storageStatus === "issues";
   const productionCheck = normalizeNotificationProductionCheck(state.notificationProductionCheck || {});
   const notificationReady =
     productionCheck.envStatus === "confirmed" &&
@@ -1318,9 +1349,11 @@ function getProductionSetupSummaryItems(results = state.pwaTestResults || []) {
     },
     {
       label: "Storage",
-      status: mediaCount ? "manual" : "missing",
-      value: mediaCount ? `${mediaCount}件のメディア` : "未確認",
-      note: mediaCount ? "Supabase Storage bucket側の保存確認が残ります" : "水槽写真または投稿メディアで確認します",
+      status: storageReady ? "ready" : storageIssue ? "missing" : mediaCount ? "manual" : "missing",
+      value: storageReady ? "OK" : storageIssue ? "要対応" : mediaCount ? `${mediaCount}件のメディア` : "未確認",
+      note: storageCheck.storageNote || (mediaCount ? "Supabase Storage bucket側の保存確認が残ります" : "水槽写真または投稿メディアで確認します"),
+      reviewer: storageCheck.storageReviewer,
+      checkedAt: storageCheck.storageCheckedAt,
     },
     {
       label: "AI Gateway",
@@ -9226,6 +9259,7 @@ function normalizeState(saved) {
     taskDate: saved.taskDate || getDateKey(new Date()),
     reminders: normalizeReminders(saved.reminders),
     pwaTestResults: Array.isArray(saved.pwaTestResults) ? saved.pwaTestResults.map(normalizePwaTestResult) : [],
+    productionSetupCheck: normalizeProductionSetupCheck(saved.productionSetupCheck || {}),
     notificationProductionCheck: normalizeNotificationProductionCheck(saved.notificationProductionCheck || {}),
     pwaReleaseDecision: normalizePwaReleaseDecision(saved.pwaReleaseDecision || {}),
     aiEvaluationLog: Array.isArray(saved.aiEvaluationLog) ? saved.aiEvaluationLog.map(normalizeAiEvaluationEntry) : [],
@@ -9417,6 +9451,15 @@ function normalizeNotificationProductionCheck(check) {
     reviewer: String(check.reviewer || "").trim(),
     note: String(check.note || "").trim(),
     checkedAt: check.checkedAt || null,
+  };
+}
+
+function normalizeProductionSetupCheck(check) {
+  return {
+    storageStatus: getAllowedValue(check.storageStatus, ["unchecked", "confirmed", "issues"], "unchecked"),
+    storageReviewer: String(check.storageReviewer || "").trim(),
+    storageNote: String(check.storageNote || "").trim(),
+    storageCheckedAt: check.storageCheckedAt || null,
   };
 }
 

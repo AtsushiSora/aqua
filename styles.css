@@ -5311,6 +5311,19 @@ textarea {
   margin-bottom: 12px;
 }
 
+.production-storage-check-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 12px;
+  padding: 12px;
+  border: 1px solid var(--glass-border);
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.42), transparent),
+    rgba(248, 252, 251, 0.78);
+}
+
 .production-setup-next {
   display: grid;
   gap: 4px;
@@ -5789,6 +5802,7 @@ textarea {
   .content-grid,
   .manager-layout,
   .community-tools,
+  .production-storage-check-form,
   .schema-grid,
   .production-setup-summary,
   .production-setup-list,
@@ -6038,6 +6052,7 @@ textarea {
   .ai-production-flow,
   .ai-image-validation-summary dl,
   .ai-condition-coverage ul,
+  .production-storage-check-form,
   .schema-grid,
   .production-setup-summary,
   .production-setup-list,

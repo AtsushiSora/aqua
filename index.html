@@ -1222,6 +1222,25 @@
               </div>
               <div class="production-setup-next" id="production-setup-next-action"></div>
               <div class="production-setup-summary" id="production-setup-summary"></div>
+              <form class="production-storage-check-form" id="production-storage-check-form">
+                <label>
+                  <span>Storage確認</span>
+                  <select id="production-storage-status-input">
+                    <option value="unchecked">未確認</option>
+                    <option value="confirmed">確認済み</option>
+                    <option value="issues">要対応</option>
+                  </select>
+                </label>
+                <label>
+                  <span>確認者</span>
+                  <input id="production-storage-reviewer-input" type="text" placeholder="確認者名">
+                </label>
+                <label class="full-field">
+                  <span>確認メモ</span>
+                  <textarea id="production-storage-note-input" rows="2" placeholder="aquanote-media bucket、アップロード、表示、削除/差し替え確認など"></textarea>
+                </label>
+                <button class="ghost-button full-field" type="submit">Storage確認を保存</button>
+              </form>
               <ol class="production-setup-list">
                 <li>
                   <strong>Supabase SQL</strong>
