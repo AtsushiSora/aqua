@@ -1971,6 +1971,48 @@ body[data-ui-mode="glance"][data-custom-buttons="true"] .icon-button {
   grid-column: 1 / -1;
 }
 
+.tank-photo-assist {
+  display: grid;
+  grid-template-columns: minmax(110px, 0.45fr) minmax(0, 1fr);
+  gap: 10px;
+  align-items: end;
+  padding: 10px;
+  border: 1px solid var(--glass-border);
+  border-radius: 8px;
+  background: rgba(245, 252, 250, 0.72);
+}
+
+.tank-photo-preview {
+  min-height: 92px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border: 1px dashed var(--glass-border);
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.4), transparent),
+    var(--waterline),
+    rgba(248, 250, 248, 0.78);
+  background-size: cover;
+  background-position: center;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
+.tank-photo-preview.has-image {
+  border-style: solid;
+}
+
+.tank-photo-assist p {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 800;
+  line-height: 1.5;
+}
+
 .tank-profile {
   padding: 18px;
 }
@@ -5441,6 +5483,10 @@ textarea {
 
   .custom-appearance-panel article {
     grid-template-columns: 64px minmax(0, 1fr);
+  }
+
+  .tank-photo-assist {
+    grid-template-columns: 1fr;
   }
 
   .custom-appearance-preview {

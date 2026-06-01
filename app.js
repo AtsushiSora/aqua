@@ -21,6 +21,9 @@ const albumCountLabel = document.querySelector("#album-count-label");
 const logForm = document.querySelector("#log-form");
 const tankForm = document.querySelector("#tank-form");
 const tankEditForm = document.querySelector("#tank-edit-form");
+const tankIdentifyPhotoInput = document.querySelector("#tank-identify-photo-input");
+const tankIdentifyPreview = document.querySelector("#tank-identify-preview");
+const tankIdentifyStatus = document.querySelector("#tank-identify-status");
 const postForm = document.querySelector("#post-form");
 const postTankSelect = document.querySelector("#post-tank-select");
 const postTankFilter = document.querySelector("#post-tank-filter");
@@ -382,6 +385,7 @@ let pendingPostVideoDataUrl = null;
 let pendingPostVideoThumbnailDataUrl = null;
 let pendingPostVideoDuration = null;
 let pendingPostMediaType = null;
+let pendingTankIdentifyImageDataUrl = null;
 let replacingPostId = null;
 let editingPostId = null;
 let activeAlbumMonth = "all";
@@ -935,6 +939,8 @@ heroPhotoInput.addEventListener("change", async () => {
   }
 });
 
+tankIdentifyPhotoInput.addEventListener("change", handleTankIdentifyPhotoChange);
+
 tankForm.addEventListener("submit", (event) => {
   event.preventDefault();
 
@@ -961,6 +967,7 @@ tankForm.addEventListener("submit", (event) => {
   state.activeTankId = tank.id;
   saveState();
   tankForm.reset();
+  resetTankIdentifyAssist();
   renderApp();
   showToast("水槽を追加しました");
 });
@@ -6153,6 +6160,168 @@ async function analyzePostWithApi({ post, tank, fallbackResult }) {
     },
     fallbackResult,
   );
+}
+
+async function handleTankIdentifyPhotoChange() {
+  const file = tankIdentifyPhotoInput.files?.[0];
+  if (!file) {
+    return;
+  }
+
+  if (!file.type.startsWith("image/")) {
+    showToast("画像ファイルを選んでください");
+    resetTankIdentifyAssist();
+    return;
+  }
+
+  try {
+    pendingTankIdentifyImageDataUrl = await resizeImageFile(file, 1000, 0.82);
+    renderTankIdentifyPreview();
+    tankIdentifyStatus.textContent = "写真から名前候補を確認しています...";
+
+    const result = await identifyTankResidentsWithApi({
+      imageDataUrl: pendingTankIdentifyImageDataUrl,
+      tankName: document.querySelector("#tank-name-input").value.trim(),
+      tankKind: document.querySelector("#tank-kind-input").value,
+    });
+
+    applyTankResidentCandidates(result);
+  } catch (error) {
+    tankIdentifyStatus.textContent = "写真を読み込めませんでした。別の写真で試してください。";
+    showToast(error.message || "写真を読み込めませんでした");
+  } finally {
+    tankIdentifyPhotoInput.value = "";
+  }
+}
+
+async function identifyTankResidentsWithApi({ imageDataUrl, tankName, tankKind }) {
+  const fallbackResult = getLocalTankResidentCandidates(tankKind);
+
+  if (location.protocol === "file:") {
+    return fallbackResult;
+  }
+
+  try {
+    const response = await fetch(AI_ANALYSIS_ENDPOINT, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        identify: {
+          imageDataUrl,
+          tankName,
+          tankKind,
+        },
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(await response.text());
+    }
+
+    return normalizeTankIdentificationResult(await response.json(), fallbackResult);
+  } catch {
+    return fallbackResult;
+  }
+}
+
+function applyTankResidentCandidates(result) {
+  const residentsInput = document.querySelector("#tank-residents-input");
+  const candidates = Array.isArray(result.names) ? result.names : [];
+
+  if (!candidates.length) {
+    tankIdentifyStatus.textContent = "写真から名前を確定できませんでした。正面から明るく撮ると候補が出やすくなります。";
+    return;
+  }
+
+  residentsInput.value = mergeCommaValues(residentsInput.value, candidates).join("、");
+  const sourceLabel = result.source === "local" ? "種類からの候補" : "写真からの候補";
+  const confidenceLabel = result.source !== "local" && Number.isFinite(Number(result.confidence))
+    ? ` / 信頼度${Math.round(Number(result.confidence) * 100)}%`
+    : "";
+  tankIdentifyStatus.textContent = `${sourceLabel}: ${candidates.join("、")}${confidenceLabel}`;
+  showToast("生体・水草の候補を入力しました");
+}
+
+function normalizeTankIdentificationResult(result, fallbackResult) {
+  const fish = normalizeNameCandidates(result?.fish);
+  const invertebrates = normalizeNameCandidates(result?.invertebrates);
+  const plants = normalizeNameCandidates(result?.plants);
+  const names = mergeCommaValues("", [...fish, ...invertebrates, ...plants]);
+  const hasStructuredNames = [result?.fish, result?.invertebrates, result?.plants, result?.uncertain].some(Array.isArray);
+  const fallbackNames = Array.isArray(fallbackResult.names) ? fallbackResult.names : [];
+
+  return {
+    names: names.length ? names : hasStructuredNames ? [] : fallbackNames,
+    uncertain: normalizeNameCandidates(result?.uncertain),
+    confidence: Number.isFinite(Number(result?.confidence)) ? Math.min(1, Math.max(0, Number(result.confidence))) : fallbackResult.confidence,
+    summary: String(result?.summary || fallbackResult.summary || ""),
+    source: result?.source || "ai",
+  };
+}
+
+function getLocalTankResidentCandidates(tankKind) {
+  const candidatesByKind = {
+    メダカ鉢: ["メダカ", "睡蓮", "浮草"],
+    池: ["メダカ", "金魚", "睡蓮"],
+    水草水槽: ["水草", "アヌビアス", "ミクロソリウム"],
+    熱帯魚水槽: ["熱帯魚", "ネオンテトラ", "水草"],
+    海水水槽: ["海水魚", "サンゴ", "ライブロック"],
+  };
+  const names = candidatesByKind[tankKind] || ["魚", "水草"];
+
+  return {
+    names,
+    uncertain: [],
+    confidence: 0,
+    summary: "AI接続前のため、水槽の種類から候補を出しました。",
+    source: "local",
+  };
+}
+
+function normalizeNameCandidates(value) {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value
+    .map((item) => String(item || "").trim())
+    .filter(Boolean)
+    .map((item) => item.replace(/[、,。]/g, ""))
+    .filter((item) => item.length >= 2 && item.length <= 24)
+    .slice(0, 8);
+}
+
+function mergeCommaValues(currentValue, candidates) {
+  const values = [
+    ...String(currentValue || "")
+      .split(/[、,]/)
+      .map((item) => item.trim())
+      .filter(Boolean),
+    ...candidates,
+  ];
+  return [...new Set(values)].slice(0, 12);
+}
+
+function renderTankIdentifyPreview() {
+  if (!pendingTankIdentifyImageDataUrl) {
+    tankIdentifyPreview.removeAttribute("style");
+    tankIdentifyPreview.classList.remove("has-image");
+    tankIdentifyPreview.innerHTML = "<span>写真未選択</span>";
+    return;
+  }
+
+  tankIdentifyPreview.style.backgroundImage = `url("${pendingTankIdentifyImageDataUrl}")`;
+  tankIdentifyPreview.classList.add("has-image");
+  tankIdentifyPreview.innerHTML = "";
+}
+
+function resetTankIdentifyAssist() {
+  pendingTankIdentifyImageDataUrl = null;
+  tankIdentifyPhotoInput.value = "";
+  tankIdentifyStatus.textContent = "魚、生き物、水草が見える写真を選ぶと候補を入れます。";
+  renderTankIdentifyPreview();
 }
 
 async function requestAiAnalysis(payload, fallbackResult) {

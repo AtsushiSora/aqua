@@ -26,6 +26,12 @@ type AnalysisRequest = {
     imageDataUrl?: string;
     imageUrl?: string;
   };
+  identify?: {
+    imageDataUrl?: string;
+    imageUrl?: string;
+    tankKind?: string;
+    tankName?: string;
+  };
 };
 
 export default async (request: Request) => {
@@ -49,8 +55,9 @@ export default async (request: Request) => {
   }
 
   const payload = (await request.json()) as AnalysisRequest;
-  const hasImage = Boolean(payload.post?.imageDataUrl || payload.post?.imageUrl);
-  const messages = buildMessages(payload);
+  const isIdentification = Boolean(payload.identify);
+  const hasImage = Boolean(payload.post?.imageDataUrl || payload.post?.imageUrl || payload.identify?.imageDataUrl || payload.identify?.imageUrl);
+  const messages = isIdentification ? buildIdentificationMessages(payload) : buildMessages(payload);
   const response = await fetch(`${OPENAI_BASE_URL.replace(/\/$/, "")}/v1/chat/completions`, {
     method: "POST",
     headers: {
@@ -72,6 +79,16 @@ export default async (request: Request) => {
 
   const data = await response.json();
   const content = data?.choices?.[0]?.message?.content || "{}";
+  if (isIdentification) {
+    return jsonResponse({
+      ...normalizeIdentification(content),
+      model: AI_ANALYSIS_MODEL,
+      promptVersion: PROMPT_VERSION,
+      source: "netlify-ai-gateway",
+      imageAnalysis: hasImage ? "real-photo" : "image-missing",
+    });
+  }
+
   return jsonResponse({
     ...normalizeAnalysis(content),
     model: AI_ANALYSIS_MODEL,
@@ -133,6 +150,39 @@ function buildMessages(payload: AnalysisRequest) {
   ];
 }
 
+function buildIdentificationMessages(payload: AnalysisRequest) {
+  const text = [
+    `Prompt version: ${PROMPT_VERSION}`,
+    "AquaNoteの水槽登録補助として、写真に写っている魚、生き物、水草の名前候補を返してください。",
+    "写真に写っている範囲だけを根拠にし、見えない種類や画像だけでは判別できない品種名を断定しないでください。",
+    "日本で一般的な和名を優先してください。種まで不明な場合は、魚、水草、エビ、貝などの上位カテゴリをuncertainへ入れてください。",
+    "似ている種類がある場合は、確定欄ではなくuncertainへ入れてください。",
+    "水槽用品、石、流木、底砂、フィルター、照明は名前候補に入れないでください。",
+    "JSONのみで返してください: {\"fish\":[\"魚の候補\"],\"invertebrates\":[\"エビ・貝など\"],\"plants\":[\"水草の候補\"],\"uncertain\":[\"不確かな候補\"],\"summary\":\"短い説明\",\"confidence\":0.0}",
+    `水槽種類: ${payload.identify?.tankKind || ""}`,
+    `水槽名: ${payload.identify?.tankName || ""}`,
+  ].join("\n");
+  const imageUrl = payload.identify?.imageDataUrl || payload.identify?.imageUrl;
+
+  if (!imageUrl) {
+    return [
+      { role: "system", content: "You identify visible aquarium residents and aquatic plants carefully. Return strict JSON only." },
+      { role: "user", content: text },
+    ];
+  }
+
+  return [
+    { role: "system", content: "You identify visible aquarium residents and aquatic plants carefully. Return strict JSON only." },
+    {
+      role: "user",
+      content: [
+        { type: "text", text },
+        { type: "image_url", image_url: { url: imageUrl, detail: "high" } },
+      ],
+    },
+  ];
+}
+
 function normalizeAnalysis(content: string) {
   let parsed;
   try {
@@ -160,6 +210,37 @@ function normalizeAnalysis(content: string) {
     summary: String(parsed.summary || "画像とログから確認ポイントを整理しました。"),
     items: items.length ? items : ["今日やること: 水温、pH、食欲を確認", "数日見ること: 水の透明度とコケの変化"],
   };
+}
+
+function normalizeIdentification(content: string) {
+  let parsed;
+  try {
+    parsed = JSON.parse(extractJson(content));
+  } catch {
+    parsed = {};
+  }
+
+  return {
+    fish: normalizeNameList(parsed.fish),
+    invertebrates: normalizeNameList(parsed.invertebrates),
+    plants: normalizeNameList(parsed.plants),
+    uncertain: normalizeNameList(parsed.uncertain),
+    summary: String(parsed.summary || "写真から名前候補を整理しました。"),
+    confidence: Math.min(1, Math.max(0, Number(parsed.confidence) || 0.5)),
+  };
+}
+
+function normalizeNameList(value: unknown) {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value
+    .map((item) => String(item || "").trim())
+    .filter(Boolean)
+    .map((item) => item.replace(/[、,。]/g, ""))
+    .filter((item) => item.length >= 2 && item.length <= 24)
+    .slice(0, 8);
 }
 
 function extractJson(content: string) {

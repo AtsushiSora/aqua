@@ -355,6 +355,16 @@
                 <span>生体・水草</span>
                 <input id="tank-residents-input" type="text" placeholder="例: メダカ、睡蓮、浮草">
               </label>
+              <div class="tank-photo-assist full-field">
+                <div class="tank-photo-preview" id="tank-identify-preview">
+                  <span>写真未選択</span>
+                </div>
+                <label>
+                  <span>写真から名前候補</span>
+                  <input id="tank-identify-photo-input" type="file" accept="image/*" capture="environment">
+                </label>
+                <p id="tank-identify-status">魚、生き物、水草が見える写真を選ぶと候補を入れます。</p>
+              </div>
               <button class="ghost-button" type="submit">水槽を追加</button>
             </form>
           </section>
