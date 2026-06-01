@@ -279,6 +279,8 @@ const defaultState = {
       kind: "水草水槽",
       size: "60cm",
       volume: "57L",
+      animals: "ネオンテトラ、ヤマトヌマエビ",
+      plants: "アヌビアス",
       residents: "ネオンテトラ、ヤマトヌマエビ、アヌビアス",
       tags: ["水草水槽", "熱帯魚", "CO2あり"],
       logs: [],
@@ -292,6 +294,8 @@ const defaultState = {
       kind: "メダカ鉢",
       size: "35cm",
       volume: "18L",
+      animals: "メダカ",
+      plants: "睡蓮、浮草",
       residents: "メダカ、睡蓮、浮草",
       tags: ["メダカ", "屋外", "ビオトープ"],
       logs: [],
@@ -948,13 +952,17 @@ tankForm.addEventListener("submit", (event) => {
   const kind = document.querySelector("#tank-kind-input").value;
   const size = document.querySelector("#tank-size-input").value.trim() || "サイズ未設定";
   const volume = document.querySelector("#tank-volume-input").value.trim() || "容量未設定";
-  const residents = document.querySelector("#tank-residents-input").value.trim() || "生体・水草未設定";
+  const animals = document.querySelector("#tank-animals-input").value.trim();
+  const plants = document.querySelector("#tank-plants-input").value.trim();
+  const residents = formatTankResidents({ animals, plants });
   const tank = {
     id: createId("tank"),
     name,
     kind,
     size,
     volume,
+    animals,
+    plants,
     residents,
     tags: [kind],
     logs: [],
@@ -986,7 +994,9 @@ tankEditForm.addEventListener("submit", (event) => {
   tank.kind = document.querySelector("#edit-tank-kind").value;
   tank.size = document.querySelector("#edit-tank-size").value.trim() || "サイズ未設定";
   tank.volume = document.querySelector("#edit-tank-volume").value.trim() || "容量未設定";
-  tank.residents = document.querySelector("#edit-tank-residents").value.trim() || "生体・水草未設定";
+  tank.animals = document.querySelector("#edit-tank-animals").value.trim();
+  tank.plants = document.querySelector("#edit-tank-plants").value.trim();
+  tank.residents = formatTankResidents(tank);
   tank.tags = tags.length ? tags : [tank.kind];
 
   saveState();
@@ -2793,11 +2803,19 @@ async function loadTanksFromSupabase() {
     return [];
   }
 
-  const { data, error } = await supabaseClient
+  let { data, error } = await supabaseClient
     .from("tanks")
-    .select("id, local_id, name, kind, size_label, volume_label, residents, tags, featured_post_id, updated_at")
+    .select("id, local_id, name, kind, size_label, volume_label, residents, animal_names, plant_names, tags, featured_post_id, updated_at")
     .eq("owner_id", authSession.user.id)
     .order("created_at", { ascending: true });
+
+  if (isMissingTankSplitColumnsError(error)) {
+    ({ data, error } = await supabaseClient
+      .from("tanks")
+      .select("id, local_id, name, kind, size_label, volume_label, residents, tags, featured_post_id, updated_at")
+      .eq("owner_id", authSession.user.id)
+      .order("created_at", { ascending: true }));
+  }
 
   if (error) {
     showToast(error.message || "水槽を読み込めませんでした");
@@ -3112,10 +3130,18 @@ async function syncTanksToSupabase(options = {}) {
   }
 
   const payloads = state.tanks.map((tank) => getTankPayload(tank, authSession.user));
-  const { data, error } = await supabaseClient
+  let { data, error } = await supabaseClient
     .from("tanks")
     .upsert(payloads, { onConflict: "owner_id,local_id" })
-    .select("id, local_id, name, kind, size_label, volume_label, residents, tags, featured_post_id, updated_at");
+    .select("id, local_id, name, kind, size_label, volume_label, residents, animal_names, plant_names, tags, featured_post_id, updated_at");
+
+  if (isMissingTankSplitColumnsError(error)) {
+    const legacyPayloads = payloads.map(({ animal_names, plant_names, ...payload }) => payload);
+    ({ data, error } = await supabaseClient
+      .from("tanks")
+      .upsert(legacyPayloads, { onConflict: "owner_id,local_id" })
+      .select("id, local_id, name, kind, size_label, volume_label, residents, tags, featured_post_id, updated_at"));
+  }
 
   if (error) {
     state.account.syncStatus = "local";
@@ -3803,11 +3829,21 @@ function getTankPayload(tank, user) {
     kind: tank.kind || "水槽",
     size_label: tank.size || null,
     volume_label: tank.volume || null,
-    residents: tank.residents || null,
+    residents: formatTankResidents(tank),
+    animal_names: tank.animals || null,
+    plant_names: tank.plants || null,
     tags: Array.isArray(tank.tags) ? tank.tags : [tank.kind || "水槽"],
     featured_post_id: null,
     updated_at: new Date().toISOString(),
   };
+}
+
+function isMissingTankSplitColumnsError(error) {
+  if (!error) {
+    return false;
+  }
+
+  return /animal_names|plant_names/i.test(`${error.message || ""} ${error.details || ""} ${error.hint || ""}`);
 }
 
 function getLogPayload(log, tank, user) {
@@ -4152,7 +4188,15 @@ function applyRemoteTanks(remoteTanks) {
     nextTank.kind = remoteTank.kind || nextTank.kind || "水槽";
     nextTank.size = remoteTank.size_label || nextTank.size || "サイズ未設定";
     nextTank.volume = remoteTank.volume_label || nextTank.volume || "容量未設定";
-    nextTank.residents = remoteTank.residents || nextTank.residents || "生体・水草未設定";
+    const remoteParts = getTankResidentParts({
+      animals: remoteTank.animal_names,
+      plants: remoteTank.plant_names,
+      residents: remoteTank.residents,
+      kind: remoteTank.kind || nextTank.kind,
+    });
+    nextTank.animals = remoteParts.animals;
+    nextTank.plants = remoteParts.plants;
+    nextTank.residents = formatTankResidents(nextTank);
     nextTank.tags = Array.isArray(remoteTank.tags) && remoteTank.tags.length ? remoteTank.tags : [nextTank.kind];
 
     if (!existingTank) {
@@ -5097,8 +5141,8 @@ function getSearchResults(query) {
     id: tank.id,
     label: "水槽",
     title: tank.name,
-    description: `${tank.kind} / ${tank.size} / ${tank.residents}`,
-    text: [tank.name, tank.kind, tank.size, tank.volume, tank.residents, ...tank.tags].join(" "),
+    description: `${tank.kind} / ${tank.size} / ${formatTankResidents(tank)}`,
+    text: [tank.name, tank.kind, tank.size, tank.volume, tank.animals, tank.plants, tank.residents, ...tank.tags].join(" "),
   }));
 
   const postResults = state.posts.map((post) => ({
@@ -5117,6 +5161,48 @@ function getSearchResults(query) {
   return [...tankResults, ...postResults, ...guideResults].filter((result) =>
     normalizeSearchTerm(result.text).includes(query),
   );
+}
+
+function getTankResidentParts(tank = {}) {
+  const animals = String(tank.animals || tank.animal_names || "").trim();
+  const plants = String(tank.plants || tank.plant_names || "").trim();
+
+  if (animals || plants) {
+    return { animals, plants };
+  }
+
+  const values = String(tank.residents || "")
+    .split(/[、,]/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+
+  if (!values.length) {
+    return { animals: "", plants: "" };
+  }
+
+  const plantKeywords = ["水草", "草", "苔", "藻", "睡蓮", "浮草", "アヌビアス", "ミクロソリウム", "ウィローモス", "マツモ", "ホテイ"];
+  const plantValues = values.filter((item) => plantKeywords.some((keyword) => item.includes(keyword)));
+  const animalValues = values.filter((item) => !plantValues.includes(item));
+
+  return {
+    animals: animalValues.join("、"),
+    plants: plantValues.join("、"),
+  };
+}
+
+function formatTankResidents(tank = {}) {
+  const { animals, plants } = getTankResidentParts(tank);
+  const parts = [];
+
+  if (animals) {
+    parts.push(animals);
+  }
+
+  if (plants) {
+    parts.push(plants);
+  }
+
+  return parts.length ? parts.join("、") : "生き物・水草未設定";
 }
 
 function getGuideSearchItems() {
@@ -5324,7 +5410,7 @@ function renderTankProfile() {
   aquariumVisual.classList.toggle("has-cover", Boolean(featuredImage));
   aquariumVisual.style.backgroundImage = featuredImage ? `url("${featuredImage}")` : "";
   document.querySelector("#tank-profile-name").textContent = tank.name;
-  document.querySelector("#tank-profile-detail").textContent = `${tank.size} / ${tank.volume} / ${tank.residents}`;
+  document.querySelector("#tank-profile-detail").textContent = `${tank.size} / ${tank.volume} / 生き物: ${tank.animals || "未設定"} / 水草: ${tank.plants || "未設定"}`;
   document.querySelector("#tank-profile-tags").innerHTML = tank.tags
     .map((tag) => `<span class="chip">${escapeHtml(tag)}</span>`)
     .join("");
@@ -5333,7 +5419,8 @@ function renderTankProfile() {
   document.querySelector("#edit-tank-kind").value = tank.kind;
   document.querySelector("#edit-tank-size").value = tank.size;
   document.querySelector("#edit-tank-volume").value = tank.volume;
-  document.querySelector("#edit-tank-residents").value = tank.residents;
+  document.querySelector("#edit-tank-animals").value = tank.animals || "";
+  document.querySelector("#edit-tank-plants").value = tank.plants || "";
   document.querySelector("#edit-tank-tags").value = tank.tags.join(", ");
   document.querySelector("#delete-tank-button").disabled = state.tanks.length <= 1;
 }
@@ -6227,33 +6314,45 @@ async function identifyTankResidentsWithApi({ imageDataUrl, tankName, tankKind }
 }
 
 function applyTankResidentCandidates(result) {
-  const residentsInput = document.querySelector("#tank-residents-input");
-  const candidates = Array.isArray(result.names) ? result.names : [];
+  const animalsInput = document.querySelector("#tank-animals-input");
+  const plantsInput = document.querySelector("#tank-plants-input");
+  const animals = Array.isArray(result.animals) ? result.animals : [];
+  const plants = Array.isArray(result.plants) ? result.plants : [];
+  const candidates = [...animals, ...plants];
 
   if (!candidates.length) {
     tankIdentifyStatus.textContent = "写真から名前を確定できませんでした。正面から明るく撮ると候補が出やすくなります。";
     return;
   }
 
-  residentsInput.value = mergeCommaValues(residentsInput.value, candidates).join("、");
+  if (animals.length) {
+    animalsInput.value = mergeCommaValues(animalsInput.value, animals).join("、");
+  }
+
+  if (plants.length) {
+    plantsInput.value = mergeCommaValues(plantsInput.value, plants).join("、");
+  }
+
   const sourceLabel = result.source === "local" ? "種類からの候補" : "写真からの候補";
   const confidenceLabel = result.source !== "local" && Number.isFinite(Number(result.confidence))
     ? ` / 信頼度${Math.round(Number(result.confidence) * 100)}%`
     : "";
-  tankIdentifyStatus.textContent = `${sourceLabel}: ${candidates.join("、")}${confidenceLabel}`;
-  showToast("生体・水草の候補を入力しました");
+  tankIdentifyStatus.textContent = `${sourceLabel}: 生き物 ${animals.join("、") || "なし"} / 水草 ${plants.join("、") || "なし"}${confidenceLabel}`;
+  showToast("生き物・水草の候補を入力しました");
 }
 
 function normalizeTankIdentificationResult(result, fallbackResult) {
   const fish = normalizeNameCandidates(result?.fish);
   const invertebrates = normalizeNameCandidates(result?.invertebrates);
   const plants = normalizeNameCandidates(result?.plants);
-  const names = mergeCommaValues("", [...fish, ...invertebrates, ...plants]);
+  const animals = mergeCommaValues("", [...fish, ...invertebrates]);
   const hasStructuredNames = [result?.fish, result?.invertebrates, result?.plants, result?.uncertain].some(Array.isArray);
-  const fallbackNames = Array.isArray(fallbackResult.names) ? fallbackResult.names : [];
+  const fallbackAnimals = Array.isArray(fallbackResult.animals) ? fallbackResult.animals : [];
+  const fallbackPlants = Array.isArray(fallbackResult.plants) ? fallbackResult.plants : [];
 
   return {
-    names: names.length ? names : hasStructuredNames ? [] : fallbackNames,
+    animals: animals.length ? animals : hasStructuredNames ? [] : fallbackAnimals,
+    plants: plants.length ? plants : hasStructuredNames ? [] : fallbackPlants,
     uncertain: normalizeNameCandidates(result?.uncertain),
     confidence: Number.isFinite(Number(result?.confidence)) ? Math.min(1, Math.max(0, Number(result.confidence))) : fallbackResult.confidence,
     summary: String(result?.summary || fallbackResult.summary || ""),
@@ -6263,16 +6362,17 @@ function normalizeTankIdentificationResult(result, fallbackResult) {
 
 function getLocalTankResidentCandidates(tankKind) {
   const candidatesByKind = {
-    メダカ鉢: ["メダカ", "睡蓮", "浮草"],
-    池: ["メダカ", "金魚", "睡蓮"],
-    水草水槽: ["水草", "アヌビアス", "ミクロソリウム"],
-    熱帯魚水槽: ["熱帯魚", "ネオンテトラ", "水草"],
-    海水水槽: ["海水魚", "サンゴ", "ライブロック"],
+    メダカ鉢: { animals: ["メダカ"], plants: ["睡蓮", "浮草"] },
+    池: { animals: ["メダカ", "金魚"], plants: ["睡蓮"] },
+    水草水槽: { animals: [], plants: ["水草", "アヌビアス", "ミクロソリウム"] },
+    熱帯魚水槽: { animals: ["熱帯魚", "ネオンテトラ"], plants: ["水草"] },
+    海水水槽: { animals: ["海水魚"], plants: ["サンゴ"] },
   };
-  const names = candidatesByKind[tankKind] || ["魚", "水草"];
+  const candidates = candidatesByKind[tankKind] || { animals: ["魚"], plants: ["水草"] };
 
   return {
-    names,
+    animals: candidates.animals,
+    plants: candidates.plants,
     uncertain: [],
     confidence: 0,
     summary: "AI接続前のため、水槽の種類から候補を出しました。",
@@ -7942,7 +8042,9 @@ function getAiTankPayload(tank) {
   return {
     name: tank.name,
     kind: tank.kind,
-    residents: tank.residents,
+    animals: tank.animals,
+    plants: tank.plants,
+    residents: formatTankResidents(tank),
     volumeLabel: tank.volume,
   };
 }
@@ -8908,7 +9010,9 @@ function normalizeState(saved) {
 
   normalized.tanks = normalized.tanks.map((tank) => ({
     ...tank,
+    ...getTankResidentParts(tank),
     volume: tank.volume || "容量未設定",
+    residents: formatTankResidents(tank),
     tags: Array.isArray(tank.tags) ? tank.tags : [tank.kind || "水槽"],
     logs: Array.isArray(tank.logs) ? tank.logs.map(normalizeLog) : [],
     latestAi: tank.latestAi ? normalizeAiResult(tank.latestAi) : null,

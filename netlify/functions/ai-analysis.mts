@@ -9,6 +9,8 @@ type AnalysisRequest = {
   tank?: {
     name?: string;
     kind?: string;
+    animals?: string;
+    plants?: string;
     residents?: string;
     volumeLabel?: string;
   };

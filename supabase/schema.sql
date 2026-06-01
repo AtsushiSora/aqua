@@ -57,12 +57,20 @@ create table if not exists public.tanks (
   size_label text,
   volume_label text,
   residents text,
+  animal_names text,
+  plant_names text,
   tags text[] not null default '{}',
   featured_post_id uuid,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   unique (owner_id, local_id)
 );
+
+alter table public.tanks
+add column if not exists animal_names text;
+
+alter table public.tanks
+add column if not exists plant_names text;
 
 create table if not exists public.logs (
   id uuid primary key default gen_random_uuid(),
