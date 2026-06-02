@@ -796,8 +796,9 @@ body[data-ui-mode="glance"] .quick-dock button:nth-child(4) {
 }
 
 body[data-ui-mode="glance"] .hero-copy p:not(.eyebrow) {
-  max-width: 44ch;
+  max-width: 22ch;
   color: rgba(247, 251, 251, 0.78);
+  font-size: 0.82rem;
   font-weight: 800;
 }
 
@@ -859,8 +860,7 @@ body[data-ui-mode="glance"] .quick-dock strong {
 }
 
 body[data-ui-mode="glance"] .quick-dock small {
-  color: rgba(247, 251, 251, 0.76);
-  font-size: 0.7rem;
+  display: none;
 }
 
 body[data-ui-mode="glance"] .metric-card {
@@ -917,9 +917,10 @@ body[data-ui-mode="glance"] .metric-card strong {
 }
 
 body[data-ui-mode="glance"] .metric-card small {
-  max-width: 16ch;
+  max-width: 10ch;
   margin-inline: auto;
   color: rgba(247, 251, 251, 0.72);
+  font-size: 0.68rem;
 }
 
 body[data-ui-mode="glance"] .metric-card.alert {
@@ -956,12 +957,31 @@ body[data-ui-mode="glance"] #dashboard .rail-head {
   text-align: center;
 }
 
+body[data-ui-mode="glance"] #dashboard .section-head h2,
+body[data-ui-mode="glance"] #dashboard .rail-head h2,
+body[data-ui-mode="glance"] #dashboard .rail-card h2 {
+  max-width: 10ch;
+  color: #f7fbfb;
+  font-size: 0.94rem;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+body[data-ui-mode="glance"] #dashboard .eyebrow {
+  font-size: 0.62rem;
+}
+
 body[data-ui-mode="glance"] #dashboard .section-head .text-button,
 body[data-ui-mode="glance"] #dashboard .rail-button {
-  width: min(100%, 150px);
-  min-height: 38px;
+  width: 68px;
+  aspect-ratio: 1;
+  min-height: 0;
+  display: grid;
+  place-items: center;
   margin: 0;
-  border-radius: 999px;
+  padding: 8px;
+  border-radius: 50%;
+  line-height: 1.2;
 }
 
 body[data-ui-mode="glance"] #dashboard .task-list,
@@ -984,6 +1004,7 @@ body[data-ui-mode="glance"] #dashboard .task-row,
 body[data-ui-mode="glance"] #dashboard .reminder-row {
   grid-template-columns: auto minmax(0, 1fr);
   padding: 8px 12px;
+  font-size: 0.82rem;
 }
 
 body[data-ui-mode="glance"] #dashboard .task-row small,
@@ -1002,6 +1023,7 @@ body[data-ui-mode="glance"] #dashboard .feed-tile {
   justify-items: center;
   gap: 6px;
   padding: 8px;
+  text-align: center;
 }
 
 body[data-ui-mode="glance"] #dashboard .tile-art {
