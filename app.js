@@ -1033,6 +1033,7 @@ tankForm.addEventListener("submit", (event) => {
 
   state.tanks.unshift(tank);
   state.activeTankId = tank.id;
+  updateFilterCareReminderFromCleanedDate(filter.lastCleanedAt);
   saveState();
   tankForm.reset();
   resetSpeciesList("tank-species-list");
@@ -1060,6 +1061,7 @@ tankEditForm.addEventListener("submit", (event) => {
   tank.residents = getSpeciesListValue("edit-tank-species-list");
   tank.equipment = getSpeciesListValue("edit-tank-equipment-list");
   tank.filter = getFilterFormValue("edit-tank");
+  updateFilterCareReminderFromCleanedDate(tank.filter.lastCleanedAt);
   const residentParts = getTankResidentParts({ residents: tank.residents });
   tank.animals = residentParts.animals;
   tank.plants = residentParts.plants;
@@ -6159,15 +6161,10 @@ function applyFilterLogToTank(tank, log) {
     flowStatus: "normal",
     note: log.note && log.note !== "水槽の状態を記録しました。" ? log.note : filter.note || "フィルター掃除を記録済み",
   };
-  updateFilterCareReminderAfterCleaning(tank.filter.lastCleanedAt);
-
-  if (getDateKey(new Date(log.createdAt)) === getDateKey(new Date())) {
-    state.tasks.filterCare = true;
-    state.taskDate = getDateKey(new Date());
-  }
+  updateFilterCareReminderFromCleanedDate(tank.filter.lastCleanedAt);
 }
 
-function updateFilterCareReminderAfterCleaning(cleanedDateKey) {
+function updateFilterCareReminderFromCleanedDate(cleanedDateKey) {
   if (!isValidDateKey(cleanedDateKey)) {
     return;
   }
@@ -6181,6 +6178,11 @@ function updateFilterCareReminderAfterCleaning(cleanedDateKey) {
     defaultReminders.filterCare,
     "filterCare",
   );
+
+  if (cleanedDateKey === getDateKey(new Date())) {
+    state.tasks.filterCare = true;
+    state.taskDate = getDateKey(new Date());
+  }
 }
 
 function getGuideSearchItems() {
