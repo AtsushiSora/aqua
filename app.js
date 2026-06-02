@@ -4615,7 +4615,7 @@ function getReminderPayload(taskId, label, reminder, user) {
     enabled: Boolean(reminder.enabled),
     schedule: getAllowedValue(reminder.schedule, ["daily", "weekly", "interval"], "daily"),
     weekdays: Array.isArray(reminder.weekdays) && reminder.weekdays.length ? reminder.weekdays : defaultReminders[taskId].weekdays,
-    interval_days: clampNumber(reminder.intervalDays, 1, 30, defaultReminders[taskId].intervalDays),
+    interval_days: clampNumber(reminder.intervalDays, 1, getReminderIntervalMax(taskId), defaultReminders[taskId].intervalDays),
     start_date: isValidDateKey(reminder.startDate) ? reminder.startDate : defaultReminders[taskId].startDate,
     notify_time: isValidTimeValue(reminder.time) ? reminder.time : defaultReminders[taskId].time,
     last_notified_on: reminder.lastNotifiedOn || null,
@@ -5003,7 +5003,7 @@ function applyRemoteReminders(remoteReminders) {
       startDate: remoteReminder.start_date,
       time: remoteReminder.notify_time,
       lastNotifiedOn: remoteReminder.last_notified_on,
-    }, defaultReminders[taskId]);
+    }, defaultReminders[taskId], taskId);
   });
 }
 
@@ -9296,7 +9296,12 @@ function renderReminders() {
   reminderList.querySelectorAll("[data-reminder-interval]").forEach((input) => {
     input.addEventListener("change", () => {
       const taskId = input.dataset.reminderInterval;
-      state.reminders[taskId].intervalDays = clampNumber(input.value, 1, 30, defaultReminders[taskId].intervalDays);
+      state.reminders[taskId].intervalDays = clampNumber(
+        input.value,
+        1,
+        getReminderIntervalMax(taskId),
+        defaultReminders[taskId].intervalDays,
+      );
       state.reminders[taskId].lastNotifiedOn = null;
       saveReminderSettings();
     });
@@ -9347,11 +9352,12 @@ function renderReminderScheduleControls(taskId, reminder) {
   }
 
   if (reminder.schedule === "interval") {
+    const intervalMax = getReminderIntervalMax(taskId);
     return `
       <div class="interval-controls">
         <label>
           <span>間隔</span>
-          <input type="number" min="1" max="30" value="${escapeAttribute(reminder.intervalDays)}" data-reminder-interval="${escapeHtml(taskId)}">
+          <input type="number" min="1" max="${escapeAttribute(intervalMax)}" value="${escapeAttribute(reminder.intervalDays)}" data-reminder-interval="${escapeHtml(taskId)}">
         </label>
         <label>
           <span>開始日</span>
@@ -10575,12 +10581,12 @@ function normalizeReminders(reminders = {}) {
 
   return Object.fromEntries(
     Object.entries(defaultReminders).map(([taskId, defaults]) => {
-      return [taskId, normalizeReminder(savedReminders[taskId] || {}, defaults)];
+      return [taskId, normalizeReminder(savedReminders[taskId] || {}, defaults, taskId)];
     }),
   );
 }
 
-function normalizeReminder(saved, defaults) {
+function normalizeReminder(saved, defaults, taskId = "") {
   const schedule = ["daily", "weekly", "interval"].includes(saved.schedule) ? saved.schedule : defaults.schedule;
   const weekdays = Array.isArray(saved.weekdays)
     ? saved.weekdays.map(Number).filter((day) => Number.isInteger(day) && day >= 0 && day <= 6)
@@ -10591,12 +10597,16 @@ function normalizeReminder(saved, defaults) {
     ...saved,
     schedule,
     weekdays: weekdays.length ? [...new Set(weekdays)].sort((a, b) => a - b) : defaults.weekdays,
-    intervalDays: clampNumber(saved.intervalDays, 1, 30, defaults.intervalDays),
+    intervalDays: clampNumber(saved.intervalDays, 1, getReminderIntervalMax(taskId), defaults.intervalDays),
     startDate: isValidDateKey(saved.startDate) ? saved.startDate : defaults.startDate,
     time: isValidTimeValue(saved.time) ? saved.time : defaults.time,
     enabled: Boolean(saved.enabled ?? defaults.enabled),
     lastNotifiedOn: saved.lastNotifiedOn || null,
   };
+}
+
+function getReminderIntervalMax(taskId) {
+  return taskId === "filterCare" ? 365 : 30;
 }
 
 function getEmptyTasks() {
