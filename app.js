@@ -1036,6 +1036,7 @@ logForm.addEventListener("submit", async (event) => {
 
   tank.logs.unshift(log);
   tank.logs = tank.logs.slice(0, 30);
+  applyFilterLogToTank(tank, log);
   saveState();
   renderApp();
   document.querySelector("#log-note").value = "";
@@ -5624,6 +5625,20 @@ function getFilterFlowLabel(value) {
   return labels[value] || labels.unchecked;
 }
 
+function applyFilterLogToTank(tank, log) {
+  if (log.type !== "フィルター掃除") {
+    return;
+  }
+
+  const filter = normalizeTankFilter(tank.filter);
+  tank.filter = {
+    ...filter,
+    lastCleanedAt: getDateKey(new Date(log.createdAt)),
+    flowStatus: "normal",
+    note: log.note && log.note !== "水槽の状態を記録しました。" ? log.note : filter.note || "フィルター掃除を記録済み",
+  };
+}
+
 function getGuideSearchItems() {
   return [...document.querySelectorAll("[data-guide-kind]")].map((card, index) => {
     const title = card.querySelector("h2")?.textContent || "ガイド";
@@ -5864,6 +5879,7 @@ function renderFilterStatusPanel(tank) {
 
   const filter = normalizeTankFilter(tank.filter);
   const status = getFilterMaintenanceStatus(filter);
+  const latestFilterLog = tank.logs.find((log) => log.type === "フィルター掃除");
   panel.className = `filter-status-panel ${escapeHtml(status.level)}`;
   panel.innerHTML = `
     <div class="section-head">
@@ -5889,6 +5905,10 @@ function renderFilterStatusPanel(tank) {
       <article>
         <span>流量</span>
         <strong>${escapeHtml(getFilterFlowLabel(filter.flowStatus))}</strong>
+      </article>
+      <article>
+        <span>最新ログ</span>
+        <strong>${escapeHtml(latestFilterLog ? formatRelativeDate(latestFilterLog.createdAt) : "未記録")}</strong>
       </article>
     </div>
     <p>${escapeHtml(filter.note || status.note)}</p>
