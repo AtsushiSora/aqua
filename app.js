@@ -115,6 +115,7 @@ const monitorGuideCopyButton = document.querySelector("#monitor-guide-copy-butto
 const monitorGuideCopyPreview = document.querySelector("#monitor-guide-copy-preview");
 const monitorFeedbackForm = document.querySelector("#monitor-feedback-form");
 const monitorFeedbackSummary = document.querySelector("#monitor-feedback-summary");
+const monitorFeedbackNext = document.querySelector("#monitor-feedback-next");
 const monitorFeedbackList = document.querySelector("#monitor-feedback-list");
 const monitorFeedbackExportButton = document.querySelector("#monitor-feedback-export-button");
 const monitorFeedbackStatusFilter = document.querySelector("#monitor-feedback-status-filter");
@@ -1682,7 +1683,7 @@ function renderMonitorFeedback() {
   }
 
   const entries = Array.isArray(state.monitorFeedback) ? state.monitorFeedback.map(normalizeMonitorFeedback) : [];
-  const filteredEntries = getFilteredMonitorFeedback(entries);
+  const filteredEntries = getFilteredMonitorFeedback(entries).sort(compareMonitorFeedbackForTriage);
   const bugCount = entries.filter((entry) => entry.kind === "bug").length;
   const uiCount = entries.filter((entry) => entry.kind === "ui").length;
   const highCount = entries.filter((entry) => entry.priority === "high").length;
@@ -1716,6 +1717,7 @@ function renderMonitorFeedback() {
       <small>対応済み ${doneCount}件 / 最新 ${escapeHtml(latest)}</small>
     </article>
   `;
+  renderMonitorFeedbackNext(entries);
 
   if (!entries.length) {
     monitorFeedbackList.innerHTML = `
@@ -1761,6 +1763,59 @@ function renderMonitorFeedback() {
     .join("");
 }
 
+function renderMonitorFeedbackNext(entries) {
+  if (!monitorFeedbackNext) {
+    return;
+  }
+
+  const triage = getMonitorFeedbackTriage(entries);
+  monitorFeedbackNext.className = `monitor-feedback-next ${triage.next ? "active" : "clear"}`;
+  monitorFeedbackNext.innerHTML = triage.next
+    ? `
+      <span>次に直す候補</span>
+      <strong>${escapeHtml(triage.next.title)}</strong>
+      <small>${escapeHtml(triage.next.note)}</small>
+    `
+    : `
+      <span>次に直す候補</span>
+      <strong>未対応の高優先度はありません</strong>
+      <small>新しい不具合やUI指摘が入ったらここに表示します。</small>
+    `;
+}
+
+function getMonitorFeedbackTriage(entries) {
+  const normalizedEntries = entries.map(normalizeMonitorFeedback);
+  const unresolved = normalizedEntries
+    .filter((entry) => entry.status !== "done")
+    .sort(compareMonitorFeedbackForTriage);
+  const highUnresolved = unresolved.filter((entry) => entry.priority === "high");
+  const next = highUnresolved[0] || unresolved.find((entry) => entry.kind === "bug" || entry.kind === "ui") || unresolved[0] || null;
+
+  return {
+    unresolvedCount: unresolved.length,
+    highUnresolvedCount: highUnresolved.length,
+    next: next
+      ? {
+          id: next.id,
+          title: `${getMonitorFeedbackPriorityLabel(next.priority)} / ${getMonitorFeedbackKindLabel(next.kind)} / ${next.participant || "参加者未設定"}`,
+          note: `${next.device || "端末未設定"}: ${next.note}`,
+        }
+      : null,
+  };
+}
+
+function compareMonitorFeedbackForTriage(a, b) {
+  const statusRank = { open: 0, doing: 1, done: 2 };
+  const priorityRank = { high: 0, watch: 1, low: 2 };
+  const kindRank = { bug: 0, ui: 1, request: 2, impression: 3 };
+  return (
+    (statusRank[a.status] ?? 3) - (statusRank[b.status] ?? 3) ||
+    (priorityRank[a.priority] ?? 3) - (priorityRank[b.priority] ?? 3) ||
+    (kindRank[a.kind] ?? 4) - (kindRank[b.kind] ?? 4) ||
+    new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  );
+}
+
 function getFilteredMonitorFeedback(entries) {
   return entries.filter((entry) => {
     const statusMatch = activeMonitorFeedbackStatusFilter === "all" || entry.status === activeMonitorFeedbackStatusFilter;
@@ -1782,6 +1837,7 @@ function exportMonitorFeedback() {
     type: "monitor-feedback",
     exportedAt: new Date().toISOString(),
     count: entries.length,
+    triage: getMonitorFeedbackTriage(entries),
     items: entries,
   };
 

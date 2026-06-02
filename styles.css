@@ -5934,6 +5934,33 @@ textarea {
   margin-top: 12px;
 }
 
+.monitor-feedback-next {
+  display: grid;
+  gap: 4px;
+  margin-top: 12px;
+  padding: 10px 12px;
+  border: 1px solid rgba(207, 132, 38, 0.22);
+  border-radius: 8px;
+  background: rgba(255, 250, 241, 0.82);
+}
+
+.monitor-feedback-next.clear {
+  border-color: rgba(40, 117, 74, 0.18);
+  background: rgba(236, 247, 240, 0.78);
+}
+
+.monitor-feedback-next span,
+.monitor-feedback-next small {
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 900;
+}
+
+.monitor-feedback-next strong {
+  color: var(--ink);
+  font-size: 0.95rem;
+}
+
 .monitor-feedback-filter {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
