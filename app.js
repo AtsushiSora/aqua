@@ -2035,7 +2035,7 @@ function getPwaModeQaSummary(results) {
     {
       label: "4モード表示",
       ready: scopeStatuses.ui_modes === "passed",
-      note: latestModeResult?.note || "ベーシック、かんたん、大人、ライブモードでホーム、投稿、AI、アカウントを確認",
+      note: latestModeResult?.note || "ベーシック、かんたん、管理重視、ライブモードでホーム、投稿、AI、アカウントを確認",
       checks: PWA_SCOPE_QA_HINTS.ui_modes,
       noteTemplate: PWA_SCOPE_NOTE_TEMPLATES.ui_modes,
     },
@@ -2773,7 +2773,7 @@ function getUiModeLabel(value) {
   const labels = {
     standard: "ベーシックモード",
     simple: "かんたんモード",
-    adult: "大人モード",
+    adult: "管理重視モード",
     live: "ライブモード",
   };
   return labels[value] || labels.standard;
