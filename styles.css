@@ -796,10 +796,7 @@ body[data-ui-mode="glance"] .quick-dock button:nth-child(4) {
 }
 
 body[data-ui-mode="glance"] .hero-copy p:not(.eyebrow) {
-  max-width: 22ch;
-  color: rgba(247, 251, 251, 0.78);
-  font-size: 0.82rem;
-  font-weight: 800;
+  display: none;
 }
 
 body[data-ui-mode="glance"] .hero-copy {
@@ -817,27 +814,40 @@ body[data-ui-mode="glance"] .hero-actions {
 body[data-ui-mode="glance"] .hero-actions .primary-button,
 body[data-ui-mode="glance"] .hero-actions .ghost-button,
 body[data-ui-mode="glance"] .hero-actions .photo-button {
-  width: 92px;
+  width: 96px;
   aspect-ratio: 1;
   min-height: 0;
   display: grid;
   place-items: center;
   padding: 10px;
   border-radius: 50%;
+  font-size: 0.78rem;
   line-height: 1.25;
   text-align: center;
+  overflow-wrap: anywhere;
 }
 
 body[data-ui-mode="glance"] .hero-photo-card {
   right: clamp(14px, 3vw, 28px);
   bottom: clamp(14px, 3vw, 28px);
-  width: 132px;
+  width: 128px;
   aspect-ratio: 1;
   align-content: center;
   justify-items: center;
   padding: 14px;
   border-radius: 50%;
   text-align: center;
+}
+
+body[data-ui-mode="glance"] .hero-photo-card span {
+  display: none;
+}
+
+body[data-ui-mode="glance"] .hero-photo-card strong {
+  max-width: 8ch;
+  font-size: 0.9rem;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
 }
 
 body[data-ui-mode="glance"] .hero-photo-card small {
@@ -868,6 +878,9 @@ body[data-ui-mode="glance"] .metric-card {
   min-height: 138px;
   display: grid;
   align-content: center;
+  justify-items: center;
+  gap: 2px;
+  padding: 14px;
   border-radius: 999px;
   text-align: center;
 }
@@ -913,14 +926,13 @@ body[data-ui-mode="glance"] .metric-card::before {
 
 body[data-ui-mode="glance"] .metric-card strong {
   color: #f7fbfb;
-  font-size: 1.68rem;
+  font-size: clamp(1.15rem, 2.1vw, 1.5rem);
+  line-height: 1.1;
+  overflow-wrap: anywhere;
 }
 
 body[data-ui-mode="glance"] .metric-card small {
-  max-width: 10ch;
-  margin-inline: auto;
-  color: rgba(247, 251, 251, 0.72);
-  font-size: 0.68rem;
+  display: none;
 }
 
 body[data-ui-mode="glance"] .metric-card.alert {
@@ -940,7 +952,7 @@ body[data-ui-mode="glance"] #dashboard .rail-card {
   display: grid;
   align-content: center;
   justify-items: center;
-  gap: 12px;
+  gap: 8px;
   padding: clamp(14px, 2vw, 22px);
   overflow: hidden;
   border-radius: 50%;
@@ -960,20 +972,20 @@ body[data-ui-mode="glance"] #dashboard .rail-head {
 body[data-ui-mode="glance"] #dashboard .section-head h2,
 body[data-ui-mode="glance"] #dashboard .rail-head h2,
 body[data-ui-mode="glance"] #dashboard .rail-card h2 {
-  max-width: 10ch;
+  max-width: 8ch;
   color: #f7fbfb;
-  font-size: 0.94rem;
-  line-height: 1.25;
+  font-size: clamp(0.78rem, 1.2vw, 0.9rem);
+  line-height: 1.18;
   overflow-wrap: anywhere;
 }
 
 body[data-ui-mode="glance"] #dashboard .eyebrow {
-  font-size: 0.62rem;
+  display: none;
 }
 
 body[data-ui-mode="glance"] #dashboard .section-head .text-button,
 body[data-ui-mode="glance"] #dashboard .rail-button {
-  width: 68px;
+  width: 72px;
   aspect-ratio: 1;
   min-height: 0;
   display: grid;
@@ -981,7 +993,9 @@ body[data-ui-mode="glance"] #dashboard .rail-button {
   margin: 0;
   padding: 8px;
   border-radius: 50%;
+  font-size: 0.72rem;
   line-height: 1.2;
+  overflow-wrap: anywhere;
 }
 
 body[data-ui-mode="glance"] #dashboard .task-list,
@@ -6597,15 +6611,21 @@ textarea {
   body[data-ui-mode="glance"] .hero-actions .primary-button,
   body[data-ui-mode="glance"] .hero-actions .ghost-button,
   body[data-ui-mode="glance"] .hero-actions .photo-button {
-    width: 82px;
+    width: 88px;
+    font-size: 0.72rem;
   }
 
   body[data-ui-mode="glance"] .hero-photo-card {
-    width: 112px;
+    width: 104px;
   }
 
   body[data-ui-mode="glance"] .metric-card {
     min-height: 112px;
+    padding: 12px;
+  }
+
+  body[data-ui-mode="glance"] .metric-card strong {
+    font-size: 1.08rem;
   }
 
   body[data-ui-mode="glance"] #dashboard .panel,
