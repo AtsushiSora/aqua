@@ -2753,6 +2753,104 @@ body[data-ui-mode="glance"][data-custom-buttons="true"] .icon-button {
   padding-left: 0;
 }
 
+.filter-management-field {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin: 0;
+  padding: 14px;
+  border: 1px solid var(--glass-border);
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.46), transparent),
+    var(--waterline),
+    rgba(248, 250, 248, 0.76);
+}
+
+.filter-management-field legend {
+  padding: 0 6px;
+  color: var(--aqua-dark);
+  font-size: 0.86rem;
+  font-weight: 900;
+}
+
+.filter-status-panel {
+  display: grid;
+  gap: 12px;
+  margin-top: 14px;
+  padding: 14px;
+  border: 1px solid rgba(15, 143, 143, 0.18);
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.46), transparent),
+    rgba(238, 247, 244, 0.82);
+}
+
+.filter-status-panel .section-head {
+  margin-bottom: 0;
+}
+
+.filter-status-chip {
+  align-self: start;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: #e7f6ed;
+  color: #28754a;
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
+.filter-status-panel.watch .filter-status-chip {
+  background: #fff3d8;
+  color: #93621b;
+}
+
+.filter-status-panel.danger .filter-status-chip {
+  background: #ffe4e1;
+  color: #a6332e;
+}
+
+.filter-status-panel.pending .filter-status-chip {
+  background: rgba(108, 124, 120, 0.12);
+  color: var(--muted);
+}
+
+.filter-status-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.filter-status-grid article {
+  min-height: 68px;
+  padding: 10px;
+  border: 1px solid var(--glass-border);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.64);
+}
+
+.filter-status-grid span {
+  display: block;
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-weight: 900;
+}
+
+.filter-status-grid strong {
+  display: block;
+  margin-top: 4px;
+  color: var(--ink);
+  font-size: 0.92rem;
+  overflow-wrap: anywhere;
+}
+
+.filter-status-panel p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.86rem;
+  font-weight: 800;
+}
+
 .tank-photo-assist {
   display: grid;
   grid-template-columns: minmax(110px, 0.45fr) minmax(0, 1fr);
@@ -6566,6 +6664,8 @@ textarea {
   .schema-grid,
   .production-setup-summary,
   .production-setup-list,
+  .filter-management-field,
+  .filter-status-grid,
   .post-grid,
   .ranking-list,
   .guide-grid,

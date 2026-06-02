@@ -369,6 +369,34 @@
                 <div class="species-list" id="tank-equipment-list" data-placeholder="例: 外部フィルター"></div>
                 <button class="text-button species-add-button" type="button" data-species-add="tank-equipment-list">設備を追加</button>
               </div>
+              <fieldset class="filter-management-field full-field">
+                <legend>フィルター管理</legend>
+                <label>
+                  <span>フィルター種類</span>
+                  <input id="tank-filter-type-input" type="text" placeholder="例: 外部フィルター">
+                </label>
+                <label>
+                  <span>前回掃除日</span>
+                  <input id="tank-filter-cleaned-input" type="date">
+                </label>
+                <label>
+                  <span>交換目安</span>
+                  <input id="tank-filter-interval-input" type="number" min="1" max="365" inputmode="numeric" placeholder="30">
+                </label>
+                <label>
+                  <span>流量メモ</span>
+                  <select id="tank-filter-flow-input">
+                    <option value="normal">正常</option>
+                    <option value="weak">弱い</option>
+                    <option value="clogged">詰まり気味</option>
+                    <option value="unchecked">未確認</option>
+                  </select>
+                </label>
+                <label class="full-field">
+                  <span>メモ</span>
+                  <input id="tank-filter-note-input" type="text" placeholder="例: ろ材は軽くすすぐ">
+                </label>
+              </fieldset>
               <div class="tank-photo-assist full-field">
                 <div class="tank-photo-preview" id="tank-identify-preview">
                   <span>写真未選択</span>
@@ -394,6 +422,7 @@
               <h2 id="tank-profile-name">はじめての水槽</h2>
               <p id="tank-profile-detail">水草水槽 / サイズ未設定 / 容量未設定</p>
               <div class="tank-detail-grid" id="tank-detail-grid"></div>
+              <section class="filter-status-panel" id="filter-status-panel" aria-label="フィルター管理"></section>
               <div class="chip-row" id="tank-profile-tags">
               </div>
 
@@ -476,6 +505,34 @@
                   <div class="species-list" id="edit-tank-equipment-list" data-placeholder="例: LEDライト"></div>
                   <button class="text-button species-add-button" type="button" data-species-add="edit-tank-equipment-list">設備を追加</button>
                 </div>
+                <fieldset class="filter-management-field full-field">
+                  <legend>フィルター管理</legend>
+                  <label>
+                    <span>フィルター種類</span>
+                    <input id="edit-tank-filter-type" type="text" placeholder="例: 外部フィルター">
+                  </label>
+                  <label>
+                    <span>前回掃除日</span>
+                    <input id="edit-tank-filter-cleaned" type="date">
+                  </label>
+                  <label>
+                    <span>交換目安</span>
+                    <input id="edit-tank-filter-interval" type="number" min="1" max="365" inputmode="numeric" placeholder="30">
+                  </label>
+                  <label>
+                    <span>流量メモ</span>
+                    <select id="edit-tank-filter-flow">
+                      <option value="normal">正常</option>
+                      <option value="weak">弱い</option>
+                      <option value="clogged">詰まり気味</option>
+                      <option value="unchecked">未確認</option>
+                    </select>
+                  </label>
+                  <label class="full-field">
+                    <span>メモ</span>
+                    <input id="edit-tank-filter-note" type="text" placeholder="例: ろ材交換は次回">
+                  </label>
+                </fieldset>
                 <label class="full-field">
                   <span>タグ</span>
                   <input id="edit-tank-tags" type="text" placeholder="例: 水草水槽, 熱帯魚, CO2あり">

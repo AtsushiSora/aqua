@@ -321,6 +321,13 @@ const defaultState = {
       plants: "",
       residents: "",
       equipment: "",
+      filter: {
+        type: "",
+        lastCleanedAt: "",
+        intervalDays: 30,
+        flowStatus: "unchecked",
+        note: "",
+      },
       tags: [],
       logs: [],
       latestAi: null,
@@ -932,6 +939,7 @@ tankForm.addEventListener("submit", (event) => {
   const volume = document.querySelector("#tank-volume-input").value.trim() || "容量未設定";
   const residents = getSpeciesListValue("tank-species-list");
   const equipment = getSpeciesListValue("tank-equipment-list");
+  const filter = getFilterFormValue("tank");
   const { animals, plants } = getTankResidentParts({ residents });
   const tank = {
     id: createId("tank"),
@@ -943,6 +951,7 @@ tankForm.addEventListener("submit", (event) => {
     plants,
     residents,
     equipment,
+    filter,
     tags: [kind],
     logs: [],
     latestAi: null,
@@ -956,6 +965,7 @@ tankForm.addEventListener("submit", (event) => {
   tankForm.reset();
   resetSpeciesList("tank-species-list");
   resetSpeciesList("tank-equipment-list");
+  resetFilterForm("tank");
   resetTankIdentifyAssist();
   renderApp();
   showToast("水槽を追加しました");
@@ -977,6 +987,7 @@ tankEditForm.addEventListener("submit", (event) => {
   tank.volume = document.querySelector("#edit-tank-volume").value.trim() || "容量未設定";
   tank.residents = getSpeciesListValue("edit-tank-species-list");
   tank.equipment = getSpeciesListValue("edit-tank-equipment-list");
+  tank.filter = getFilterFormValue("edit-tank");
   const residentParts = getTankResidentParts({ residents: tank.residents });
   tank.animals = residentParts.animals;
   tank.plants = residentParts.plants;
@@ -3007,9 +3018,17 @@ async function loadTanksFromSupabase() {
 
   let { data, error } = await supabaseClient
     .from("tanks")
-    .select("id, local_id, name, kind, size_label, volume_label, residents, animal_names, plant_names, equipment_names, tags, featured_post_id, updated_at")
+    .select("id, local_id, name, kind, size_label, volume_label, residents, animal_names, plant_names, equipment_names, filter_profile, tags, featured_post_id, updated_at")
     .eq("owner_id", authSession.user.id)
     .order("created_at", { ascending: true });
+
+  if (isMissingTankFilterProfileColumnError(error)) {
+    ({ data, error } = await supabaseClient
+      .from("tanks")
+      .select("id, local_id, name, kind, size_label, volume_label, residents, animal_names, plant_names, equipment_names, tags, featured_post_id, updated_at")
+      .eq("owner_id", authSession.user.id)
+      .order("created_at", { ascending: true }));
+  }
 
   if (isMissingTankSplitColumnsError(error)) {
     ({ data, error } = await supabaseClient
@@ -3335,10 +3354,18 @@ async function syncTanksToSupabase(options = {}) {
   let { data, error } = await supabaseClient
     .from("tanks")
     .upsert(payloads, { onConflict: "owner_id,local_id" })
-    .select("id, local_id, name, kind, size_label, volume_label, residents, animal_names, plant_names, equipment_names, tags, featured_post_id, updated_at");
+    .select("id, local_id, name, kind, size_label, volume_label, residents, animal_names, plant_names, equipment_names, filter_profile, tags, featured_post_id, updated_at");
+
+  if (isMissingTankFilterProfileColumnError(error)) {
+    const filterlessPayloads = payloads.map(({ filter_profile, ...payload }) => payload);
+    ({ data, error } = await supabaseClient
+      .from("tanks")
+      .upsert(filterlessPayloads, { onConflict: "owner_id,local_id" })
+      .select("id, local_id, name, kind, size_label, volume_label, residents, animal_names, plant_names, equipment_names, tags, featured_post_id, updated_at"));
+  }
 
   if (isMissingTankSplitColumnsError(error)) {
-    const legacyPayloads = payloads.map(({ animal_names, plant_names, equipment_names, ...payload }) => payload);
+    const legacyPayloads = payloads.map(({ animal_names, plant_names, equipment_names, filter_profile, ...payload }) => payload);
     ({ data, error } = await supabaseClient
       .from("tanks")
       .upsert(legacyPayloads, { onConflict: "owner_id,local_id" })
@@ -4035,10 +4062,19 @@ function getTankPayload(tank, user) {
     animal_names: tank.animals || null,
     plant_names: tank.plants || null,
     equipment_names: tank.equipment || null,
+    filter_profile: normalizeTankFilter(tank.filter),
     tags: Array.isArray(tank.tags) ? tank.tags : [tank.kind || "水槽"],
     featured_post_id: null,
     updated_at: new Date().toISOString(),
   };
+}
+
+function isMissingTankFilterProfileColumnError(error) {
+  if (!error) {
+    return false;
+  }
+
+  return /filter_profile/i.test(`${error.message || ""} ${error.details || ""} ${error.hint || ""}`);
 }
 
 function isMissingTankSplitColumnsError(error) {
@@ -4401,6 +4437,7 @@ function applyRemoteTanks(remoteTanks) {
     nextTank.plants = remoteParts.plants;
     nextTank.residents = getTankResidentValue(nextTank);
     nextTank.equipment = remoteTank.equipment_names || nextTank.equipment || "";
+    nextTank.filter = normalizeTankFilter(remoteTank.filter_profile || nextTank.filter);
     nextTank.tags = Array.isArray(remoteTank.tags) && remoteTank.tags.length ? remoteTank.tags : [nextTank.kind];
 
     if (!existingTank) {
@@ -5390,7 +5427,20 @@ function getSearchResults(query) {
     label: "水槽",
     title: tank.name,
     description: `${tank.kind} / ${tank.size} / ${formatTankResidents(tank)}`,
-    text: [tank.name, tank.kind, tank.size, tank.volume, tank.animals, tank.plants, tank.residents, tank.equipment, ...tank.tags].join(" "),
+    text: [
+      tank.name,
+      tank.kind,
+      tank.size,
+      tank.volume,
+      tank.animals,
+      tank.plants,
+      tank.residents,
+      tank.equipment,
+      tank.filter?.type,
+      tank.filter?.note,
+      getFilterFlowLabel(tank.filter?.flowStatus),
+      ...tank.tags,
+    ].join(" "),
   }));
 
   const postResults = state.posts.map((post) => ({
@@ -5467,6 +5517,111 @@ function getTankDetailItems(tank) {
     { label: "生き物・水草", value: formatTankResidents(tank) },
     { label: "設備", value: tank.equipment || "未設定" },
   ];
+}
+
+function getFilterFormValue(prefix) {
+  const interval = Number(document.querySelector(`#${prefix}-filter-interval${prefix === "tank" ? "-input" : ""}`)?.value || 30);
+  return normalizeTankFilter({
+    type: document.querySelector(`#${prefix}-filter-type${prefix === "tank" ? "-input" : ""}`)?.value || "",
+    lastCleanedAt: document.querySelector(`#${prefix}-filter-cleaned${prefix === "tank" ? "-input" : ""}`)?.value || "",
+    intervalDays: Number.isFinite(interval) ? interval : 30,
+    flowStatus: document.querySelector(`#${prefix}-filter-flow${prefix === "tank" ? "-input" : ""}`)?.value || "unchecked",
+    note: document.querySelector(`#${prefix}-filter-note${prefix === "tank" ? "-input" : ""}`)?.value || "",
+  });
+}
+
+function setFilterFormValue(prefix, filterValue) {
+  const filter = normalizeTankFilter(filterValue);
+  const suffix = prefix === "tank" ? "-input" : "";
+  const typeInput = document.querySelector(`#${prefix}-filter-type${suffix}`);
+  const cleanedInput = document.querySelector(`#${prefix}-filter-cleaned${suffix}`);
+  const intervalInput = document.querySelector(`#${prefix}-filter-interval${suffix}`);
+  const flowInput = document.querySelector(`#${prefix}-filter-flow${suffix}`);
+  const noteInput = document.querySelector(`#${prefix}-filter-note${suffix}`);
+
+  if (typeInput) typeInput.value = filter.type;
+  if (cleanedInput) cleanedInput.value = filter.lastCleanedAt;
+  if (intervalInput) intervalInput.value = filter.intervalDays || "";
+  if (flowInput) flowInput.value = filter.flowStatus;
+  if (noteInput) noteInput.value = filter.note;
+}
+
+function resetFilterForm(prefix) {
+  setFilterFormValue(prefix, {
+    type: "",
+    lastCleanedAt: "",
+    intervalDays: 30,
+    flowStatus: "unchecked",
+    note: "",
+  });
+}
+
+function normalizeTankFilter(value = {}) {
+  const intervalDays = Number(value.intervalDays || value.interval_days || 30);
+  const rawFlowStatus = value.flowStatus || value.flow_status || "unchecked";
+  const flowStatus = ["normal", "weak", "clogged", "unchecked"].includes(rawFlowStatus) ? rawFlowStatus : "unchecked";
+
+  return {
+    type: String(value.type || value.filter_type || "").trim(),
+    lastCleanedAt: isValidDateKey(value.lastCleanedAt || value.last_cleaned_at || "") ? value.lastCleanedAt || value.last_cleaned_at : "",
+    intervalDays: Number.isFinite(intervalDays) && intervalDays > 0 ? Math.min(365, Math.round(intervalDays)) : 30,
+    flowStatus,
+    note: String(value.note || "").trim(),
+  };
+}
+
+function getFilterMaintenanceStatus(filterValue = {}) {
+  const filter = normalizeTankFilter(filterValue);
+  if (!filter.lastCleanedAt) {
+    return {
+      level: "pending",
+      label: "未記録",
+      nextLabel: "掃除日未設定",
+      note: "前回掃除日を入れると、次回目安を表示します。",
+    };
+  }
+
+  const cleanedDate = parseDateKey(filter.lastCleanedAt);
+  const nextDate = new Date(cleanedDate);
+  nextDate.setDate(nextDate.getDate() + filter.intervalDays);
+  const daysLeft = diffCalendarDays(new Date(), nextDate);
+  const nextLabel = `${formatAlbumDate(nextDate)} / ${daysLeft >= 0 ? `あと${daysLeft}日` : `${Math.abs(daysLeft)}日超過`}`;
+  const flowWarning = filter.flowStatus === "weak" || filter.flowStatus === "clogged";
+
+  if (daysLeft < 0 || flowWarning) {
+    return {
+      level: "danger",
+      label: "掃除推奨",
+      nextLabel,
+      note: flowWarning ? "流量が落ちています。詰まりやろ材の汚れを確認しましょう。" : "掃除目安を過ぎています。水換え時に確認しましょう。",
+    };
+  }
+
+  if (daysLeft <= 3) {
+    return {
+      level: "watch",
+      label: "そろそろ",
+      nextLabel,
+      note: "次の水換えタイミングでフィルター掃除も確認しましょう。",
+    };
+  }
+
+  return {
+    level: "ready",
+    label: "良好",
+    nextLabel,
+    note: "フィルター管理は予定内です。",
+  };
+}
+
+function getFilterFlowLabel(value) {
+  const labels = {
+    normal: "正常",
+    weak: "弱い",
+    clogged: "詰まり気味",
+    unchecked: "未確認",
+  };
+  return labels[value] || labels.unchecked;
 }
 
 function getGuideSearchItems() {
@@ -5685,6 +5840,7 @@ function renderTankProfile() {
       `,
     )
     .join("");
+  renderFilterStatusPanel(tank);
   document.querySelector("#tank-profile-tags").innerHTML = tank.tags
     .map((tag) => `<span class="chip">${escapeHtml(tag)}</span>`)
     .join("");
@@ -5695,8 +5851,48 @@ function renderTankProfile() {
   document.querySelector("#edit-tank-volume").value = tank.volume;
   setSpeciesListValues("edit-tank-species-list", getTankResidentValue(tank));
   setSpeciesListValues("edit-tank-equipment-list", tank.equipment || "");
+  setFilterFormValue("edit-tank", tank.filter);
   document.querySelector("#edit-tank-tags").value = tank.tags.join(", ");
   document.querySelector("#delete-tank-button").disabled = state.tanks.length <= 1;
+}
+
+function renderFilterStatusPanel(tank) {
+  const panel = document.querySelector("#filter-status-panel");
+  if (!panel) {
+    return;
+  }
+
+  const filter = normalizeTankFilter(tank.filter);
+  const status = getFilterMaintenanceStatus(filter);
+  panel.className = `filter-status-panel ${escapeHtml(status.level)}`;
+  panel.innerHTML = `
+    <div class="section-head">
+      <div>
+        <p class="eyebrow">Filter care</p>
+        <h3>フィルター管理</h3>
+      </div>
+      <span class="filter-status-chip">${escapeHtml(status.label)}</span>
+    </div>
+    <div class="filter-status-grid">
+      <article>
+        <span>種類</span>
+        <strong>${escapeHtml(filter.type || "未設定")}</strong>
+      </article>
+      <article>
+        <span>前回掃除</span>
+        <strong>${escapeHtml(filter.lastCleanedAt ? formatAlbumDate(filter.lastCleanedAt) : "未記録")}</strong>
+      </article>
+      <article>
+        <span>次回目安</span>
+        <strong>${escapeHtml(status.nextLabel)}</strong>
+      </article>
+      <article>
+        <span>流量</span>
+        <strong>${escapeHtml(getFilterFlowLabel(filter.flowStatus))}</strong>
+      </article>
+    </div>
+    <p>${escapeHtml(filter.note || status.note)}</p>
+  `;
 }
 
 function renderTimeline() {
@@ -9406,6 +9602,7 @@ function normalizeState(saved) {
       volume: nextTank.volume || "容量未設定",
       residents: getTankResidentValue(nextTank),
       equipment: normalizeSpeciesValues(nextTank.equipment || nextTank.equipment_names || "").join("、"),
+      filter: normalizeTankFilter(nextTank.filter),
       tags: Array.isArray(nextTank.tags) ? nextTank.tags : [nextTank.kind || "水槽"],
       logs: Array.isArray(nextTank.logs) ? nextTank.logs.map(normalizeLog) : [],
       latestAi: nextTank.latestAi ? normalizeAiResult(nextTank.latestAi) : null,
@@ -10085,6 +10282,7 @@ function escapeCssIdentifier(value) {
 setDefaultLogDate();
 resetSpeciesList("tank-species-list");
 resetSpeciesList("tank-equipment-list");
+resetFilterForm("tank");
 renderPostImagePreview();
 renderApp();
 initSupabaseAuth();
