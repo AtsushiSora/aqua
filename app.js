@@ -115,6 +115,10 @@ const monitorFeedbackForm = document.querySelector("#monitor-feedback-form");
 const monitorFeedbackSummary = document.querySelector("#monitor-feedback-summary");
 const monitorFeedbackList = document.querySelector("#monitor-feedback-list");
 const monitorFeedbackExportButton = document.querySelector("#monitor-feedback-export-button");
+const monitorFeedbackStatusFilter = document.querySelector("#monitor-feedback-status-filter");
+const monitorFeedbackKindFilter = document.querySelector("#monitor-feedback-kind-filter");
+const monitorFeedbackPriorityFilter = document.querySelector("#monitor-feedback-priority-filter");
+const monitorFeedbackFilterReset = document.querySelector("#monitor-feedback-filter-reset");
 const productionSetupNextAction = document.querySelector("#production-setup-next-action");
 const productionSetupSummary = document.querySelector("#production-setup-summary");
 const productionSetupExportButton = document.querySelector("#production-setup-export-button");
@@ -390,6 +394,9 @@ let activeAiEvaluationStatusFilter = "all";
 let activeAiEvaluationReviewFilter = "all";
 let activeAiEvaluationFromFilter = "";
 let activeAiEvaluationToFilter = "";
+let activeMonitorFeedbackStatusFilter = "all";
+let activeMonitorFeedbackKindFilter = "all";
+let activeMonitorFeedbackPriorityFilter = "all";
 let aiApiStatus = {
   checkedAt: null,
   configured: null,
@@ -649,6 +656,24 @@ pwaTestForm.addEventListener("submit", handlePwaTestSubmit);
 pwaTestExportButton.addEventListener("click", exportPwaTestResults);
 monitorFeedbackForm.addEventListener("submit", handleMonitorFeedbackSubmit);
 monitorFeedbackExportButton.addEventListener("click", exportMonitorFeedback);
+monitorFeedbackStatusFilter.addEventListener("change", () => {
+  activeMonitorFeedbackStatusFilter = monitorFeedbackStatusFilter.value;
+  renderMonitorFeedback();
+});
+monitorFeedbackKindFilter.addEventListener("change", () => {
+  activeMonitorFeedbackKindFilter = monitorFeedbackKindFilter.value;
+  renderMonitorFeedback();
+});
+monitorFeedbackPriorityFilter.addEventListener("change", () => {
+  activeMonitorFeedbackPriorityFilter = monitorFeedbackPriorityFilter.value;
+  renderMonitorFeedback();
+});
+monitorFeedbackFilterReset.addEventListener("click", () => {
+  activeMonitorFeedbackStatusFilter = "all";
+  activeMonitorFeedbackKindFilter = "all";
+  activeMonitorFeedbackPriorityFilter = "all";
+  renderMonitorFeedback();
+});
 productionSetupExportButton.addEventListener("click", exportProductionSetupStatus);
 pwaReleaseDecisionForm.addEventListener("submit", handlePwaReleaseDecisionSubmit);
 productionSupabaseCheckForm.addEventListener("submit", handleProductionSupabaseCheckSubmit);
@@ -1605,6 +1630,7 @@ function renderMonitorFeedback() {
   }
 
   const entries = Array.isArray(state.monitorFeedback) ? state.monitorFeedback.map(normalizeMonitorFeedback) : [];
+  const filteredEntries = getFilteredMonitorFeedback(entries);
   const bugCount = entries.filter((entry) => entry.kind === "bug").length;
   const uiCount = entries.filter((entry) => entry.kind === "ui").length;
   const highCount = entries.filter((entry) => entry.priority === "high").length;
@@ -1612,6 +1638,9 @@ function renderMonitorFeedback() {
   const doingCount = entries.filter((entry) => entry.status === "doing").length;
   const doneCount = entries.filter((entry) => entry.status === "done").length;
   const latest = entries[0]?.createdAt ? formatFullDate(entries[0].createdAt) : "まだ記録なし";
+  monitorFeedbackStatusFilter.value = activeMonitorFeedbackStatusFilter;
+  monitorFeedbackKindFilter.value = activeMonitorFeedbackKindFilter;
+  monitorFeedbackPriorityFilter.value = activeMonitorFeedbackPriorityFilter;
 
   monitorFeedbackSummary.innerHTML = `
     <article>
@@ -1630,9 +1659,9 @@ function renderMonitorFeedback() {
       <small>モニター中に先に直す候補</small>
     </article>
     <article>
-      <span>対応済み</span>
-      <strong>${doneCount}件</strong>
-      <small>最新 ${escapeHtml(latest)}</small>
+      <span>表示中</span>
+      <strong>${filteredEntries.length}件</strong>
+      <small>対応済み ${doneCount}件 / 最新 ${escapeHtml(latest)}</small>
     </article>
   `;
 
@@ -1646,7 +1675,17 @@ function renderMonitorFeedback() {
     return;
   }
 
-  monitorFeedbackList.innerHTML = entries
+  if (!filteredEntries.length) {
+    monitorFeedbackList.innerHTML = `
+      <article class="monitor-feedback-empty">
+        <strong>条件に合うフィードバックはありません</strong>
+        <span>絞り込みを解除すると全件を確認できます。</span>
+      </article>
+    `;
+    return;
+  }
+
+  monitorFeedbackList.innerHTML = filteredEntries
     .map(
       (entry) => `
         <article class="monitor-feedback-item ${escapeHtml(entry.priority)}">
@@ -1668,6 +1707,15 @@ function renderMonitorFeedback() {
       `,
     )
     .join("");
+}
+
+function getFilteredMonitorFeedback(entries) {
+  return entries.filter((entry) => {
+    const statusMatch = activeMonitorFeedbackStatusFilter === "all" || entry.status === activeMonitorFeedbackStatusFilter;
+    const kindMatch = activeMonitorFeedbackKindFilter === "all" || entry.kind === activeMonitorFeedbackKindFilter;
+    const priorityMatch = activeMonitorFeedbackPriorityFilter === "all" || entry.priority === activeMonitorFeedbackPriorityFilter;
+    return statusMatch && kindMatch && priorityMatch;
+  });
 }
 
 function exportMonitorFeedback() {

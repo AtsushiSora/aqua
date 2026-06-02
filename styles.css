@@ -6442,6 +6442,18 @@ textarea {
   margin-top: 12px;
 }
 
+.monitor-feedback-filter {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
+  gap: 10px;
+  align-items: end;
+  margin-top: 12px;
+  padding: 10px;
+  border: 1px solid rgba(15, 143, 143, 0.12);
+  border-radius: 8px;
+  background: rgba(245, 252, 250, 0.72);
+}
+
 .monitor-feedback-empty {
   display: grid;
   gap: 4px;
@@ -6688,6 +6700,7 @@ textarea {
   .schema-grid,
   .monitor-readiness-summary,
   .monitor-feedback-form,
+  .monitor-feedback-filter,
   .monitor-feedback-summary,
   .monitor-guide ol,
   .production-setup-summary,
@@ -6970,6 +6983,7 @@ textarea {
   .schema-grid,
   .monitor-readiness-summary,
   .monitor-feedback-form,
+  .monitor-feedback-filter,
   .monitor-feedback-summary,
   .monitor-guide ol,
   .production-setup-summary,
