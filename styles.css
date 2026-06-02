@@ -6392,7 +6392,7 @@ textarea {
 
 .monitor-feedback-form {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 10px;
 }
 
@@ -6506,6 +6506,24 @@ textarea {
   border-radius: 999px;
   background: rgba(15, 143, 143, 0.1);
   color: #0c6d72;
+}
+
+.monitor-feedback-meta span.doing {
+  background: rgba(207, 132, 38, 0.14);
+  color: #93621b;
+}
+
+.monitor-feedback-meta span.done {
+  background: rgba(40, 117, 74, 0.13);
+  color: #28754a;
+}
+
+.monitor-feedback-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+  max-width: 210px;
 }
 
 .media-detail-copy dl {

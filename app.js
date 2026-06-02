@@ -144,6 +144,7 @@ const pushConfig = window.AQUANOTE_PUSH_CONFIG || {};
 const UI_MODES = ["standard", "simple", "glance", "adult", "live"];
 const MONITOR_FEEDBACK_KINDS = ["impression", "bug", "ui", "request"];
 const MONITOR_FEEDBACK_PRIORITIES = ["watch", "high", "low"];
+const MONITOR_FEEDBACK_STATUSES = ["open", "doing", "done"];
 const PWA_REQUIRED_SCOPES = ["login", "install", "notification", "offline", "ui_modes", "custom_images"];
 const PWA_SCOPE_QA_HINTS = {
   login: ["ログイン状態", "プロフィール同期", "再読み込み後の維持"],
@@ -671,6 +672,23 @@ pwaTestLog.addEventListener("click", async (event) => {
 });
 
 monitorFeedbackList.addEventListener("click", (event) => {
+  const statusButton = event.target.closest("[data-monitor-feedback-status]");
+  if (statusButton) {
+    state.monitorFeedback = (state.monitorFeedback || []).map((entry) =>
+      entry.id === statusButton.dataset.monitorFeedbackStatus
+        ? normalizeMonitorFeedback({
+            ...entry,
+            status: statusButton.dataset.monitorFeedbackNextStatus,
+            resolvedAt: statusButton.dataset.monitorFeedbackNextStatus === "done" ? new Date().toISOString() : null,
+          })
+        : entry,
+    );
+    saveState();
+    renderMonitorFeedback();
+    showToast("対応状況を更新しました");
+    return;
+  }
+
   const button = event.target.closest("[data-monitor-feedback-delete]");
   if (!button) {
     return;
@@ -1570,6 +1588,7 @@ function handleMonitorFeedbackSubmit(event) {
     device: document.querySelector("#monitor-feedback-device-input").value,
     kind: document.querySelector("#monitor-feedback-kind-input").value,
     priority: document.querySelector("#monitor-feedback-priority-input").value,
+    status: document.querySelector("#monitor-feedback-status-input").value,
     note,
   });
 
@@ -1589,13 +1608,16 @@ function renderMonitorFeedback() {
   const bugCount = entries.filter((entry) => entry.kind === "bug").length;
   const uiCount = entries.filter((entry) => entry.kind === "ui").length;
   const highCount = entries.filter((entry) => entry.priority === "high").length;
+  const openCount = entries.filter((entry) => entry.status === "open").length;
+  const doingCount = entries.filter((entry) => entry.status === "doing").length;
+  const doneCount = entries.filter((entry) => entry.status === "done").length;
   const latest = entries[0]?.createdAt ? formatFullDate(entries[0].createdAt) : "まだ記録なし";
 
   monitorFeedbackSummary.innerHTML = `
     <article>
       <span>記録数</span>
       <strong>${entries.length}件</strong>
-      <small>感想、不具合、要望をまとめて確認</small>
+      <small>未対応 ${openCount}件 / 対応中 ${doingCount}件</small>
     </article>
     <article>
       <span>不具合/UI</span>
@@ -1608,9 +1630,9 @@ function renderMonitorFeedback() {
       <small>モニター中に先に直す候補</small>
     </article>
     <article>
-      <span>最新</span>
-      <strong>${escapeHtml(latest)}</strong>
-      <small>JSONで書き出して共有できます</small>
+      <span>対応済み</span>
+      <strong>${doneCount}件</strong>
+      <small>最新 ${escapeHtml(latest)}</small>
     </article>
   `;
 
@@ -1632,12 +1654,16 @@ function renderMonitorFeedback() {
             <div class="monitor-feedback-meta">
               <span>${escapeHtml(getMonitorFeedbackKindLabel(entry.kind))}</span>
               <span>${escapeHtml(getMonitorFeedbackPriorityLabel(entry.priority))}</span>
+              <span class="${escapeHtml(entry.status)}">${escapeHtml(getMonitorFeedbackStatusLabel(entry.status))}</span>
               <small>${escapeHtml(formatFullDate(entry.createdAt))}</small>
             </div>
             <strong>${escapeHtml(entry.participant || "参加者未設定")} / ${escapeHtml(entry.device || "端末未設定")}</strong>
             <p>${escapeHtml(entry.note)}</p>
           </div>
-          <button class="text-button" type="button" data-monitor-feedback-delete="${escapeHtml(entry.id)}">削除</button>
+          <div class="monitor-feedback-actions">
+            ${getMonitorFeedbackStatusActions(entry)}
+            <button class="text-button" type="button" data-monitor-feedback-delete="${escapeHtml(entry.id)}">削除</button>
+          </div>
         </article>
       `,
     )
@@ -1675,6 +1701,8 @@ function normalizeMonitorFeedback(entry = {}) {
     device: String(entry.device || "").trim(),
     kind: getAllowedValue(entry.kind, MONITOR_FEEDBACK_KINDS, "impression"),
     priority: getAllowedValue(entry.priority, MONITOR_FEEDBACK_PRIORITIES, "watch"),
+    status: getAllowedValue(entry.status, MONITOR_FEEDBACK_STATUSES, "open"),
+    resolvedAt: entry.resolvedAt || null,
     note: String(entry.note || "").trim(),
   };
 }
@@ -1696,6 +1724,31 @@ function getMonitorFeedbackPriorityLabel(priority) {
     low: "低",
   };
   return labels[priority] || labels.watch;
+}
+
+function getMonitorFeedbackStatusLabel(status) {
+  const labels = {
+    open: "未対応",
+    doing: "対応中",
+    done: "対応済み",
+  };
+  return labels[status] || labels.open;
+}
+
+function getMonitorFeedbackStatusActions(entry) {
+  const actions = MONITOR_FEEDBACK_STATUSES.filter((status) => status !== entry.status);
+  return actions
+    .map(
+      (status) => `
+        <button
+          class="text-button"
+          type="button"
+          data-monitor-feedback-status="${escapeHtml(entry.id)}"
+          data-monitor-feedback-next-status="${escapeHtml(status)}"
+        >${escapeHtml(getMonitorFeedbackStatusLabel(status))}</button>
+      `,
+    )
+    .join("");
 }
 
 function getMonitorReadinessState() {
