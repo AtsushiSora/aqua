@@ -453,6 +453,22 @@ body[data-ui-mode="simple"] .metric-card {
   text-align: center;
 }
 
+body[data-ui-mode="simple"] .metric-temp-card {
+  order: 1;
+}
+
+body[data-ui-mode="simple"] .metric-water-card {
+  order: 2;
+}
+
+body[data-ui-mode="simple"] .metric-ph-card {
+  order: 3;
+}
+
+body[data-ui-mode="simple"] .metric-ai-card {
+  order: 4;
+}
+
 body[data-ui-mode="simple"] .metric-card strong {
   font-size: 1.82rem;
 }
@@ -488,6 +504,18 @@ body[data-ui-mode="simple"] .quick-dock {
 
 body[data-ui-mode="simple"] .content-grid {
   grid-template-columns: minmax(0, 1fr);
+}
+
+body[data-ui-mode="simple"] .home-care-panel {
+  order: -1;
+}
+
+body[data-ui-mode="simple"] .reminder-panel {
+  order: 1;
+}
+
+body[data-ui-mode="simple"] .home-community-panel {
+  order: 2;
 }
 
 body[data-ui-mode="simple"] .insight-rail {
@@ -576,6 +604,22 @@ body[data-ui-mode="adult"] .metric-card {
   padding: 14px;
 }
 
+body[data-ui-mode="adult"] .metric-ph-card {
+  order: 1;
+}
+
+body[data-ui-mode="adult"] .metric-temp-card {
+  order: 2;
+}
+
+body[data-ui-mode="adult"] .metric-water-card {
+  order: 3;
+}
+
+body[data-ui-mode="adult"] .metric-ai-card {
+  order: 4;
+}
+
 body[data-ui-mode="adult"] .metric-grid,
 body[data-ui-mode="adult"] .content-grid {
   gap: 10px;
@@ -629,6 +673,11 @@ body[data-ui-mode="adult"] .metric-card {
   background:
     linear-gradient(180deg, rgba(251, 252, 250, 0.5), transparent),
     rgba(251, 252, 250, 0.9);
+}
+
+body[data-ui-mode="adult"] .metric-ph-card,
+body[data-ui-mode="adult"] .metric-temp-card {
+  border-color: rgba(29, 85, 88, 0.22);
 }
 
 body[data-ui-mode="glance"] .sidebar,
@@ -776,6 +825,22 @@ body[data-ui-mode="glance"] .metric-card {
   text-align: center;
 }
 
+body[data-ui-mode="glance"] .metric-ai-card {
+  order: 1;
+}
+
+body[data-ui-mode="glance"] .metric-water-card {
+  order: 2;
+}
+
+body[data-ui-mode="glance"] .metric-temp-card {
+  order: 3;
+}
+
+body[data-ui-mode="glance"] .metric-ph-card {
+  order: 4;
+}
+
 body[data-ui-mode="glance"] .metric-grid {
   grid-column: 1 / -1;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -812,6 +877,12 @@ body[data-ui-mode="glance"] .metric-card small {
 
 body[data-ui-mode="glance"] .metric-card.alert {
   background: rgba(60, 30, 28, 0.84);
+}
+
+body[data-ui-mode="glance"] .metric-ai-card {
+  box-shadow:
+    inset 0 0 0 2px rgba(255, 211, 90, 0.18),
+    var(--shadow-soft);
 }
 
 body[data-ui-mode="glance"] input,
@@ -1046,6 +1117,22 @@ body[data-ui-mode="live"] .metric-card {
   background:
     repeating-linear-gradient(112deg, transparent 0 52px, rgba(16, 168, 186, 0.08) 54px, transparent 78px),
     rgba(255, 255, 255, 0.86);
+}
+
+body[data-ui-mode="live"] .metric-water-card {
+  order: 1;
+}
+
+body[data-ui-mode="live"] .metric-temp-card {
+  order: 2;
+}
+
+body[data-ui-mode="live"] .metric-ph-card {
+  order: 3;
+}
+
+body[data-ui-mode="live"] .metric-ai-card {
+  order: 4;
 }
 
 body[data-ui-mode="live"] .metric-grid {
