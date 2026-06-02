@@ -1853,6 +1853,13 @@ body[data-custom-buttons="true"] .icon-button {
   font-size: 1.45rem;
 }
 
+.metric-card-action {
+  min-height: 32px;
+  margin-top: 10px;
+  padding: 0 10px;
+  font-size: 0.78rem;
+}
+
 .metric-card.alert {
   border-color: rgba(217, 107, 95, 0.28);
   background: rgba(255, 250, 248, 0.88);

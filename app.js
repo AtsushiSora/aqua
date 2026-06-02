@@ -1122,10 +1122,24 @@ logForm.addEventListener("submit", async (event) => {
 
 document.querySelectorAll("[data-add-log]").forEach((button) => {
   button.addEventListener("click", () => {
-    showView("tanks");
-    document.querySelector("#log-note").focus();
+    openLogForm();
   });
 });
+
+document.querySelector("[data-filter-log]").addEventListener("click", () => {
+  openLogForm({ type: "フィルター掃除", note: "フィルター掃除を記録済み" });
+});
+
+function openLogForm(options = {}) {
+  showView("tanks");
+  if (options.type) {
+    document.querySelector("#log-type").value = options.type;
+  }
+  if (options.note) {
+    document.querySelector("#log-note").value = options.note;
+  }
+  document.querySelector("#log-note").focus();
+}
 
 document.querySelector("[data-reset-logs]").addEventListener("click", () => {
   if (!confirm("水槽、ログ、投稿を初期状態に戻しますか？")) {
