@@ -441,22 +441,24 @@ directViewButtons.forEach((button) => {
   button.addEventListener("click", () => showView(button.dataset.viewTarget));
 });
 
-globalSearchInput.addEventListener("input", renderSearchResults);
-globalSearchInput.addEventListener("focus", renderSearchResults);
-globalSearchInput.addEventListener("keydown", (event) => {
-  if (event.key === "Escape") {
-    clearSearchResults();
-  }
-});
+if (globalSearchInput && searchResults) {
+  globalSearchInput.addEventListener("input", renderSearchResults);
+  globalSearchInput.addEventListener("focus", renderSearchResults);
+  globalSearchInput.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") {
+      clearSearchResults();
+    }
+  });
 
-searchResults.addEventListener("click", (event) => {
-  const button = event.target.closest("[data-search-type]");
-  if (!button) {
-    return;
-  }
+  searchResults.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-search-type]");
+    if (!button) {
+      return;
+    }
 
-  openSearchResult(button.dataset.searchType, button.dataset.searchId);
-});
+    openSearchResult(button.dataset.searchType, button.dataset.searchId);
+  });
+}
 
 document.addEventListener("click", (event) => {
   if (!event.target.closest(".search-box")) {
@@ -6005,6 +6007,10 @@ async function importAppData() {
 }
 
 function renderSearchResults() {
+  if (!globalSearchInput || !searchResults) {
+    return;
+  }
+
   const query = normalizeSearchTerm(globalSearchInput.value);
   if (!query) {
     clearSearchResults();
@@ -6330,11 +6336,17 @@ function openSearchResult(type, id) {
     flashSearchResult();
   }
 
-  globalSearchInput.value = "";
+  if (globalSearchInput) {
+    globalSearchInput.value = "";
+  }
   clearSearchResults();
 }
 
 function clearSearchResults() {
+  if (!searchResults) {
+    return;
+  }
+
   searchResults.hidden = true;
   searchResults.innerHTML = "";
 }

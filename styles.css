@@ -1087,6 +1087,24 @@ time {
   color: var(--ink);
 }
 
+.topbar-switches {
+  flex: 1;
+  max-width: 680px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+.topbar-switch {
+  min-width: min(260px, 100%);
+  flex: 1 1 220px;
+}
+
+.topbar-switch select {
+  flex: 1;
+}
+
 .search-results {
   position: absolute;
   top: calc(100% + 8px);
@@ -6284,6 +6302,14 @@ textarea {
 
   .topbar-actions {
     justify-content: space-between;
+  }
+
+  .topbar-switches {
+    max-width: none;
+  }
+
+  .topbar-switch {
+    flex-basis: 100%;
   }
 
   .app-home-top {

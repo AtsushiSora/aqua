@@ -69,11 +69,24 @@
 
       <main class="main">
         <header class="topbar">
-          <label class="search-box">
-            <span aria-hidden="true">⌕</span>
-            <input id="global-search" type="search" placeholder="水槽、投稿、ガイドを検索" autocomplete="off">
-            <div class="search-results" id="search-results" hidden></div>
-          </label>
+          <div class="topbar-switches" aria-label="水槽とデザインの変更">
+            <label class="ui-mode-switch topbar-switch">
+              <span>水槽変更</span>
+              <select id="home-tank-select" aria-label="ホームで操作する水槽">
+                <option value="tank-main">はじめての水槽</option>
+              </select>
+            </label>
+            <label class="ui-mode-switch topbar-switch">
+              <span>デザイン変更</span>
+              <select id="home-ui-mode-input" aria-label="ホームの表示モード">
+                <option value="standard">ベーシックモード</option>
+                <option value="simple">かんたんモード</option>
+                <option value="adult">管理重視モード</option>
+                <option value="live">投稿重視モード</option>
+              </select>
+            </label>
+            <button class="design-cycle-button" id="home-ui-mode-cycle-button" type="button">切り替え</button>
+          </div>
           <div class="topbar-actions">
             <button class="sync-status-button" id="sync-status-button" type="button" data-view-target="account">
               <span id="sync-status-dot" aria-hidden="true"></span>
@@ -94,22 +107,6 @@
               <h1 id="dashboard-title">今日のアクアノート</h1>
             </div>
             <div class="home-controls">
-              <label class="ui-mode-switch">
-                <span>水槽</span>
-                <select id="home-tank-select" aria-label="ホームで操作する水槽">
-                  <option value="tank-main">はじめての水槽</option>
-                </select>
-              </label>
-              <label class="ui-mode-switch">
-                <span>デザイン</span>
-                <select id="home-ui-mode-input" aria-label="ホームの表示モード">
-                  <option value="standard">ベーシックモード</option>
-                  <option value="simple">かんたんモード</option>
-                  <option value="adult">管理重視モード</option>
-                  <option value="live">投稿重視モード</option>
-                </select>
-              </label>
-              <button class="design-cycle-button" id="home-ui-mode-cycle-button" type="button">デザイン変更</button>
               <div class="app-status-pill" aria-label="選択中の水槽">
                 <span id="app-active-tank">はじめての水槽</span>
                 <strong id="app-health-chip">未記録</strong>
