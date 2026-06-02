@@ -129,6 +129,7 @@ const accountButtonPreview = document.querySelector("#account-button-preview");
 const accountBackgroundStatus = document.querySelector("#account-background-status");
 const accountButtonStatus = document.querySelector("#account-button-status");
 const dashboardTitle = document.querySelector("#dashboard-title");
+const homeUiModeNote = document.querySelector("#home-ui-mode-note");
 const heroTitle = document.querySelector(".hero-copy h2");
 const heroLead = document.querySelector(".hero-copy h2 + p");
 const quickDockButtons = document.querySelectorAll(".quick-dock button");
@@ -163,6 +164,7 @@ const taskLabels = {
 const homeModeCopy = {
   standard: {
     title: "今日のアクアノート",
+    note: "毎日の記録、写真、AI確認をバランスよく使う基本表示です。",
     heroTitle: "水槽管理を、きれいに続ける。",
     heroLead: "水温、pH、写真、気づいた変化をひとつにまとめて、毎日の管理を軽くします。",
     dock: [
@@ -174,6 +176,7 @@ const homeModeCopy = {
   },
   simple: {
     title: "今日やること",
+    note: "小学生でも迷わないよう、言葉と操作を大きくした表示です。",
     heroTitle: "水槽のようすをかんたんチェック",
     heroLead: "写真をえらんで、温度や気づいたことを入れるだけ。次に見るところがすぐわかります。",
     dock: [
@@ -185,6 +188,7 @@ const homeModeCopy = {
   },
   glance: {
     title: "一目チェック",
+    note: "Apple Watchのように、主要操作と数値を一目で押せる表示です。",
     heroTitle: "大事な状態を、ひと目で。",
     heroLead: "大きなボタンと数値だけを前に出して、Apple Watchのようにすぐ操作できます。",
     dock: [
@@ -196,6 +200,7 @@ const homeModeCopy = {
   },
   adult: {
     title: "水槽ダッシュボード",
+    note: "落ち着いた密度で、管理と公開前確認を静かに進める表示です。",
     heroTitle: "日々の管理を静かに整える。",
     heroLead: "水質、写真、タスク、レビューを落ち着いた画面で確認し、公開前の判断までつなげます。",
     dock: [
@@ -207,6 +212,7 @@ const homeModeCopy = {
   },
   live: {
     title: "ライブアクアリウム",
+    note: "水面のゆらぎと写真演出で、水槽を眺める楽しさを前面に出す表示です。",
     heroTitle: "写真に、水の動きを足す。",
     heroLead: "トップ写真にゆらぎと光を重ねて、静止画でも水槽が動いているように見せます。",
     dock: [
@@ -2358,6 +2364,9 @@ function applyHomeModeCopy(uiMode) {
   const copy = homeModeCopy[uiMode] || homeModeCopy.standard;
   if (dashboardTitle) {
     dashboardTitle.textContent = copy.title;
+  }
+  if (homeUiModeNote) {
+    homeUiModeNote.textContent = copy.note;
   }
   if (heroTitle) {
     heroTitle.textContent = copy.heroTitle;

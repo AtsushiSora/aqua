@@ -386,8 +386,15 @@ body[data-ui-mode="simple"] .hero-copy p:not(.eyebrow) {
 
 body[data-ui-mode="simple"] .ui-mode-switch,
 body[data-ui-mode="simple"] .design-cycle-button,
-body[data-ui-mode="simple"] .app-status-pill {
+body[data-ui-mode="simple"] .app-status-pill,
+body[data-ui-mode="simple"] .ui-mode-note {
   border-width: 2px;
+}
+
+body[data-ui-mode="simple"] .ui-mode-note {
+  background: rgba(255, 255, 255, 0.84);
+  color: #24545a;
+  font-size: 0.88rem;
 }
 
 body[data-ui-mode="simple"] .design-cycle-button {
@@ -545,8 +552,15 @@ body[data-ui-mode="adult"] .hero-photo-card {
 
 body[data-ui-mode="adult"] .ui-mode-switch,
 body[data-ui-mode="adult"] .design-cycle-button,
-body[data-ui-mode="adult"] .app-status-pill {
+body[data-ui-mode="adult"] .app-status-pill,
+body[data-ui-mode="adult"] .ui-mode-note {
   min-height: 42px;
+}
+
+body[data-ui-mode="adult"] .ui-mode-note {
+  background: rgba(251, 252, 250, 0.88);
+  color: #4d5a56;
+  box-shadow: none;
 }
 
 body[data-ui-mode="adult"] .design-cycle-button {
@@ -786,6 +800,12 @@ body[data-ui-mode="glance"] .ui-mode-switch select {
   color: #f7fbfb;
 }
 
+body[data-ui-mode="glance"] .ui-mode-note {
+  border-color: rgba(137, 247, 255, 0.18);
+  background: rgba(17, 27, 34, 0.92);
+  color: rgba(247, 251, 251, 0.82);
+}
+
 body[data-ui-mode="glance"] .design-cycle-button {
   background: radial-gradient(circle at 28% 18%, #f7fbfb, var(--aqua) 30%, #167dff 80%);
   color: #061014;
@@ -915,6 +935,12 @@ body[data-ui-mode="live"] .metric-card::before {
 
 body[data-ui-mode="live"] .design-cycle-button {
   background: linear-gradient(135deg, #10a8ba, #54a96f);
+}
+
+body[data-ui-mode="live"] .ui-mode-note {
+  border-color: rgba(16, 168, 186, 0.2);
+  background: rgba(236, 255, 251, 0.78);
+  color: #24545a;
 }
 
 .brand-mark {
@@ -1511,6 +1537,21 @@ body[data-ui-mode="glance"][data-custom-buttons="true"] .icon-button {
 .app-status-pill strong.is-danger {
   background: #ffe4e1;
   color: #a6332e;
+}
+
+.ui-mode-note {
+  flex: 1 1 100%;
+  margin: 0;
+  padding: 8px 10px;
+  border: 1px solid var(--glass-border);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.62);
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 850;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+  box-shadow: none;
 }
 
 .dashboard-layout {
