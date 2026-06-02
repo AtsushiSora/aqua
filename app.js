@@ -111,6 +111,10 @@ const pwaReleaseDecisionSummary = document.querySelector("#pwa-release-decision-
 const monitorReadinessChip = document.querySelector("#monitor-readiness-chip");
 const monitorReadinessNext = document.querySelector("#monitor-readiness-next");
 const monitorReadinessSummary = document.querySelector("#monitor-readiness-summary");
+const monitorFeedbackForm = document.querySelector("#monitor-feedback-form");
+const monitorFeedbackSummary = document.querySelector("#monitor-feedback-summary");
+const monitorFeedbackList = document.querySelector("#monitor-feedback-list");
+const monitorFeedbackExportButton = document.querySelector("#monitor-feedback-export-button");
 const productionSetupNextAction = document.querySelector("#production-setup-next-action");
 const productionSetupSummary = document.querySelector("#production-setup-summary");
 const productionSetupExportButton = document.querySelector("#production-setup-export-button");
@@ -138,6 +142,8 @@ const heroLead = document.querySelector(".hero-copy h2 + p");
 const quickDockButtons = document.querySelectorAll(".quick-dock button");
 const pushConfig = window.AQUANOTE_PUSH_CONFIG || {};
 const UI_MODES = ["standard", "simple", "glance", "adult", "live"];
+const MONITOR_FEEDBACK_KINDS = ["impression", "bug", "ui", "request"];
+const MONITOR_FEEDBACK_PRIORITIES = ["watch", "high", "low"];
 const PWA_REQUIRED_SCOPES = ["login", "install", "notification", "offline", "ui_modes", "custom_images"];
 const PWA_SCOPE_QA_HINTS = {
   login: ["ログイン状態", "プロフィール同期", "再読み込み後の維持"],
@@ -281,6 +287,7 @@ const defaultState = {
     lastSyncedAt: null,
   },
   pwaTestResults: [],
+  monitorFeedback: [],
   productionSetupCheck: {
     supabaseStatus: "unchecked",
     supabaseReviewer: "",
@@ -639,6 +646,8 @@ importDataButton.addEventListener("click", () => importDataInput.click());
 importDataInput.addEventListener("change", importAppData);
 pwaTestForm.addEventListener("submit", handlePwaTestSubmit);
 pwaTestExportButton.addEventListener("click", exportPwaTestResults);
+monitorFeedbackForm.addEventListener("submit", handleMonitorFeedbackSubmit);
+monitorFeedbackExportButton.addEventListener("click", exportMonitorFeedback);
 productionSetupExportButton.addEventListener("click", exportProductionSetupStatus);
 pwaReleaseDecisionForm.addEventListener("submit", handlePwaReleaseDecisionSubmit);
 productionSupabaseCheckForm.addEventListener("submit", handleProductionSupabaseCheckSubmit);
@@ -659,6 +668,18 @@ pwaTestLog.addEventListener("click", async (event) => {
     await deletePwaDeviceTestFromSupabase(current.cloudId, { silent: true });
   }
   showToast("PWA実機テスト結果を削除しました");
+});
+
+monitorFeedbackList.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-monitor-feedback-delete]");
+  if (!button) {
+    return;
+  }
+
+  state.monitorFeedback = (state.monitorFeedback || []).filter((entry) => entry.id !== button.dataset.monitorFeedbackDelete);
+  saveState();
+  renderMonitorFeedback();
+  showToast("フィードバックを削除しました");
 });
 
 authForm.addEventListener("submit", async (event) => {
@@ -1267,12 +1288,14 @@ function renderAccount() {
   renderPwaTestResults();
   renderPwaReleaseDecision();
   renderMonitorReadiness();
+  renderMonitorFeedback();
   renderProductionSetupSummary();
 
   const mediaCount = state.posts.filter((post) => hasPostMedia(post)).length;
   const commentCount = state.posts.reduce((total, post) => total + getDisplayCommentCount(post), 0);
   const logCount = state.tanks.reduce((total, tank) => total + tank.logs.length, 0);
   const pwaTestCount = Array.isArray(state.pwaTestResults) ? state.pwaTestResults.length : 0;
+  const monitorFeedbackCount = Array.isArray(state.monitorFeedback) ? state.monitorFeedback.length : 0;
   const exportedSize = Math.ceil(JSON.stringify(state).length / 1024);
 
   syncSummary.innerHTML = `
@@ -1284,7 +1307,7 @@ function renderAccount() {
     <article>
       <span>データ量</span>
       <strong>${state.tanks.length}水槽 / ${state.posts.length}投稿</strong>
-      <small>ログ ${logCount}件、コメント ${commentCount}件、メディア ${mediaCount}件、PWA確認 ${pwaTestCount}件</small>
+      <small>ログ ${logCount}件、コメント ${commentCount}件、メディア ${mediaCount}件、PWA確認 ${pwaTestCount}件、感想 ${monitorFeedbackCount}件</small>
     </article>
     <article>
       <span>移行ファイル</span>
@@ -1530,6 +1553,149 @@ function renderMonitorReadiness() {
       `,
     )
     .join("");
+}
+
+function handleMonitorFeedbackSubmit(event) {
+  event.preventDefault();
+  const note = document.querySelector("#monitor-feedback-note-input").value.trim();
+  if (!note) {
+    showToast("内容を入力してください");
+    return;
+  }
+
+  const entry = normalizeMonitorFeedback({
+    id: createId("monitor-feedback"),
+    createdAt: new Date().toISOString(),
+    participant: document.querySelector("#monitor-feedback-name-input").value,
+    device: document.querySelector("#monitor-feedback-device-input").value,
+    kind: document.querySelector("#monitor-feedback-kind-input").value,
+    priority: document.querySelector("#monitor-feedback-priority-input").value,
+    note,
+  });
+
+  state.monitorFeedback = [entry, ...(state.monitorFeedback || [])].slice(0, 80);
+  saveState();
+  monitorFeedbackForm.reset();
+  renderMonitorFeedback();
+  showToast("フィードバックを保存しました");
+}
+
+function renderMonitorFeedback() {
+  if (!monitorFeedbackSummary || !monitorFeedbackList) {
+    return;
+  }
+
+  const entries = Array.isArray(state.monitorFeedback) ? state.monitorFeedback.map(normalizeMonitorFeedback) : [];
+  const bugCount = entries.filter((entry) => entry.kind === "bug").length;
+  const uiCount = entries.filter((entry) => entry.kind === "ui").length;
+  const highCount = entries.filter((entry) => entry.priority === "high").length;
+  const latest = entries[0]?.createdAt ? formatFullDate(entries[0].createdAt) : "まだ記録なし";
+
+  monitorFeedbackSummary.innerHTML = `
+    <article>
+      <span>記録数</span>
+      <strong>${entries.length}件</strong>
+      <small>感想、不具合、要望をまとめて確認</small>
+    </article>
+    <article>
+      <span>不具合/UI</span>
+      <strong>${bugCount + uiCount}件</strong>
+      <small>不具合 ${bugCount}件 / UI ${uiCount}件</small>
+    </article>
+    <article>
+      <span>優先度高</span>
+      <strong>${highCount}件</strong>
+      <small>モニター中に先に直す候補</small>
+    </article>
+    <article>
+      <span>最新</span>
+      <strong>${escapeHtml(latest)}</strong>
+      <small>JSONで書き出して共有できます</small>
+    </article>
+  `;
+
+  if (!entries.length) {
+    monitorFeedbackList.innerHTML = `
+      <article class="monitor-feedback-empty">
+        <strong>まだフィードバックはありません</strong>
+        <span>モニター参加者から聞いたことを、端末と一緒にここへ残します。</span>
+      </article>
+    `;
+    return;
+  }
+
+  monitorFeedbackList.innerHTML = entries
+    .map(
+      (entry) => `
+        <article class="monitor-feedback-item ${escapeHtml(entry.priority)}">
+          <div class="monitor-feedback-main">
+            <div class="monitor-feedback-meta">
+              <span>${escapeHtml(getMonitorFeedbackKindLabel(entry.kind))}</span>
+              <span>${escapeHtml(getMonitorFeedbackPriorityLabel(entry.priority))}</span>
+              <small>${escapeHtml(formatFullDate(entry.createdAt))}</small>
+            </div>
+            <strong>${escapeHtml(entry.participant || "参加者未設定")} / ${escapeHtml(entry.device || "端末未設定")}</strong>
+            <p>${escapeHtml(entry.note)}</p>
+          </div>
+          <button class="text-button" type="button" data-monitor-feedback-delete="${escapeHtml(entry.id)}">削除</button>
+        </article>
+      `,
+    )
+    .join("");
+}
+
+function exportMonitorFeedback() {
+  const entries = Array.isArray(state.monitorFeedback) ? state.monitorFeedback.map(normalizeMonitorFeedback) : [];
+  if (!entries.length) {
+    showToast("書き出すフィードバックがありません");
+    return;
+  }
+
+  const payload = {
+    app: "AquaNote",
+    type: "monitor-feedback",
+    exportedAt: new Date().toISOString(),
+    count: entries.length,
+    items: entries,
+  };
+
+  downloadFile(
+    `aquanote-monitor-feedback-${getDateKey(new Date())}.json`,
+    JSON.stringify(payload, null, 2),
+    "application/json;charset=utf-8",
+  );
+  showToast("モニターフィードバックを書き出しました");
+}
+
+function normalizeMonitorFeedback(entry = {}) {
+  return {
+    id: entry.id || createId("monitor-feedback"),
+    createdAt: entry.createdAt || new Date().toISOString(),
+    participant: String(entry.participant || entry.name || "").trim(),
+    device: String(entry.device || "").trim(),
+    kind: getAllowedValue(entry.kind, MONITOR_FEEDBACK_KINDS, "impression"),
+    priority: getAllowedValue(entry.priority, MONITOR_FEEDBACK_PRIORITIES, "watch"),
+    note: String(entry.note || "").trim(),
+  };
+}
+
+function getMonitorFeedbackKindLabel(kind) {
+  const labels = {
+    impression: "感想",
+    bug: "不具合",
+    ui: "UI/デザイン",
+    request: "要望",
+  };
+  return labels[kind] || labels.impression;
+}
+
+function getMonitorFeedbackPriorityLabel(priority) {
+  const labels = {
+    watch: "確認",
+    high: "高",
+    low: "低",
+  };
+  return labels[priority] || labels.watch;
 }
 
 function getMonitorReadinessState() {
@@ -9693,6 +9859,7 @@ function normalizeState(saved) {
     taskDate: saved.taskDate || getDateKey(new Date()),
     reminders: normalizeReminders(saved.reminders),
     pwaTestResults: Array.isArray(saved.pwaTestResults) ? saved.pwaTestResults.map(normalizePwaTestResult) : [],
+    monitorFeedback: Array.isArray(saved.monitorFeedback) ? saved.monitorFeedback.map(normalizeMonitorFeedback) : [],
     productionSetupCheck: normalizeProductionSetupCheck(saved.productionSetupCheck || {}),
     notificationProductionCheck: normalizeNotificationProductionCheck(saved.notificationProductionCheck || {}),
     pwaReleaseDecision: normalizePwaReleaseDecision(saved.pwaReleaseDecision || {}),
