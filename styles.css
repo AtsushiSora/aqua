@@ -414,8 +414,12 @@ body[data-ui-mode="simple"] .metric-ph-card {
   order: 3;
 }
 
-body[data-ui-mode="simple"] .metric-ai-card {
+body[data-ui-mode="simple"] .metric-filter-card {
   order: 4;
+}
+
+body[data-ui-mode="simple"] .metric-ai-card {
+  order: 5;
 }
 
 body[data-ui-mode="simple"] .metric-card strong {
@@ -565,8 +569,12 @@ body[data-ui-mode="adult"] .metric-water-card {
   order: 3;
 }
 
-body[data-ui-mode="adult"] .metric-ai-card {
+body[data-ui-mode="adult"] .metric-filter-card {
   order: 4;
+}
+
+body[data-ui-mode="adult"] .metric-ai-card {
+  order: 5;
 }
 
 body[data-ui-mode="adult"] .metric-grid,
@@ -625,7 +633,8 @@ body[data-ui-mode="adult"] .metric-card {
 }
 
 body[data-ui-mode="adult"] .metric-ph-card,
-body[data-ui-mode="adult"] .metric-temp-card {
+body[data-ui-mode="adult"] .metric-temp-card,
+body[data-ui-mode="adult"] .metric-filter-card {
   border-color: rgba(29, 85, 88, 0.22);
 }
 
@@ -797,8 +806,12 @@ body[data-ui-mode="live"] .metric-ph-card {
   order: 3;
 }
 
-body[data-ui-mode="live"] .metric-ai-card {
+body[data-ui-mode="live"] .metric-filter-card {
   order: 4;
+}
+
+body[data-ui-mode="live"] .metric-ai-card {
+  order: 5;
 }
 
 body[data-ui-mode="live"] .metric-grid {
@@ -1684,7 +1697,7 @@ body[data-custom-buttons="true"] .icon-button {
 }
 
 .metric-grid {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   margin-top: 14px;
   position: relative;
   z-index: 2;

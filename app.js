@@ -9785,6 +9785,7 @@ function renderDashboard() {
   const latestWaterChange = tank.logs.find((log) => log.type === "水換え");
   const aiStatus = tank.latestAi || getLogBasedStatus(latestLog, latestWaterChange);
   const waterChangeDays = latestWaterChange ? diffDays(latestWaterChange.createdAt) : null;
+  const filterStatus = getFilterMaintenanceStatus(tank.filter);
 
   document.querySelector("#metric-temp").textContent = latestLog ? `${Number(latestLog.temp).toFixed(1)}°C` : "--";
   document.querySelector("#metric-temp-note").textContent = latestLog ? `${tank.name} / ${formatRelativeDate(latestLog.createdAt)}` : `${tank.name} は記録待ち`;
@@ -9792,6 +9793,8 @@ function renderDashboard() {
   document.querySelector("#metric-ph-note").textContent = latestLog ? `${latestLog.type}ログから表示` : "記録待ち";
   document.querySelector("#metric-water-change").textContent = waterChangeDays === null ? "--" : `${waterChangeDays}日前`;
   document.querySelector("#metric-water-change-note").textContent = getWaterChangeNote(waterChangeDays);
+  document.querySelector("#metric-filter-status").textContent = filterStatus.label;
+  document.querySelector("#metric-filter-note").textContent = filterStatus.nextLabel;
   document.querySelector("#metric-ai-status").textContent = aiStatus.status;
   document.querySelector("#metric-ai-note").textContent = `${tank.name}: ${aiStatus.summary}`;
   document.querySelector("#app-active-tank").textContent = tank.name;
@@ -9804,6 +9807,10 @@ function renderDashboard() {
   const aiCard = document.querySelector("#metric-ai-card");
   aiCard.classList.toggle("alert", aiStatus.levelClass !== "");
   aiCard.classList.toggle("danger", aiStatus.levelClass === "danger");
+
+  const filterCard = document.querySelector("#metric-filter-card");
+  filterCard.classList.toggle("alert", filterStatus.level === "watch" || filterStatus.level === "pending");
+  filterCard.classList.toggle("danger", filterStatus.level === "danger");
 
   const healthChip = document.querySelector("#app-health-chip");
   healthChip.classList.toggle("is-warning", aiStatus.levelClass === "warning");
