@@ -702,7 +702,11 @@ body[data-ui-mode="glance"] .sync-status-button.is-synced {
 }
 
 body[data-ui-mode="glance"] .hero-band {
+  justify-content: center;
+  align-items: center;
+  padding: clamp(18px, 3vw, 32px);
   min-height: clamp(360px, 44vw, 540px);
+  border-radius: 50%;
   border-color: rgba(137, 247, 255, 0.18);
   background:
     radial-gradient(circle at 76% 26%, rgba(37, 217, 228, 0.22), transparent 28%),
@@ -795,6 +799,48 @@ body[data-ui-mode="glance"] .hero-copy p:not(.eyebrow) {
   max-width: 44ch;
   color: rgba(247, 251, 251, 0.78);
   font-weight: 800;
+}
+
+body[data-ui-mode="glance"] .hero-copy {
+  max-width: min(360px, 68%);
+  display: grid;
+  justify-items: center;
+  text-align: center;
+}
+
+body[data-ui-mode="glance"] .hero-actions {
+  justify-content: center;
+  gap: 10px;
+}
+
+body[data-ui-mode="glance"] .hero-actions .primary-button,
+body[data-ui-mode="glance"] .hero-actions .ghost-button,
+body[data-ui-mode="glance"] .hero-actions .photo-button {
+  width: 92px;
+  aspect-ratio: 1;
+  min-height: 0;
+  display: grid;
+  place-items: center;
+  padding: 10px;
+  border-radius: 50%;
+  line-height: 1.25;
+  text-align: center;
+}
+
+body[data-ui-mode="glance"] .hero-photo-card {
+  right: clamp(14px, 3vw, 28px);
+  bottom: clamp(14px, 3vw, 28px);
+  width: 132px;
+  aspect-ratio: 1;
+  align-content: center;
+  justify-items: center;
+  padding: 14px;
+  border-radius: 50%;
+  text-align: center;
+}
+
+body[data-ui-mode="glance"] .hero-photo-card small {
+  display: none;
 }
 
 body[data-ui-mode="glance"] .quick-dock span {
@@ -1067,10 +1113,28 @@ body[data-ui-mode="glance"] .delivery-status.canceled {
 
 body[data-ui-mode="glance"] .ui-mode-switch {
   border-color: rgba(137, 247, 255, 0.2);
+  border-radius: 999px;
   background: rgba(17, 27, 34, 0.96);
 }
 
 body[data-ui-mode="glance"] .ui-mode-switch select {
+  color: #f7fbfb;
+}
+
+body[data-ui-mode="glance"] .app-status-pill,
+body[data-ui-mode="glance"] .ui-mode-note {
+  border-radius: 999px;
+}
+
+body[data-ui-mode="glance"] .app-status-pill {
+  min-width: min(260px, 100%);
+  justify-content: center;
+  background: rgba(17, 27, 34, 0.92);
+  color: #f7fbfb;
+}
+
+body[data-ui-mode="glance"] .app-status-pill strong {
+  background: rgba(247, 251, 251, 0.14);
   color: #f7fbfb;
 }
 
@@ -6398,11 +6462,26 @@ textarea {
 
   body[data-ui-mode="glance"] .hero-band {
     min-height: 420px;
+    border-radius: 34px;
   }
 
   body[data-ui-mode="glance"] .quick-dock button {
     width: min(100%, 112px);
     padding: 10px 8px;
+  }
+
+  body[data-ui-mode="glance"] .hero-copy {
+    max-width: 100%;
+  }
+
+  body[data-ui-mode="glance"] .hero-actions .primary-button,
+  body[data-ui-mode="glance"] .hero-actions .ghost-button,
+  body[data-ui-mode="glance"] .hero-actions .photo-button {
+    width: 82px;
+  }
+
+  body[data-ui-mode="glance"] .hero-photo-card {
+    width: 112px;
   }
 
   body[data-ui-mode="glance"] .metric-card {
