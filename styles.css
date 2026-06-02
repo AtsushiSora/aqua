@@ -1518,16 +1518,24 @@ body[data-custom-buttons="true"] .icon-button {
   pointer-events: none;
 }
 
+.hero-band::before,
+.hero-copy,
+.hero-photo-card {
+  display: none;
+}
+
 .hero-media {
   position: absolute;
   inset: 0;
-  z-index: -2;
+  z-index: 0;
+  cursor: pointer;
 }
 
 .hero-media::after {
   content: "";
   position: absolute;
   inset: 0;
+  display: none;
   background:
     linear-gradient(90deg, rgba(14, 31, 33, 0.36) 0%, rgba(14, 31, 33, 0.12) 42%, rgba(14, 31, 33, 0.06) 100%),
     linear-gradient(0deg, rgba(14, 31, 33, 0.5), transparent 46%),
@@ -1543,7 +1551,7 @@ body[data-custom-buttons="true"] .icon-button {
 }
 
 .hero-media.is-placeholder img {
-  opacity: 0;
+  opacity: 1;
 }
 
 .hero-media.is-placeholder::before {
@@ -1560,6 +1568,10 @@ body[data-custom-buttons="true"] .icon-button {
   font-size: 0.78rem;
   font-weight: 900;
   backdrop-filter: blur(10px);
+}
+
+.hero-media.is-placeholder::before {
+  display: none;
 }
 
 .hero-copy {
@@ -1613,6 +1625,11 @@ body[data-custom-buttons="true"] .icon-button {
   object-fit: cover;
 }
 
+.hero-media:focus-visible {
+  outline: 3px solid rgba(104, 229, 224, 0.72);
+  outline-offset: -6px;
+}
+
 .photo-button {
   min-height: 42px;
   padding: 0 16px;
@@ -1655,6 +1672,10 @@ body[data-custom-buttons="true"] .icon-button {
   font-family: var(--font-jp);
   color: #ffffff;
   overflow-wrap: anywhere;
+}
+
+.hero-band .hero-photo-card {
+  display: none;
 }
 
 .quick-dock {

@@ -997,6 +997,17 @@ heroPhotoButton.addEventListener("click", () => {
   heroPhotoInput.click();
 });
 
+heroMedia.addEventListener("click", () => {
+  heroPhotoInput.click();
+});
+
+heroMedia.addEventListener("keydown", (event) => {
+  if (event.key === "Enter" || event.key === " ") {
+    event.preventDefault();
+    heroPhotoInput.click();
+  }
+});
+
 heroPhotoInput.addEventListener("change", async () => {
   const file = heroPhotoInput.files[0];
   if (!file) {
