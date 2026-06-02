@@ -177,6 +177,7 @@ const taskLabels = {
   feedMorning: "朝の餌やり",
   checkTemp: "水温チェック",
   checkAlgae: "ガラス面のコケ確認",
+  filterCare: "フィルター管理",
 };
 
 const homeModeCopy = {
@@ -257,6 +258,15 @@ const defaultReminders = {
     schedule: "weekly",
     weekdays: [0],
     intervalDays: 7,
+    startDate: getDateKey(new Date()),
+    lastNotifiedOn: null,
+  },
+  filterCare: {
+    time: "19:30",
+    enabled: true,
+    schedule: "interval",
+    weekdays: [0, 1, 2, 3, 4, 5, 6],
+    intervalDays: 30,
     startDate: getDateKey(new Date()),
     lastNotifiedOn: null,
   },
@@ -347,6 +357,7 @@ const defaultState = {
     feedMorning: false,
     checkTemp: false,
     checkAlgae: false,
+    filterCare: false,
   },
   taskDate: getDateKey(new Date()),
   reminders: cloneState(defaultReminders),
@@ -6134,6 +6145,11 @@ function applyFilterLogToTank(tank, log) {
     flowStatus: "normal",
     note: log.note && log.note !== "水槽の状態を記録しました。" ? log.note : filter.note || "フィルター掃除を記録済み",
   };
+
+  if (getDateKey(new Date(log.createdAt)) === getDateKey(new Date())) {
+    state.tasks.filterCare = true;
+    state.taskDate = getDateKey(new Date());
+  }
 }
 
 function getGuideSearchItems() {
