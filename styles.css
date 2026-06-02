@@ -1146,6 +1146,18 @@ time {
   flex-wrap: wrap;
 }
 
+.mode-post-action {
+  display: none;
+}
+
+body[data-ui-mode="live"] .mode-post-action {
+  display: inline-flex;
+}
+
+body[data-ui-mode="live"] .mode-post-action + .primary-button {
+  display: none;
+}
+
 .topbar-actions {
   justify-content: flex-end;
   flex-wrap: wrap;
