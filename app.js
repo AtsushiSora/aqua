@@ -218,10 +218,10 @@ const homeModeCopy = {
     heroTitle: "今日の水槽を、すぐ投稿。",
     heroLead: "トップ写真を大きく見せながら、投稿、共有、AI確認へすぐ進めます。",
     dock: [
-      ["投稿", "Share"],
-      ["写真", "Pick"],
-      ["AI確認", "Scan"],
       ["記録", "Log"],
+      ["投稿", "Share"],
+      ["AI確認", "Scan"],
+      ["ガイド", "Tips"],
     ],
   },
 };

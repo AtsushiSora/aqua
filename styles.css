@@ -1301,7 +1301,20 @@ body[data-ui-mode="live"] .quick-dock button {
 }
 
 body[data-ui-mode="live"] .quick-dock button:nth-child(2) {
+  order: -1;
+  border-color: rgba(240, 107, 68, 0.32);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.74), transparent),
+    linear-gradient(135deg, rgba(255, 128, 91, 0.26), rgba(16, 168, 186, 0.16)),
+    rgba(255, 255, 255, 0.9);
   animation-delay: -1.3s;
+}
+
+body[data-ui-mode="live"] .quick-dock button:nth-child(2) span {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.84), transparent),
+    rgba(240, 107, 68, 0.22);
+  color: #a5422a;
 }
 
 body[data-ui-mode="live"] .quick-dock button:nth-child(3) {
