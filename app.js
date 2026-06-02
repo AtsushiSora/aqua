@@ -111,6 +111,8 @@ const pwaReleaseDecisionSummary = document.querySelector("#pwa-release-decision-
 const monitorReadinessChip = document.querySelector("#monitor-readiness-chip");
 const monitorReadinessNext = document.querySelector("#monitor-readiness-next");
 const monitorReadinessSummary = document.querySelector("#monitor-readiness-summary");
+const monitorGuideCopyButton = document.querySelector("#monitor-guide-copy-button");
+const monitorGuideCopyPreview = document.querySelector("#monitor-guide-copy-preview");
 const monitorFeedbackForm = document.querySelector("#monitor-feedback-form");
 const monitorFeedbackSummary = document.querySelector("#monitor-feedback-summary");
 const monitorFeedbackList = document.querySelector("#monitor-feedback-list");
@@ -644,6 +646,7 @@ pwaTestForm.addEventListener("submit", handlePwaTestSubmit);
 pwaTestExportButton.addEventListener("click", exportPwaTestResults);
 monitorFeedbackForm.addEventListener("submit", handleMonitorFeedbackSubmit);
 monitorFeedbackExportButton.addEventListener("click", exportMonitorFeedback);
+monitorGuideCopyButton.addEventListener("click", copyMonitorGuideText);
 monitorFeedbackStatusFilter.addEventListener("change", () => {
   activeMonitorFeedbackStatusFilter = monitorFeedbackStatusFilter.value;
   renderMonitorFeedback();
@@ -1584,6 +1587,67 @@ function renderMonitorReadiness() {
       `,
     )
     .join("");
+  renderMonitorGuideCopyPreview(readiness);
+}
+
+function renderMonitorGuideCopyPreview(readiness = getMonitorReadinessState()) {
+  if (!monitorGuideCopyPreview) {
+    return;
+  }
+
+  const guideText = getMonitorGuideText(readiness);
+  monitorGuideCopyPreview.innerHTML = `
+    <strong>送付文の内容</strong>
+    <p>${escapeHtml(guideText.split("\n").slice(0, 3).join(" "))}</p>
+  `;
+}
+
+async function copyMonitorGuideText() {
+  const text = getMonitorGuideText();
+  if (navigator.clipboard?.writeText) {
+    try {
+      await navigator.clipboard.writeText(text);
+      showToast("モニター案内文をコピーしました");
+      return;
+    } catch (error) {
+      console.warn("Clipboard copy failed", error);
+    }
+  }
+
+  downloadFile(
+    `aquanote-monitor-guide-${getDateKey(new Date())}.txt`,
+    text,
+    "text/plain;charset=utf-8",
+  );
+  showToast("コピーできないため案内文を書き出しました");
+}
+
+function getMonitorGuideText(readiness = getMonitorReadinessState()) {
+  const decision = normalizePwaReleaseDecision(state.pwaReleaseDecision || {});
+  const urlLine = decision.productionUrl ? `モニターURL: ${decision.productionUrl}` : "モニターURL: これから共有します";
+  const nextLine = readiness.ready
+    ? "準備状況: モニター開始OKです"
+    : `準備状況: ${readiness.readyCount}/${readiness.totalCount}項目確認済み、優先確認は「${readiness.nextAction}」です`;
+
+  return [
+    "AquaNote モニター確認のお願い",
+    urlLine,
+    nextLine,
+    "",
+    "試してほしいこと:",
+    "1. 新規登録またはログインをして、プロフィールを保存する",
+    "2. 自分の水槽を1つ登録し、写真をTOPに設定する",
+    "3. 水温、pH、水換え、フィルター掃除を1回ずつ記録する",
+    "4. 投稿またはアルバムに写真を1枚追加する",
+    "5. ベーシック、かんたん、管理重視、投稿重視モードを切り替えて感想を残す",
+    "",
+    "見てほしいポイント:",
+    "- 初めてでも次に押す場所が分かるか",
+    "- 文字の見切れ、押しにくいボタン、戻りにくい画面がないか",
+    "- 水槽写真、投稿、記録、表示モード変更が自然に使えるか",
+    "",
+    "気づいたことは、端末名と画面名も一緒に教えてください。",
+  ].join("\n");
 }
 
 function handleMonitorFeedbackSubmit(event) {
