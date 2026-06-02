@@ -108,6 +108,9 @@ const pwaTestNoteTemplateButton = document.querySelector("#pwa-test-note-templat
 const pwaReleaseDecisionForm = document.querySelector("#pwa-release-decision-form");
 const pwaReleaseDecisionChip = document.querySelector("#pwa-release-decision-chip");
 const pwaReleaseDecisionSummary = document.querySelector("#pwa-release-decision-summary");
+const monitorReadinessChip = document.querySelector("#monitor-readiness-chip");
+const monitorReadinessNext = document.querySelector("#monitor-readiness-next");
+const monitorReadinessSummary = document.querySelector("#monitor-readiness-summary");
 const productionSetupNextAction = document.querySelector("#production-setup-next-action");
 const productionSetupSummary = document.querySelector("#production-setup-summary");
 const productionSetupExportButton = document.querySelector("#production-setup-export-button");
@@ -1263,6 +1266,7 @@ function renderAccount() {
   renderNotificationVerificationChecklist();
   renderPwaTestResults();
   renderPwaReleaseDecision();
+  renderMonitorReadiness();
   renderProductionSetupSummary();
 
   const mediaCount = state.posts.filter((post) => hasPostMedia(post)).length;
@@ -1500,6 +1504,97 @@ function getProductionSetupStatusLabel(status) {
     missing: "未確認",
   };
   return labels[status] || labels.missing;
+}
+
+function renderMonitorReadiness() {
+  if (!monitorReadinessSummary || !monitorReadinessNext || !monitorReadinessChip) {
+    return;
+  }
+
+  const readiness = getMonitorReadinessState();
+  monitorReadinessChip.textContent = readiness.ready ? "モニター開始OK" : `${readiness.readyCount}/${readiness.totalCount}`;
+  monitorReadinessChip.className = `monitor-readiness-chip ${readiness.ready ? "ready" : "pending"}`;
+  monitorReadinessNext.className = `monitor-readiness-next ${readiness.ready ? "ready" : "pending"}`;
+  monitorReadinessNext.innerHTML = `
+    <span>${escapeHtml(readiness.ready ? "次の作業" : "優先タスク")}</span>
+    <strong>${escapeHtml(readiness.nextAction)}</strong>
+  `;
+  monitorReadinessSummary.innerHTML = readiness.items
+    .map(
+      (item) => `
+        <article class="${escapeHtml(item.status)}">
+          <span>${escapeHtml(item.label)}</span>
+          <strong>${escapeHtml(item.value)}</strong>
+          <small>${escapeHtml(item.note)}</small>
+        </article>
+      `,
+    )
+    .join("");
+}
+
+function getMonitorReadinessState() {
+  const items = getMonitorReadinessItems();
+  const readyCount = items.filter((item) => item.status === "ready").length;
+  const nextItem = items.find((item) => item.status === "missing") || items.find((item) => item.status === "manual");
+  return {
+    ready: readyCount === items.length,
+    readyCount,
+    totalCount: items.length,
+    nextAction: nextItem ? `${nextItem.label}: ${nextItem.note}` : "モニター参加者へURLと案内文を渡して、実機フィードバックを集めます。",
+    items,
+  };
+}
+
+function getMonitorReadinessItems() {
+  const setup = getProductionSetupSummaryState();
+  const pwaCoverage = getPwaReleaseCoverage(state.pwaTestResults || []);
+  const decision = normalizePwaReleaseDecision(state.pwaReleaseDecision || {});
+  const setupReadyCount = setup.items.filter((item) => item.status === "ready").length;
+  const mediaCount = state.posts.filter((post) => hasPostMedia(post)).length;
+  const filterReady = state.tanks.some((tank) => {
+    const filter = normalizeTankFilter(tank.filter);
+    return Boolean(filter.type || filter.lastCleanedAt || filter.note);
+  });
+  const hasCoreUserFlow = state.tanks.length > 0 && typeof getTankResidentValue(getActiveTank()) === "string";
+
+  return [
+    {
+      label: "初回導線",
+      status: hasCoreUserFlow ? "ready" : "missing",
+      value: hasCoreUserFlow ? "OK" : "未確認",
+      note: hasCoreUserFlow ? "水槽登録、記録、投稿へ進める構成です" : "水槽登録から記録までの流れを確認します",
+    },
+    {
+      label: "フィルター管理",
+      status: filterReady ? "ready" : "manual",
+      value: filterReady ? "入力あり" : "要確認",
+      note: filterReady ? "フィルター種類、掃除日、流量メモを表示できます" : "モニター前に1水槽でフィルター管理を入力します",
+    },
+    {
+      label: "写真/メディア",
+      status: mediaCount ? "ready" : "manual",
+      value: mediaCount ? `${mediaCount}件` : "未投稿",
+      note: mediaCount ? "写真または動画の表示確認ができます" : "モニター前に写真投稿またはTOP画像を1件確認します",
+    },
+    {
+      label: "本番前設定",
+      status: setup.ready ? "ready" : setupReadyCount >= 3 ? "manual" : "missing",
+      value: `${setupReadyCount}/${setup.totalCount}`,
+      note: setup.ready ? "Supabase、Storage、AI、通知、PWA QAが揃っています" : setup.nextAction,
+    },
+    {
+      label: "実機UI",
+      status: pwaCoverage.ready ? "ready" : pwaCoverage.passedCount ? "manual" : "missing",
+      value: `${pwaCoverage.passedCount}/${pwaCoverage.scopes.length}`,
+      note: pwaCoverage.ready ? "必須実機QAはOKです" : "スマホでログイン、5モード、画像カスタムを保存します",
+    },
+    {
+      label: "判定メモ",
+      status: decision.productionUrl && decision.reviewer && decision.note ? "ready" : "manual",
+      value: decision.productionUrl ? "URLあり" : "URL未記録",
+      note: decision.productionUrl ? "モニターURL、確認者、残タスクを判定メモに残します" : "モニターで使うURLを最終リリース判定に保存します",
+    },
+  ];
 }
 
 function renderCustomAppearance() {
