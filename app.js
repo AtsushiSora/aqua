@@ -110,6 +110,7 @@ const pwaReleaseDecisionChip = document.querySelector("#pwa-release-decision-chi
 const pwaReleaseDecisionSummary = document.querySelector("#pwa-release-decision-summary");
 const productionSetupNextAction = document.querySelector("#production-setup-next-action");
 const productionSetupSummary = document.querySelector("#production-setup-summary");
+const productionSetupExportButton = document.querySelector("#production-setup-export-button");
 const productionSupabaseCheckForm = document.querySelector("#production-supabase-check-form");
 const productionStorageCheckForm = document.querySelector("#production-storage-check-form");
 const productionAiCheckForm = document.querySelector("#production-ai-check-form");
@@ -621,6 +622,7 @@ importDataButton.addEventListener("click", () => importDataInput.click());
 importDataInput.addEventListener("change", importAppData);
 pwaTestForm.addEventListener("submit", handlePwaTestSubmit);
 pwaTestExportButton.addEventListener("click", exportPwaTestResults);
+productionSetupExportButton.addEventListener("click", exportProductionSetupStatus);
 pwaReleaseDecisionForm.addEventListener("submit", handlePwaReleaseDecisionSubmit);
 productionSupabaseCheckForm.addEventListener("submit", handleProductionSupabaseCheckSubmit);
 productionStorageCheckForm.addEventListener("submit", handleProductionStorageCheckSubmit);
@@ -4921,6 +4923,30 @@ function exportAppData() {
     "application/json;charset=utf-8",
   );
   showToast("データを書き出しました");
+}
+
+function exportProductionSetupStatus() {
+  const setupSummary = getProductionSetupSummaryState();
+  const payload = {
+    app: "AquaNote",
+    type: "production-setup-status",
+    exportedAt: new Date().toISOString(),
+    ready: setupSummary.ready,
+    nextAction: setupSummary.nextAction,
+    readyCount: setupSummary.readyCount,
+    manualCount: setupSummary.manualCount,
+    missingCount: setupSummary.missingCount,
+    totalCount: setupSummary.totalCount,
+    setupCheck: normalizeProductionSetupCheck(state.productionSetupCheck || {}),
+    items: setupSummary.items,
+  };
+
+  downloadFile(
+    `aquanote-production-setup-${getDateKey(new Date())}.json`,
+    JSON.stringify(payload, null, 2),
+    "application/json;charset=utf-8",
+  );
+  showToast("本番前セットアップを書き出しました");
 }
 
 function exportPwaTestResults() {
