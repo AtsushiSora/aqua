@@ -1,5 +1,5 @@
 -- Allow the current AquaNote display modes on existing Supabase projects.
--- Run this once in the Supabase SQL Editor before syncing profiles that use live mode.
+-- The posting-focused display mode is stored as `live` for backwards compatibility.
 
 alter table public.profiles
 drop constraint if exists profiles_ui_mode_check;

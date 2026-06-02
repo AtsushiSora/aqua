@@ -5163,14 +5163,14 @@ async function syncProfileToSupabase(options = {}) {
 }
 
 function getProfileSyncErrorMessage(error) {
-  if (isLiveUiModeConstraintError(error)) {
+  if (isPostingUiModeConstraintError(error)) {
     return "Supabaseで投稿重視モード用SQLを実行してください。READMEの既存Supabase反映手順を確認してください。";
   }
 
   return error?.message || "プロフィール同期に失敗しました";
 }
 
-function isLiveUiModeConstraintError(error) {
+function isPostingUiModeConstraintError(error) {
   const text = `${error?.message || ""} ${error?.details || ""} ${error?.hint || ""} ${error?.code || ""}`;
   return /ui_mode|profiles_ui_mode_check|23514/i.test(text) && state.account?.uiMode === "live";
 }

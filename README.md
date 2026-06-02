@@ -265,6 +265,7 @@ AI画面の「AI比較ログ」には、Gateway結果とローカル分析の差
 
 既存のSupabase環境へ反映する場合は、`supabase/migrations/20260602_remove_glance_ui_mode.sql` をSQL Editorで実行し、古い一目モード値をベーシックへ戻してからプロフィール同期を確認してください。
 UIモード保存時に既存制約が残っている場合は、アプリ上でもこのSQL実行が必要なことを案内します。
+投稿重視モードは既存データ互換のため、DBには `live` として保存します。
 フィルター管理をSupabase同期する場合は、`supabase/migrations/20260602_add_filter_profile.sql` をSQL Editorで実行し、`tanks.filter_profile` に掃除日、交換目安、流量メモを保存できる状態にしてください。
 
 ## 公開後の拡張メモ
