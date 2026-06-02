@@ -1473,7 +1473,7 @@ body[data-custom-buttons="true"] .icon-button {
   position: relative;
   min-height: clamp(360px, 46vw, 560px);
   display: flex;
-  align-items: flex-start;
+  align-items: flex-end;
   padding: clamp(22px, 3.5vw, 40px);
   background: var(--nav);
   border: 1px solid rgba(255, 255, 255, 0.34);
@@ -1512,8 +1512,8 @@ body[data-custom-buttons="true"] .icon-button {
   position: absolute;
   inset: 0;
   background:
-    linear-gradient(90deg, rgba(14, 31, 33, 0.78) 0%, rgba(14, 31, 33, 0.48) 48%, rgba(14, 31, 33, 0.14) 100%),
-    linear-gradient(0deg, rgba(14, 31, 33, 0.26), transparent 56%),
+    linear-gradient(90deg, rgba(14, 31, 33, 0.36) 0%, rgba(14, 31, 33, 0.12) 42%, rgba(14, 31, 33, 0.06) 100%),
+    linear-gradient(0deg, rgba(14, 31, 33, 0.5), transparent 46%),
     repeating-linear-gradient(98deg, transparent 0 72px, rgba(255, 255, 255, 0.08) 74px, transparent 92px);
   z-index: 1;
 }
@@ -1546,11 +1546,16 @@ body[data-custom-buttons="true"] .icon-button {
 }
 
 .hero-copy {
-  max-width: 620px;
+  max-width: min(520px, 100%);
   color: white;
   text-shadow: none;
   position: relative;
   z-index: 2;
+  padding: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  border-radius: 8px;
+  background: rgba(7, 31, 35, 0.58);
+  backdrop-filter: blur(14px);
 }
 
 .hero-copy h2,
@@ -1564,9 +1569,9 @@ body[data-custom-buttons="true"] .icon-button {
 }
 
 .hero-copy p:not(.eyebrow) {
-  max-width: 540px;
+  max-width: 440px;
   color: rgba(255, 255, 255, 0.88);
-  font-size: 0.98rem;
+  font-size: 0.9rem;
   font-weight: 500;
 }
 
@@ -1608,9 +1613,9 @@ body[data-custom-buttons="true"] .icon-button {
 .hero-photo-card {
   position: absolute;
   right: clamp(18px, 4vw, 42px);
-  bottom: clamp(18px, 4vw, 38px);
+  top: clamp(18px, 4vw, 38px);
   z-index: 3;
-  width: min(300px, 34vw);
+  width: min(260px, 32vw);
   display: grid;
   gap: 4px;
   padding: 14px;
@@ -1954,6 +1959,16 @@ body[data-custom-buttons="true"] .icon-button {
 
 .reminder-panel {
   min-height: 100%;
+}
+
+.tank-reminder-panel {
+  margin-top: 4px;
+  padding: 14px;
+  border: 1px solid var(--glass-border);
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.5), transparent),
+    rgba(248, 250, 248, 0.72);
 }
 
 .reminder-list {
@@ -6345,6 +6360,7 @@ textarea {
 
   .hero-photo-card {
     right: 18px;
+    top: auto;
     bottom: 18px;
     left: 18px;
     width: auto;

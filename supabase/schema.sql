@@ -163,6 +163,7 @@ create table if not exists public.post_likes (
 create table if not exists public.reminders (
   id uuid primary key default gen_random_uuid(),
   owner_id uuid not null references public.profiles(id) on delete cascade,
+  tank_id uuid references public.tanks(id) on delete cascade,
   task_key text not null,
   label text not null,
   enabled boolean not null default true,
@@ -174,8 +175,30 @@ create table if not exists public.reminders (
   last_notified_on date,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
-  unique (owner_id, task_key)
+  unique (owner_id, tank_id, task_key)
 );
+
+alter table public.reminders
+add column if not exists tank_id uuid references public.tanks(id) on delete cascade;
+
+update public.reminders reminder
+set tank_id = (
+  select id
+  from public.tanks
+  where owner_id = reminder.owner_id
+  order by created_at asc
+  limit 1
+)
+where reminder.tank_id is null;
+
+alter table public.reminders
+drop constraint if exists reminders_owner_id_task_key_key;
+
+alter table public.reminders
+drop constraint if exists reminders_owner_id_tank_id_task_key_key;
+
+alter table public.reminders
+add constraint reminders_owner_id_tank_id_task_key_key unique (owner_id, tank_id, task_key);
 
 create table if not exists public.notification_deliveries (
   id uuid primary key default gen_random_uuid(),
@@ -317,6 +340,7 @@ create index if not exists posts_owner_idx on public.posts(owner_id);
 create index if not exists media_post_idx on public.media(post_id);
 create index if not exists comments_post_created_idx on public.comments(post_id, created_at desc);
 create index if not exists reminders_owner_idx on public.reminders(owner_id);
+create index if not exists reminders_tank_idx on public.reminders(tank_id);
 create index if not exists notification_deliveries_owner_scheduled_idx on public.notification_deliveries(owner_id, scheduled_for)
 where status = 'pending';
 create index if not exists push_subscriptions_owner_enabled_idx on public.push_subscriptions(owner_id)

@@ -95,6 +95,12 @@
             </div>
             <div class="home-controls">
               <label class="ui-mode-switch">
+                <span>水槽</span>
+                <select id="home-tank-select" aria-label="ホームで操作する水槽">
+                  <option value="tank-main">はじめての水槽</option>
+                </select>
+              </label>
+              <label class="ui-mode-switch">
                 <span>デザイン</span>
                 <select id="home-ui-mode-input" aria-label="ホームの表示モード">
                   <option value="standard">ベーシックモード</option>
@@ -222,17 +228,6 @@
                       <small data-task-status="filterCare">30日ごと</small>
                     </label>
                   </div>
-                </section>
-
-                <section class="panel reminder-panel">
-                  <div class="section-head">
-                    <div>
-                      <p class="eyebrow">Reminder</p>
-                      <h2>今日のリマインダー</h2>
-                    </div>
-                    <button class="text-button" id="enable-notifications-button" type="button">通知を許可</button>
-                  </div>
-                  <div class="reminder-list" id="reminder-list"></div>
                 </section>
 
                 <section class="panel home-community-panel">
@@ -548,6 +543,16 @@
                   <span>タグ</span>
                   <input id="edit-tank-tags" type="text" placeholder="例: 水草水槽, 熱帯魚, CO2あり">
                 </label>
+                <section class="tank-reminder-panel full-field">
+                  <div class="section-head">
+                    <div>
+                      <p class="eyebrow">Reminder</p>
+                      <h3>この水槽のリマインダー</h3>
+                    </div>
+                    <button class="text-button" id="enable-notifications-button" type="button">通知を許可</button>
+                  </div>
+                  <div class="reminder-list" id="reminder-list"></div>
+                </section>
                 <div class="profile-actions full-field">
                   <button class="primary-button" type="submit">プロフィール保存</button>
                   <button class="danger-button" type="button" id="delete-tank-button">削除</button>

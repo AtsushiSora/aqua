@@ -62,6 +62,7 @@ const heroMedia = document.querySelector(".hero-media");
 const heroPhotoStatus = document.querySelector("#hero-photo-status");
 const heroTankName = document.querySelector("#hero-tank-name");
 const heroPhotoNote = document.querySelector("#hero-photo-note");
+const homeTankSelect = document.querySelector("#home-tank-select");
 const notificationButton = document.querySelector("#notification-button");
 const installAppButton = document.querySelector("#install-app-button");
 const enableNotificationsButton = document.querySelector("#enable-notifications-button");
@@ -347,6 +348,9 @@ const defaultState = {
       },
       tags: [],
       logs: [],
+      tasks: getEmptyTasks(),
+      taskDate: getDateKey(new Date()),
+      reminders: cloneState(defaultReminders),
       latestAi: null,
       featuredPostId: null,
       albumOrder: [],
@@ -473,17 +477,39 @@ document.querySelectorAll("[data-open-post]").forEach((button) => {
   });
 });
 
+homeTankSelect?.addEventListener("change", () => {
+  if (!state.tanks.some((tank) => tank.id === homeTankSelect.value)) {
+    return;
+  }
+
+  state.activeTankId = homeTankSelect.value;
+  saveState();
+  renderHeroPhoto();
+  renderTankList();
+  renderTankProfile();
+  renderTimeline();
+  renderPostControls();
+  renderTasks();
+  renderReminders();
+  renderDashboard();
+});
+
 document.querySelectorAll("[data-close-modal]").forEach((button) => {
   button.addEventListener("click", closePostModal);
 });
 
 document.querySelectorAll("[data-task]").forEach((checkbox) => {
   checkbox.addEventListener("change", () => {
-    state.tasks[checkbox.dataset.task] = checkbox.checked;
-    state.taskDate = getDateKey(new Date());
+    const tank = getActiveTank();
+    ensureTankCareState(tank);
+    tank.tasks[checkbox.dataset.task] = checkbox.checked;
+    tank.taskDate = getDateKey(new Date());
+    state.tasks = { ...tank.tasks };
+    state.taskDate = tank.taskDate;
     saveState();
     renderTasks();
     renderReminders();
+    renderDashboard();
   });
 });
 
@@ -1026,6 +1052,9 @@ tankForm.addEventListener("submit", (event) => {
     filter,
     tags: [kind],
     logs: [],
+    tasks: getEmptyTasks(),
+    taskDate: getDateKey(new Date()),
+    reminders: cloneState(defaultReminders),
     latestAi: null,
     featuredPostId: null,
     albumOrder: [],
@@ -1033,7 +1062,7 @@ tankForm.addEventListener("submit", (event) => {
 
   state.tanks.unshift(tank);
   state.activeTankId = tank.id;
-  updateFilterCareReminderFromCleanedDate(filter.lastCleanedAt);
+  updateFilterCareReminderFromCleanedDate(filter.lastCleanedAt, tank);
   saveState();
   tankForm.reset();
   resetSpeciesList("tank-species-list");
@@ -1061,7 +1090,7 @@ tankEditForm.addEventListener("submit", (event) => {
   tank.residents = getSpeciesListValue("edit-tank-species-list");
   tank.equipment = getSpeciesListValue("edit-tank-equipment-list");
   tank.filter = getFilterFormValue("edit-tank");
-  updateFilterCareReminderFromCleanedDate(tank.filter.lastCleanedAt);
+  updateFilterCareReminderFromCleanedDate(tank.filter.lastCleanedAt, tank);
   const residentParts = getTankResidentParts({ residents: tank.residents });
   tank.animals = residentParts.animals;
   tank.plants = residentParts.plants;
@@ -1291,6 +1320,10 @@ function renderPostControls() {
 
   postTankSelect.innerHTML = options;
   postTankSelect.value = state.activeTankId;
+  if (homeTankSelect) {
+    homeTankSelect.innerHTML = options;
+    homeTankSelect.value = state.activeTankId;
+  }
   postTankFilter.innerHTML = `<option value="all">すべての水槽・池</option>${options}`;
   postTankFilter.value = currentFilter;
 
@@ -3611,10 +3644,17 @@ async function loadRemindersFromSupabase() {
     return [];
   }
 
-  const { data, error } = await supabaseClient
+  let { data, error } = await supabaseClient
     .from("reminders")
-    .select("task_key, label, enabled, schedule, weekdays, interval_days, start_date, notify_time, last_notified_on")
+    .select("tank_id, task_key, label, enabled, schedule, weekdays, interval_days, start_date, notify_time, last_notified_on")
     .eq("owner_id", authSession.user.id);
+
+  if (isMissingReminderTankColumnError(error)) {
+    ({ data, error } = await supabaseClient
+      .from("reminders")
+      .select("task_key, label, enabled, schedule, weekdays, interval_days, start_date, notify_time, last_notified_on")
+      .eq("owner_id", authSession.user.id));
+  }
 
   if (error) {
     showToast(error.message || "リマインダーを読み込めませんでした");
@@ -3976,13 +4016,36 @@ async function syncRemindersToSupabase(options = {}) {
     return false;
   }
 
-  const payloads = Object.entries(taskLabels).map(([taskId, label]) =>
-    getReminderPayload(taskId, label, state.reminders[taskId] || defaultReminders[taskId], authSession.user),
-  );
-  const { data, error } = await supabaseClient
+  const payloads = state.tanks.flatMap((tank) => {
+    ensureTankCareState(tank);
+    if (!tank.cloudId) {
+      return [];
+    }
+
+    return Object.entries(taskLabels).map(([taskId, label]) =>
+      getReminderPayload(taskId, label, tank.reminders[taskId] || defaultReminders[taskId], authSession.user, tank),
+    );
+  });
+
+  if (!payloads.length) {
+    return true;
+  }
+
+  let { data, error } = await supabaseClient
     .from("reminders")
-    .upsert(payloads, { onConflict: "owner_id,task_key" })
-    .select("task_key, label, enabled, schedule, weekdays, interval_days, start_date, notify_time, last_notified_on");
+    .upsert(payloads, { onConflict: "owner_id,tank_id,task_key" })
+    .select("tank_id, task_key, label, enabled, schedule, weekdays, interval_days, start_date, notify_time, last_notified_on");
+
+  if (isMissingReminderTankColumnError(error)) {
+    const tank = getActiveTank();
+    const legacyPayloads = Object.entries(taskLabels).map(([taskId, label]) =>
+      getReminderPayload(taskId, label, tank.reminders[taskId] || defaultReminders[taskId], authSession.user),
+    );
+    ({ data, error } = await supabaseClient
+      .from("reminders")
+      .upsert(legacyPayloads, { onConflict: "owner_id,task_key" })
+      .select("task_key, label, enabled, schedule, weekdays, interval_days, start_date, notify_time, last_notified_on"));
+  }
 
   if (error) {
     state.account.syncStatus = "local";
@@ -4610,6 +4673,14 @@ function isMissingTankSplitColumnsError(error) {
   return /animal_names|plant_names|equipment_names/i.test(`${error.message || ""} ${error.details || ""} ${error.hint || ""}`);
 }
 
+function isMissingReminderTankColumnError(error) {
+  if (!error) {
+    return false;
+  }
+
+  return /tank_id|owner_id,tank_id,task_key/i.test(`${error.message || ""} ${error.details || ""} ${error.hint || ""}`);
+}
+
 function getLogPayload(log, tank, user) {
   return {
     owner_id: user.id,
@@ -4623,9 +4694,10 @@ function getLogPayload(log, tank, user) {
   };
 }
 
-function getReminderPayload(taskId, label, reminder, user) {
+function getReminderPayload(taskId, label, reminder, user, tank = null) {
   return {
     owner_id: user.id,
+    ...(tank?.cloudId ? { tank_id: tank.cloudId } : {}),
     task_key: taskId,
     label,
     enabled: Boolean(reminder.enabled),
@@ -4646,25 +4718,28 @@ function getNotificationDeliveryPayloads(user) {
   }
 
   const now = new Date();
-  return Object.entries(taskLabels)
-    .map(([taskId, label]) => {
-      const reminder = state.reminders[taskId] || defaultReminders[taskId];
-      const nextReminder = getNextReminderForTask(taskId, reminder, now);
-      if (!nextReminder) {
-        return null;
-      }
+  return state.tanks
+    .flatMap((tank) => {
+      ensureTankCareState(tank);
+      return Object.entries(taskLabels).map(([taskId, label]) => {
+        const reminder = tank.reminders[taskId] || defaultReminders[taskId];
+        const nextReminder = getNextReminderForTask(taskId, reminder, now, tank);
+        if (!nextReminder) {
+          return null;
+        }
 
-      return {
-        owner_id: user.id,
-        task_key: taskId,
-        label,
-        channel,
-        scheduled_for: nextReminder.date.toISOString(),
-        status: "pending",
-        attempt_count: 0,
-        last_error: null,
-        updated_at: new Date().toISOString(),
-      };
+        return {
+          owner_id: user.id,
+          task_key: `${tank.id}:${taskId}`,
+          label: `${tank.name} / ${label}`,
+          channel,
+          scheduled_for: nextReminder.date.toISOString(),
+          status: "pending",
+          attempt_count: 0,
+          last_error: null,
+          updated_at: new Date().toISOString(),
+        };
+      });
     })
     .filter(Boolean);
 }
@@ -5010,17 +5085,29 @@ function applyRemoteReminders(remoteReminders) {
       return;
     }
 
-    state.reminders[taskId] = normalizeReminder({
-      ...state.reminders[taskId],
-      enabled: remoteReminder.enabled,
-      schedule: remoteReminder.schedule,
-      weekdays: remoteReminder.weekdays,
-      intervalDays: remoteReminder.interval_days,
-      startDate: remoteReminder.start_date,
-      time: remoteReminder.notify_time,
-      lastNotifiedOn: remoteReminder.last_notified_on,
-    }, defaultReminders[taskId], taskId);
+    const targetTanks = remoteReminder.tank_id
+      ? state.tanks.filter((tank) => tank.cloudId === remoteReminder.tank_id)
+      : state.tanks;
+
+    targetTanks.forEach((tank) => {
+      ensureTankCareState(tank);
+      tank.reminders[taskId] = normalizeReminder({
+        ...tank.reminders[taskId],
+        enabled: remoteReminder.enabled,
+        schedule: remoteReminder.schedule,
+        weekdays: remoteReminder.weekdays,
+        intervalDays: remoteReminder.interval_days,
+        startDate: remoteReminder.start_date,
+        time: remoteReminder.notify_time,
+        lastNotifiedOn: remoteReminder.last_notified_on,
+      }, defaultReminders[taskId], taskId);
+    });
   });
+
+  const activeTank = getActiveTank();
+  state.reminders = normalizeReminders(activeTank.reminders);
+  state.tasks = { ...activeTank.tasks };
+  state.taskDate = activeTank.taskDate;
 }
 
 function applyRemotePosts(remotePosts) {
@@ -6161,17 +6248,18 @@ function applyFilterLogToTank(tank, log) {
     flowStatus: "normal",
     note: log.note && log.note !== "水槽の状態を記録しました。" ? log.note : filter.note || "フィルター掃除を記録済み",
   };
-  updateFilterCareReminderFromCleanedDate(tank.filter.lastCleanedAt);
+  updateFilterCareReminderFromCleanedDate(tank.filter.lastCleanedAt, tank);
 }
 
-function updateFilterCareReminderFromCleanedDate(cleanedDateKey) {
+function updateFilterCareReminderFromCleanedDate(cleanedDateKey, tank = getActiveTank()) {
   if (!isValidDateKey(cleanedDateKey)) {
     return;
   }
 
-  state.reminders.filterCare = normalizeReminder(
+  ensureTankCareState(tank);
+  tank.reminders.filterCare = normalizeReminder(
     {
-      ...state.reminders.filterCare,
+      ...tank.reminders.filterCare,
       startDate: cleanedDateKey,
       lastNotifiedOn: null,
     },
@@ -6180,8 +6268,14 @@ function updateFilterCareReminderFromCleanedDate(cleanedDateKey) {
   );
 
   if (cleanedDateKey === getDateKey(new Date())) {
-    state.tasks.filterCare = true;
-    state.taskDate = getDateKey(new Date());
+    tank.tasks.filterCare = true;
+    tank.taskDate = getDateKey(new Date());
+  }
+
+  if (tank.id === state.activeTankId) {
+    state.reminders = normalizeReminders(tank.reminders);
+    state.tasks = { ...tank.tasks };
+    state.taskDate = tank.taskDate;
   }
 }
 
@@ -9237,13 +9331,14 @@ function analyzePostPhoto(post) {
 }
 
 function renderTasks() {
+  const tasks = getActiveTankTasks();
   document.querySelectorAll("[data-task]").forEach((checkbox) => {
-    checkbox.checked = Boolean(state.tasks[checkbox.dataset.task]);
+    checkbox.checked = Boolean(tasks[checkbox.dataset.task]);
   });
 
   document.querySelectorAll("[data-task-status]").forEach((status) => {
     const taskId = status.dataset.taskStatus;
-    const isDone = Boolean(state.tasks[taskId]);
+    const isDone = Boolean(tasks[taskId]);
     status.textContent = isDone ? "完了" : getReminderStatus(taskId);
   });
 }
@@ -9253,12 +9348,15 @@ function renderReminders() {
     return;
   }
 
+  const tank = getActiveTank();
+  const reminders = getActiveTankReminders();
+
   reminderList.innerHTML = Object.entries(taskLabels)
     .map(([taskId, label]) => {
-      const reminder = state.reminders[taskId] || defaultReminders[taskId];
+      const reminder = reminders[taskId] || defaultReminders[taskId];
       const checked = reminder.enabled ? "checked" : "";
       const rowClass = reminder.enabled ? "" : "is-off";
-      const status = getReminderStatusText(taskId, reminder);
+      const status = getReminderStatusText(taskId, reminder, tank);
 
       return `
         <div class="reminder-row ${rowClass}">
@@ -9284,7 +9382,7 @@ function renderReminders() {
   reminderList.querySelectorAll("[data-reminder-enabled]").forEach((input) => {
     input.addEventListener("change", () => {
       const taskId = input.dataset.reminderEnabled;
-      state.reminders[taskId].enabled = input.checked;
+      reminders[taskId].enabled = input.checked;
       saveReminderSettings();
     });
   });
@@ -9292,8 +9390,8 @@ function renderReminders() {
   reminderList.querySelectorAll("[data-reminder-time]").forEach((input) => {
     input.addEventListener("change", () => {
       const taskId = input.dataset.reminderTime;
-      state.reminders[taskId].time = input.value || defaultReminders[taskId].time;
-      state.reminders[taskId].lastNotifiedOn = null;
+      reminders[taskId].time = input.value || defaultReminders[taskId].time;
+      reminders[taskId].lastNotifiedOn = null;
       saveReminderSettings();
     });
   });
@@ -9301,8 +9399,8 @@ function renderReminders() {
   reminderList.querySelectorAll("[data-reminder-schedule]").forEach((select) => {
     select.addEventListener("change", () => {
       const taskId = select.dataset.reminderSchedule;
-      state.reminders[taskId].schedule = select.value;
-      state.reminders[taskId].lastNotifiedOn = null;
+      reminders[taskId].schedule = select.value;
+      reminders[taskId].lastNotifiedOn = null;
       saveReminderSettings();
     });
   });
@@ -9311,7 +9409,7 @@ function renderReminders() {
     input.addEventListener("change", () => {
       const taskId = input.dataset.reminderWeekday;
       const weekday = Number(input.value);
-      const reminder = state.reminders[taskId];
+      const reminder = reminders[taskId];
       const weekdays = new Set(reminder.weekdays);
 
       if (input.checked) {
@@ -9329,13 +9427,13 @@ function renderReminders() {
   reminderList.querySelectorAll("[data-reminder-interval]").forEach((input) => {
     input.addEventListener("change", () => {
       const taskId = input.dataset.reminderInterval;
-      state.reminders[taskId].intervalDays = clampNumber(
+      reminders[taskId].intervalDays = clampNumber(
         input.value,
         1,
         getReminderIntervalMax(taskId),
         defaultReminders[taskId].intervalDays,
       );
-      state.reminders[taskId].lastNotifiedOn = null;
+      reminders[taskId].lastNotifiedOn = null;
       saveReminderSettings();
     });
   });
@@ -9343,8 +9441,8 @@ function renderReminders() {
   reminderList.querySelectorAll("[data-reminder-start]").forEach((input) => {
     input.addEventListener("change", () => {
       const taskId = input.dataset.reminderStart;
-      state.reminders[taskId].startDate = isValidDateKey(input.value) ? input.value : getDateKey(new Date());
-      state.reminders[taskId].lastNotifiedOn = null;
+      reminders[taskId].startDate = isValidDateKey(input.value) ? input.value : getDateKey(new Date());
+      reminders[taskId].lastNotifiedOn = null;
       saveReminderSettings();
     });
   });
@@ -9354,9 +9452,14 @@ function renderReminders() {
 }
 
 async function saveReminderSettings() {
+  const tank = getActiveTank();
+  state.reminders = normalizeReminders(tank.reminders);
+  state.tasks = { ...tank.tasks };
+  state.taskDate = tank.taskDate;
   saveState();
   renderTasks();
   renderReminders();
+  renderDashboard();
 
   if (authSession?.user) {
     const remindersSynced = await syncRemindersToSupabase({ silent: true });
@@ -9425,24 +9528,26 @@ function renderNotificationButtons() {
   }
 }
 
-function getReminderStatus(taskId) {
-  const reminder = state.reminders[taskId];
+function getReminderStatus(taskId, tank = getActiveTank()) {
+  ensureTankCareState(tank);
+  const reminder = tank.reminders[taskId];
 
   if (!reminder?.enabled) {
     return "OFF";
   }
 
-  return getReminderStatusText(taskId, reminder);
+  return getReminderStatusText(taskId, reminder, tank);
 }
 
-function getReminderStatusText(taskId, reminder = state.reminders[taskId]) {
+function getReminderStatusText(taskId, reminder = getActiveTankReminders()[taskId], tank = getActiveTank()) {
   if (!reminder?.enabled) {
     return "通知オフ";
   }
 
-  const nextReminder = getNextReminderForTask(taskId, reminder, new Date());
+  ensureTankCareState(tank);
+  const nextReminder = getNextReminderForTask(taskId, reminder, new Date(), tank);
   const todayKey = getDateKey(new Date());
-  if (state.tasks[taskId] && nextReminder && getDateKey(nextReminder.date) !== todayKey) {
+  if (tank.tasks[taskId] && nextReminder && getDateKey(nextReminder.date) !== todayKey) {
     return `今日のタスクは完了 / 次回 ${formatReminderDate(nextReminder.date)}`;
   }
 
@@ -9455,21 +9560,25 @@ function getReminderStatusText(taskId, reminder = state.reminders[taskId]) {
 
 function getNextReminder() {
   const now = new Date();
-  return Object.entries(taskLabels)
-    .map(([taskId, label]) => {
-      const reminder = state.reminders[taskId] || defaultReminders[taskId];
-      const nextReminder = getNextReminderForTask(taskId, reminder, now);
-      return nextReminder ? { taskId, label, date: nextReminder.date } : null;
+  return state.tanks
+    .flatMap((tank) => {
+      ensureTankCareState(tank);
+      return Object.entries(taskLabels).map(([taskId, label]) => {
+        const reminder = tank.reminders[taskId] || defaultReminders[taskId];
+        const nextReminder = getNextReminderForTask(taskId, reminder, now, tank);
+        return nextReminder ? { taskId, tankId: tank.id, label: `${tank.name} / ${label}`, date: nextReminder.date } : null;
+      });
     })
     .filter(Boolean)
     .sort((a, b) => a.date - b.date)[0];
 }
 
-function getNextReminderForTask(taskId, reminder, now = new Date()) {
+function getNextReminderForTask(taskId, reminder, now = new Date(), tank = getActiveTank()) {
   if (!reminder?.enabled) {
     return null;
   }
 
+  ensureTankCareState(tank);
   const todayKey = getDateKey(now);
   for (let offset = 0; offset <= 370; offset += 1) {
     const candidate = new Date(now);
@@ -9485,7 +9594,7 @@ function getNextReminderForTask(taskId, reminder, now = new Date()) {
       continue;
     }
 
-    if (dateKey === todayKey && state.tasks[taskId]) {
+    if (dateKey === todayKey && tank.tasks[taskId]) {
       continue;
     }
 
@@ -9502,35 +9611,42 @@ function checkDueReminders() {
   const todayKey = getDateKey(now);
   let changed = false;
 
-  Object.entries(taskLabels).forEach(([taskId, label]) => {
-    const reminder = state.reminders[taskId];
-    if (!reminder?.enabled || state.tasks[taskId] || reminder.lastNotifiedOn === todayKey) {
-      return;
-    }
+  state.tanks.forEach((tank) => {
+    ensureTankCareState(tank);
+    Object.entries(taskLabels).forEach(([taskId, label]) => {
+      const reminder = tank.reminders[taskId];
+      if (!reminder?.enabled || tank.tasks[taskId] || reminder.lastNotifiedOn === todayKey) {
+        return;
+      }
 
-    if (!doesReminderMatchDate(reminder, now)) {
-      return;
-    }
+      if (!doesReminderMatchDate(reminder, now)) {
+        return;
+      }
 
-    const dueAt = getReminderDate(reminder.time, now);
-    const deltaMs = now.getTime() - dueAt.getTime();
-    if (deltaMs < 0 || deltaMs > 60000) {
-      return;
-    }
+      const dueAt = getReminderDate(reminder.time, now);
+      const deltaMs = now.getTime() - dueAt.getTime();
+      if (deltaMs < 0 || deltaMs > 60000) {
+        return;
+      }
 
-    reminder.lastNotifiedOn = todayKey;
-    changed = true;
-    notifyReminder(label);
+      reminder.lastNotifiedOn = todayKey;
+      changed = true;
+      notifyReminder(label, tank.name);
+    });
   });
 
   if (changed) {
+    const activeTank = getActiveTank();
+    state.reminders = normalizeReminders(activeTank.reminders);
+    state.tasks = { ...activeTank.tasks };
+    state.taskDate = activeTank.taskDate;
     saveState();
     renderReminders();
   }
 }
 
-function notifyReminder(label) {
-  const message = `${getActiveTank().name} の${label}の時間です`;
+function notifyReminder(label, tankName = getActiveTank().name) {
+  const message = `${tankName} の${label}の時間です`;
   const account = state.account;
 
   if (account.notificationChannel === "none") {
@@ -10031,7 +10147,9 @@ function getWaterChangeNote(days) {
 
 function getActiveTank() {
   ensureActiveTank();
-  return state.tanks.find((tank) => tank.id === state.activeTankId);
+  const tank = state.tanks.find((item) => item.id === state.activeTankId);
+  ensureTankCareState(tank);
+  return tank;
 }
 
 function ensureActiveTank() {
@@ -10044,16 +10162,52 @@ function ensureActiveTank() {
   }
 }
 
-function ensureDailyTasks() {
-  const todayKey = getDateKey(new Date());
-
-  if (state.taskDate === todayKey) {
-    return;
+function ensureTankCareState(tank) {
+  if (!tank) {
+    return null;
   }
 
-  state.tasks = getEmptyTasks();
-  state.taskDate = todayKey;
-  saveState();
+  tank.tasks = { ...getEmptyTasks(), ...(tank.tasks || {}) };
+  tank.taskDate = tank.taskDate || state.taskDate || getDateKey(new Date());
+  tank.reminders = normalizeReminders(tank.reminders || state.reminders || defaultReminders);
+  return tank;
+}
+
+function getActiveTankTasks() {
+  const tank = getActiveTank();
+  return tank.tasks;
+}
+
+function getActiveTankReminders() {
+  const tank = getActiveTank();
+  return tank.reminders;
+}
+
+function ensureDailyTasks() {
+  const todayKey = getDateKey(new Date());
+  let changed = false;
+
+  state.tanks.forEach((tank) => {
+    ensureTankCareState(tank);
+    if (tank.taskDate !== todayKey) {
+      tank.tasks = getEmptyTasks();
+      tank.taskDate = todayKey;
+      changed = true;
+    }
+  });
+
+  if (state.taskDate !== todayKey) {
+    state.tasks = getEmptyTasks();
+    state.taskDate = todayKey;
+    changed = true;
+  }
+
+  if (changed) {
+    const activeTank = getActiveTank();
+    state.tasks = { ...activeTank.tasks };
+    state.taskDate = activeTank.taskDate;
+    saveState();
+  }
 }
 
 function closePostModal() {
@@ -10149,13 +10303,15 @@ function loadLocalState() {
 }
 
 function normalizeState(saved) {
+  const savedTasks = { ...defaultState.tasks, ...(saved.tasks || {}) };
+  const savedReminders = normalizeReminders(saved.reminders);
   const normalized = {
     ...cloneState(defaultState),
     ...saved,
     account: normalizeAccount(saved.account),
-    tasks: { ...defaultState.tasks, ...saved.tasks },
+    tasks: savedTasks,
     taskDate: saved.taskDate || getDateKey(new Date()),
-    reminders: normalizeReminders(saved.reminders),
+    reminders: savedReminders,
     pwaTestResults: Array.isArray(saved.pwaTestResults) ? saved.pwaTestResults.map(normalizePwaTestResult) : [],
     monitorFeedback: Array.isArray(saved.monitorFeedback) ? saved.monitorFeedback.map(normalizeMonitorFeedback) : [],
     productionSetupCheck: normalizeProductionSetupCheck(saved.productionSetupCheck || {}),
@@ -10185,6 +10341,9 @@ function normalizeState(saved) {
       filter: normalizeTankFilter(nextTank.filter),
       tags: Array.isArray(nextTank.tags) ? nextTank.tags : [nextTank.kind || "水槽"],
       logs: Array.isArray(nextTank.logs) ? nextTank.logs.map(normalizeLog) : [],
+      tasks: { ...getEmptyTasks(), ...(nextTank.tasks || (nextTank.id === normalized.activeTankId ? savedTasks : {})) },
+      taskDate: nextTank.taskDate || (nextTank.id === normalized.activeTankId ? normalized.taskDate : getDateKey(new Date())),
+      reminders: normalizeReminders(nextTank.reminders || savedReminders),
       latestAi: nextTank.latestAi ? normalizeAiResult(nextTank.latestAi) : null,
       featuredPostId: nextTank.featuredPostId || null,
       albumOrder: Array.isArray(nextTank.albumOrder) ? nextTank.albumOrder : [],
@@ -10234,6 +10393,12 @@ function normalizeState(saved) {
       likedByCurrentUser: Boolean(post.likedByCurrentUser),
     };
   });
+
+  const activeTank = normalized.tanks.find((tank) => tank.id === normalized.activeTankId) || normalized.tanks[0];
+  normalized.activeTankId = activeTank.id;
+  normalized.tasks = { ...activeTank.tasks };
+  normalized.taskDate = activeTank.taskDate;
+  normalized.reminders = normalizeReminders(activeTank.reminders);
 
   return normalized;
 }

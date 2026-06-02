@@ -107,6 +107,7 @@
 - ローカル水槽プロフィールのSupabase `tanks` 同期
 - 管理ログのSupabase `logs` 同期
 - リマインダー設定のSupabase `reminders` 同期
+- ホームの水槽選択と、水槽ごとの今日の管理・リマインダー切り替え
 - 投稿とコメントのSupabase `posts` / `comments` 同期
 - いいねとランキングのSupabase `post_likes` / `post_stats` 同期
 - 写真・動画・サムネイルのSupabase Storage / `media` 同期
