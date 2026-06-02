@@ -6145,11 +6145,28 @@ function applyFilterLogToTank(tank, log) {
     flowStatus: "normal",
     note: log.note && log.note !== "水槽の状態を記録しました。" ? log.note : filter.note || "フィルター掃除を記録済み",
   };
+  updateFilterCareReminderAfterCleaning(tank.filter.lastCleanedAt);
 
   if (getDateKey(new Date(log.createdAt)) === getDateKey(new Date())) {
     state.tasks.filterCare = true;
     state.taskDate = getDateKey(new Date());
   }
+}
+
+function updateFilterCareReminderAfterCleaning(cleanedDateKey) {
+  if (!isValidDateKey(cleanedDateKey)) {
+    return;
+  }
+
+  state.reminders.filterCare = normalizeReminder(
+    {
+      ...state.reminders.filterCare,
+      startDate: cleanedDateKey,
+      lastNotifiedOn: null,
+    },
+    defaultReminders.filterCare,
+    "filterCare",
+  );
 }
 
 function getGuideSearchItems() {
