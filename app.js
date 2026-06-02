@@ -155,7 +155,7 @@ const PWA_SCOPE_QA_HINTS = {
   install: ["ホーム画面追加", "アイコン起動", "スタンドアロン表示"],
   notification: ["通知許可", "Push購読", "dry-run解除後の受信"],
   offline: ["機内モード再読み込み", "オフラインページ", "復帰後の再表示"],
-  ui_modes: ["ベーシック", "かんたん", "大人", "ライブ演出", "横スクロールなし", "動きを減らす設定"],
+  ui_modes: ["ベーシック", "かんたん", "管理重視", "投稿重視", "横スクロールなし", "動きを減らす設定"],
   custom_images: ["背景画像", "ボタン背面", "文字の読みやすさ"],
 };
 const PWA_SCOPE_NOTE_TEMPLATES = {
@@ -163,7 +163,7 @@ const PWA_SCOPE_NOTE_TEMPLATES = {
   install: "ホーム画面追加: OK / アイコン起動: OK / スタンドアロン表示: OK",
   notification: "通知許可: OK / Push購読: OK / dry-run解除後の受信: 未確認",
   offline: "機内モード再読み込み: OK / オフラインページ: OK / 復帰後の再表示: OK",
-  ui_modes: "ベーシック: OK / かんたん: OK / 大人: OK / ライブ演出: OK / 横スクロールなし: OK / 動きを減らす設定: OK",
+  ui_modes: "ベーシック: OK / かんたん: OK / 管理重視: OK / 投稿重視: OK / 横スクロールなし: OK / 動きを減らす設定: OK",
   custom_images: "背景画像: OK / ボタン背面: OK / 文字の読みやすさ: OK",
 };
 const AI_REQUIRED_PHOTO_CONDITIONS = ["dark", "small_fish", "algae", "reflection"];
@@ -213,15 +213,15 @@ const homeModeCopy = {
     ],
   },
   live: {
-    title: "ライブアクアリウム",
-    note: "水面のゆらぎと写真演出で、水槽を眺める楽しさを前面に出す表示です。",
-    heroTitle: "写真に、水の動きを足す。",
-    heroLead: "トップ写真にゆらぎと光を重ねて、静止画でも水槽が動いているように見せます。",
+    title: "投稿フィード",
+    note: "写真投稿と共有を前面に出し、水槽の変化を見せやすくする表示です。",
+    heroTitle: "今日の水槽を、すぐ投稿。",
+    heroLead: "トップ写真を大きく見せながら、投稿、共有、AI確認へすぐ進めます。",
     dock: [
-      ["記録", "Flow"],
       ["投稿", "Share"],
-      ["AI", "Scan"],
-      ["ガイド", "Tips"],
+      ["写真", "Pick"],
+      ["AI確認", "Scan"],
+      ["記録", "Log"],
     ],
   },
 };
@@ -2035,7 +2035,7 @@ function getPwaModeQaSummary(results) {
     {
       label: "4モード表示",
       ready: scopeStatuses.ui_modes === "passed",
-      note: latestModeResult?.note || "ベーシック、かんたん、管理重視、ライブモードでホーム、投稿、AI、アカウントを確認",
+      note: latestModeResult?.note || "ベーシック、かんたん、管理重視、投稿重視モードでホーム、投稿、AI、アカウントを確認",
       checks: PWA_SCOPE_QA_HINTS.ui_modes,
       noteTemplate: PWA_SCOPE_NOTE_TEMPLATES.ui_modes,
     },
@@ -2774,7 +2774,7 @@ function getUiModeLabel(value) {
     standard: "ベーシックモード",
     simple: "かんたんモード",
     adult: "管理重視モード",
-    live: "ライブモード",
+    live: "投稿重視モード",
   };
   return labels[value] || labels.standard;
 }
@@ -5164,7 +5164,7 @@ async function syncProfileToSupabase(options = {}) {
 
 function getProfileSyncErrorMessage(error) {
   if (isLiveUiModeConstraintError(error)) {
-    return "Supabaseでライブモード用SQLを実行してください。READMEの既存Supabase反映手順を確認してください。";
+    return "Supabaseで投稿重視モード用SQLを実行してください。READMEの既存Supabase反映手順を確認してください。";
   }
 
   return error?.message || "プロフィール同期に失敗しました";
