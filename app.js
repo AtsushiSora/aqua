@@ -614,7 +614,7 @@ homeUiModeInput.addEventListener("change", () => {
   updateUiMode(homeUiModeInput.value);
 });
 
-homeUiModeCycleButton.addEventListener("click", () => {
+homeUiModeCycleButton?.addEventListener("click", () => {
   const currentIndex = UI_MODES.indexOf(getAllowedValue(state.account.uiMode, UI_MODES, "standard"));
   updateUiMode(UI_MODES[(currentIndex + 1) % UI_MODES.length]);
 });
