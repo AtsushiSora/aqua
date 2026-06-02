@@ -99,7 +99,6 @@
                 <select id="home-ui-mode-input" aria-label="ホームの表示モード">
                   <option value="standard">ベーシックモード</option>
                   <option value="simple">かんたんモード</option>
-                  <option value="glance">一目モード</option>
                   <option value="adult">大人モード</option>
                   <option value="live">ライブモード</option>
                 </select>
@@ -855,7 +854,6 @@
                   <select id="account-ui-mode-input">
                     <option value="standard">ベーシックモード</option>
                     <option value="simple">かんたんモード</option>
-                    <option value="glance">一目モード</option>
                     <option value="adult">大人モード</option>
                     <option value="live">ライブモード</option>
                   </select>
@@ -1050,7 +1048,7 @@
                 <article>
                   <span>4</span>
                   <strong>スマホ表示</strong>
-                  <small>ベーシック、かんたん、一目、大人、ライブモードをiPhone/Android幅で確認する</small>
+                  <small>ベーシック、かんたん、大人、ライブモードをiPhone/Android幅で確認する</small>
                 </article>
               </div>
             </section>
@@ -1080,8 +1078,8 @@
                   <span>機内モードで再読み込みし、キャッシュ画面またはオフラインページが出ることを確認する</span>
                 </li>
                 <li>
-                  <strong>5モード確認</strong>
-                  <span>ベーシック、かんたん、一目、大人、ライブモードを切り替え、ホームで主要操作を試す</span>
+                  <strong>4モード確認</strong>
+                  <span>ベーシック、かんたん、大人、ライブモードを切り替え、ホームで主要操作を試す</span>
                 </li>
                 <li>
                   <strong>画像カスタム</strong>
@@ -1121,7 +1119,7 @@
                     <option value="install">ホーム追加</option>
                     <option value="notification">通知受信</option>
                     <option value="offline">オフライン復帰</option>
-                    <option value="ui_modes">5モード表示</option>
+                    <option value="ui_modes">4モード表示</option>
                     <option value="custom_images">画像カスタム</option>
                     <option value="login">ログイン</option>
                   </select>
@@ -1212,7 +1210,7 @@
                   <li>自分の水槽を1つ登録し、写真をTOPに設定する</li>
                   <li>水温、pH、水換え、フィルター掃除を1回ずつ記録する</li>
                   <li>投稿またはアルバムに写真を1枚追加する</li>
-                  <li>ベーシック、一目、かんたん、大人、ライブの表示を切り替えて感想を残す</li>
+                  <li>ベーシック、かんたん、大人、ライブの表示を切り替えて感想を残す</li>
                 </ol>
               </div>
             </section>
@@ -1406,7 +1404,7 @@
                   </label>
                   <label class="full-field">
                     <span>確認メモ</span>
-                    <textarea id="production-supabase-note-input" rows="2" placeholder="schema.sql、live mode migration、RLS、Auth登録確認など"></textarea>
+                    <textarea id="production-supabase-note-input" rows="2" placeholder="schema.sql、UI mode migration、RLS、Auth登録確認など"></textarea>
                   </label>
                   <button class="ghost-button full-field" type="submit">Supabase確認を保存</button>
                 </form>
@@ -1487,7 +1485,7 @@
               <ol class="production-setup-list">
                 <li>
                   <strong>Supabase SQL</strong>
-                  <span><code>supabase/schema.sql</code> を実行。既存プロジェクトは <code>supabase/migrations/20260601_add_live_ui_mode.sql</code> も実行。</span>
+                  <span><code>supabase/schema.sql</code> を実行。既存プロジェクトは <code>supabase/migrations/20260602_remove_glance_ui_mode.sql</code> も実行。</span>
                   <span class="production-setup-target">確認場所: アカウント / Supabase Auth</span>
                 </li>
                 <li>
@@ -1507,7 +1505,7 @@
                 </li>
                 <li>
                   <strong>PWA実機QA</strong>
-                  <span>本番URLでログイン、ホーム追加、通知、オフライン、5モード、画像カスタムを記録し、JSONを書き出す。</span>
+                  <span>本番URLでログイン、ホーム追加、通知、オフライン、4モード、画像カスタムを記録し、JSONを書き出す。</span>
                   <span class="production-setup-target">確認場所: アカウント / PWA実機テスト結果</span>
                 </li>
               </ol>
