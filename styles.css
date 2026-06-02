@@ -1905,6 +1905,13 @@ body[data-custom-buttons="true"] .icon-button {
   margin: 0;
 }
 
+.panel-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
 .task-list {
   display: grid;
   gap: 10px;

@@ -117,6 +117,7 @@ const monitorFeedbackForm = document.querySelector("#monitor-feedback-form");
 const monitorFeedbackSummary = document.querySelector("#monitor-feedback-summary");
 const monitorFeedbackNext = document.querySelector("#monitor-feedback-next");
 const monitorFeedbackList = document.querySelector("#monitor-feedback-list");
+const monitorFeedbackExportCsvButton = document.querySelector("#monitor-feedback-export-csv-button");
 const monitorFeedbackExportButton = document.querySelector("#monitor-feedback-export-button");
 const monitorFeedbackStatusFilter = document.querySelector("#monitor-feedback-status-filter");
 const monitorFeedbackKindFilter = document.querySelector("#monitor-feedback-kind-filter");
@@ -646,6 +647,7 @@ importDataInput.addEventListener("change", importAppData);
 pwaTestForm.addEventListener("submit", handlePwaTestSubmit);
 pwaTestExportButton.addEventListener("click", exportPwaTestResults);
 monitorFeedbackForm.addEventListener("submit", handleMonitorFeedbackSubmit);
+monitorFeedbackExportCsvButton.addEventListener("click", exportMonitorFeedbackCsv);
 monitorFeedbackExportButton.addEventListener("click", exportMonitorFeedback);
 monitorGuideCopyButton.addEventListener("click", copyMonitorGuideText);
 monitorFeedbackStatusFilter.addEventListener("change", () => {
@@ -1847,6 +1849,32 @@ function exportMonitorFeedback() {
     "application/json;charset=utf-8",
   );
   showToast("モニターフィードバックを書き出しました");
+}
+
+function exportMonitorFeedbackCsv() {
+  const entries = Array.isArray(state.monitorFeedback) ? state.monitorFeedback.map(normalizeMonitorFeedback) : [];
+  if (!entries.length) {
+    showToast("書き出すフィードバックがありません");
+    return;
+  }
+
+  const triage = getMonitorFeedbackTriage(entries);
+  const rows = [
+    ["kind", "priority", "status", "createdAt", "participant", "device", "note", "nextCandidate"],
+    ...entries.sort(compareMonitorFeedbackForTriage).map((entry) => [
+      getMonitorFeedbackKindLabel(entry.kind),
+      getMonitorFeedbackPriorityLabel(entry.priority),
+      getMonitorFeedbackStatusLabel(entry.status),
+      entry.createdAt,
+      entry.participant,
+      entry.device,
+      entry.note,
+      triage.next?.id === entry.id ? "yes" : "",
+    ]),
+  ];
+
+  downloadFile(`aquanote-monitor-feedback-${getDateKey(new Date())}.csv`, toCsv(rows), "text/csv;charset=utf-8");
+  showToast("モニターフィードバックをCSVで書き出しました");
 }
 
 function normalizeMonitorFeedback(entry = {}) {
