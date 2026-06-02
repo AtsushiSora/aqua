@@ -1281,6 +1281,41 @@
                   </label>
                   <button class="ghost-button full-field" type="submit">AI確認を保存</button>
                 </form>
+                <form class="production-setup-check-form" id="production-notification-check-form">
+                  <label>
+                    <span>通知環境変数</span>
+                    <select id="production-notification-env-status-input">
+                      <option value="unchecked">未確認</option>
+                      <option value="confirmed">確認済み</option>
+                      <option value="issues">要対応</option>
+                    </select>
+                  </label>
+                  <label>
+                    <span>送信結果</span>
+                    <select id="production-notification-send-status-input">
+                      <option value="unchecked">未確認</option>
+                      <option value="confirmed">確認済み</option>
+                      <option value="issues">要対応</option>
+                    </select>
+                  </label>
+                  <label>
+                    <span>dry-run解除</span>
+                    <select id="production-notification-dry-run-status-input">
+                      <option value="unchecked">未確認</option>
+                      <option value="confirmed">確認済み</option>
+                      <option value="issues">要対応</option>
+                    </select>
+                  </label>
+                  <label>
+                    <span>確認者</span>
+                    <input id="production-notification-reviewer-input" type="text" placeholder="確認者名">
+                  </label>
+                  <label class="full-field">
+                    <span>確認メモ</span>
+                    <textarea id="production-notification-note-input" rows="2" placeholder="VAPID鍵、SUPABASE_SERVICE_ROLE_KEY、dry-run解除、送信ログ確認など"></textarea>
+                  </label>
+                  <button class="ghost-button full-field" type="submit">通知確認を保存</button>
+                </form>
               </div>
               <ol class="production-setup-list">
                 <li>

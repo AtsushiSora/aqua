@@ -114,6 +114,7 @@ const productionSetupExportButton = document.querySelector("#production-setup-ex
 const productionSupabaseCheckForm = document.querySelector("#production-supabase-check-form");
 const productionStorageCheckForm = document.querySelector("#production-storage-check-form");
 const productionAiCheckForm = document.querySelector("#production-ai-check-form");
+const productionNotificationCheckForm = document.querySelector("#production-notification-check-form");
 const accountUiModeInput = document.querySelector("#account-ui-mode-input");
 const homeUiModeInput = document.querySelector("#home-ui-mode-input");
 const homeUiModeCycleButton = document.querySelector("#home-ui-mode-cycle-button");
@@ -627,6 +628,7 @@ pwaReleaseDecisionForm.addEventListener("submit", handlePwaReleaseDecisionSubmit
 productionSupabaseCheckForm.addEventListener("submit", handleProductionSupabaseCheckSubmit);
 productionStorageCheckForm.addEventListener("submit", handleProductionStorageCheckSubmit);
 productionAiCheckForm.addEventListener("submit", handleProductionAiCheckSubmit);
+productionNotificationCheckForm.addEventListener("submit", handleProductionNotificationCheckSubmit);
 pwaTestLog.addEventListener("click", async (event) => {
   const button = event.target.closest("[data-pwa-test-delete]");
   if (!button) {
@@ -770,6 +772,7 @@ notificationProductionCheckForm.addEventListener("submit", (event) => {
   });
   saveState();
   renderNotificationVerificationChecklist();
+  renderProductionSetupSummary();
   showToast("通知本番チェックを保存しました");
 });
 
@@ -783,6 +786,7 @@ notificationApplyDeliveryResultButton.addEventListener("click", () => {
   });
   saveState();
   renderNotificationVerificationChecklist();
+  renderProductionSetupSummary();
   showToast("配信ログの結果を通知本番チェックに反映しました");
 });
 
@@ -1292,6 +1296,14 @@ function renderProductionSetupSummary() {
     document.querySelector("#production-ai-reviewer-input").value = setupCheck.aiReviewer || state.account.name || "";
     document.querySelector("#production-ai-note-input").value = setupCheck.aiNote;
   }
+  if (productionNotificationCheckForm) {
+    const productionCheck = normalizeNotificationProductionCheck(state.notificationProductionCheck || {});
+    document.querySelector("#production-notification-env-status-input").value = productionCheck.envStatus;
+    document.querySelector("#production-notification-dry-run-status-input").value = productionCheck.dryRunStatus;
+    document.querySelector("#production-notification-send-status-input").value = productionCheck.sendStatus;
+    document.querySelector("#production-notification-reviewer-input").value = productionCheck.reviewer || state.account.name || "";
+    document.querySelector("#production-notification-note-input").value = productionCheck.note;
+  }
   if (productionSetupNextAction) {
     productionSetupNextAction.className = `production-setup-next ${setupSummary.ready ? "ready" : "pending"}`;
     productionSetupNextAction.innerHTML = `
@@ -1352,6 +1364,22 @@ function handleProductionAiCheckSubmit(event) {
   saveState();
   renderProductionSetupSummary();
   showToast("AI Gateway確認を保存しました");
+}
+
+function handleProductionNotificationCheckSubmit(event) {
+  event.preventDefault();
+  state.notificationProductionCheck = normalizeNotificationProductionCheck({
+    envStatus: document.querySelector("#production-notification-env-status-input").value,
+    dryRunStatus: document.querySelector("#production-notification-dry-run-status-input").value,
+    sendStatus: document.querySelector("#production-notification-send-status-input").value,
+    reviewer: document.querySelector("#production-notification-reviewer-input").value,
+    note: document.querySelector("#production-notification-note-input").value,
+    checkedAt: new Date().toISOString(),
+  });
+  saveState();
+  renderNotificationVerificationChecklist();
+  renderProductionSetupSummary();
+  showToast("通知確認を保存しました");
 }
 
 function getProductionSetupSummaryState(results = state.pwaTestResults || []) {
@@ -1426,6 +1454,8 @@ function getProductionSetupSummaryItems(results = state.pwaTestResults || []) {
       status: notificationReady ? "ready" : "manual",
       value: notificationReady ? "OK" : getNotificationProductionNextAction(productionCheck),
       note: productionCheck.checkedAt ? `${formatFullDate(productionCheck.checkedAt)} に確認` : "通知本番チェックの確認メモを保存します",
+      reviewer: productionCheck.reviewer,
+      checkedAt: productionCheck.checkedAt,
     },
     {
       label: "PWA実機QA",
