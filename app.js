@@ -1957,6 +1957,23 @@ function getMonitorFeedbackTriage(entries) {
   };
 }
 
+function getMonitorFeedbackExportSummary(entries = state.monitorFeedback || []) {
+  const normalizedEntries = entries.map(normalizeMonitorFeedback);
+  const triage = getMonitorFeedbackTriage(normalizedEntries);
+  const unresolved = normalizedEntries.filter((entry) => entry.status !== "done");
+  const highUnresolved = unresolved.filter((entry) => entry.priority === "high");
+
+  return {
+    ready: unresolved.length === 0,
+    totalCount: normalizedEntries.length,
+    unresolvedCount: unresolved.length,
+    highUnresolvedCount: highUnresolved.length,
+    resolvedCount: normalizedEntries.filter((entry) => entry.status === "done").length,
+    latestAt: normalizedEntries[0]?.createdAt || null,
+    triage,
+  };
+}
+
 function compareMonitorFeedbackForTriage(a, b) {
   const statusRank = { open: 0, doing: 1, done: 2 };
   const priorityRank = { high: 0, watch: 1, low: 2 };
@@ -1990,6 +2007,7 @@ function exportMonitorFeedback() {
     type: "monitor-feedback",
     exportedAt: new Date().toISOString(),
     count: entries.length,
+    summary: getMonitorFeedbackExportSummary(entries),
     triage: getMonitorFeedbackTriage(entries),
     items: entries,
   };
@@ -5845,6 +5863,7 @@ async function exportPwaTestResults() {
     decision: releaseDecision,
     results,
   });
+  const monitorFeedback = getMonitorFeedbackExportSummary();
   const readyForRelease = coverage.ready && releaseDecision.status === "ready" && evidence.every((item) => item.ready);
 
   const payload = {
@@ -5884,6 +5903,7 @@ async function exportPwaTestResults() {
     handoffMemo,
     testerScript,
     cloudReview,
+    monitorFeedback,
     releaseDecision: {
       ...releaseDecision,
       statusLabel: getPwaReleaseDecisionLabel(releaseDecision.status),
