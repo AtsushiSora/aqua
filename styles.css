@@ -2538,15 +2538,34 @@ body[data-custom-buttons="true"] .icon-button {
   color: var(--ink);
 }
 
+.calculated-volume div {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
 .calculated-volume span {
   color: var(--muted);
   font-size: 0.78rem;
   font-weight: 900;
 }
 
+.calculated-volume small {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 800;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
 .calculated-volume strong {
+  flex: 0 0 auto;
   font-size: 1rem;
   font-weight: 900;
+}
+
+.calculated-volume.is-complete {
+  background: rgba(28, 166, 137, 0.14);
 }
 
 .tank-photo-preview {

@@ -6404,10 +6404,16 @@ function getTankResidentValue(tank = {}) {
 }
 
 function getTankDetailItems(tank) {
+  const dimensions = normalizeTankDimensions(tank.dimensions);
+  const calculation = hasCompleteTankDimensions(dimensions)
+    ? `${formatDimensionNumber(dimensions.lengthCm)} × ${formatDimensionNumber(dimensions.widthCm)} × ${formatDimensionNumber(dimensions.heightCm)} ÷ 1000`
+    : "サイズ入力後に表示";
+
   return [
     { label: "種類", value: tank.kind || "未設定" },
     { label: "寸法", value: getTankDimensionDetail(tank.dimensions) },
     { label: "水量目安", value: tank.volume || "未設定" },
+    { label: "計算", value: calculation },
     { label: "生き物・水草", value: formatTankResidents(tank) },
     { label: "設備", value: tank.equipment || "未設定" },
   ];
@@ -6450,6 +6456,12 @@ function updateTankVolumeOutput(prefix) {
 
   const dimensions = getTankDimensionsFormValue(prefix);
   output.textContent = formatTankVolume(dimensions, "未計算");
+  output.closest(".calculated-volume")?.classList.toggle("is-complete", hasCompleteTankDimensions(dimensions));
+
+  const helper = document.querySelector(`#${prefix}-volume-helper`);
+  if (helper) {
+    helper.textContent = getTankVolumeHelperText(dimensions);
+  }
 }
 
 function normalizeTankDimensions(value = {}) {
@@ -6485,6 +6497,26 @@ function getTankVolumeLiters(dimensionsValue) {
   }
 
   return Math.round((dimensions.heightCm * dimensions.widthCm * dimensions.lengthCm) / 100) / 10;
+}
+
+function getTankVolumeHelperText(dimensionsValue) {
+  const dimensions = normalizeTankDimensions(dimensionsValue);
+  const fields = [
+    { key: "heightCm", label: "縦" },
+    { key: "widthCm", label: "横" },
+    { key: "lengthCm", label: "長さ" },
+  ];
+  const missing = fields.filter((field) => !Number.isFinite(dimensions[field.key])).map((field) => field.label);
+
+  if (!missing.length) {
+    return `計算式: ${formatDimensionNumber(dimensions.lengthCm)}×${formatDimensionNumber(dimensions.widthCm)}×${formatDimensionNumber(dimensions.heightCm)}÷1000`;
+  }
+
+  if (missing.length === fields.length) {
+    return "縦・横・長さを入れると自動計算します";
+  }
+
+  return `あと ${missing.join("・")} を入力すると計算できます`;
 }
 
 function formatTankSize(dimensionsValue, fallback = "サイズ未設定") {
