@@ -251,7 +251,7 @@ PWA実機テスト前でも、本番前セットアップだけを `aquanote-pro
 JSONを書き出すと、書き出し日時が最終リリース判定メモに保存されます。
 最終QAでは、本番URL、実機結果、最終判定、クラウド保存、レビューJSONが揃っているかを確認できます。
 
-既存のSupabase環境へ反映する場合は、`supabase/schema.sql` の `pwa_device_tests` と `pwa_release_decisions` のテーブル、インデックス、RLSポリシーを追加してください。既存の `pwa_release_decisions` には `review_status`、`result_status`、`production_url`、`review_exported_at` も追加してください。
+既存のSupabase環境へ反映する場合は、`supabase/migrations/20260603_release_schema_updates.sql` をSQL Editorで実行してください。`pwa_device_tests` と `pwa_release_decisions` のテーブル、インデックス、RLSポリシー、既存 `pwa_release_decisions` の追加カラムも含めて反映します。
 
 公開前レビューの操作順:
 
@@ -277,7 +277,7 @@ AI画面の「AI比較ログ」には、Gateway結果とローカル分析の差
 UIモード保存時に既存制約が残っている場合は、アプリ上でもこのSQL実行が必要なことを案内します。
 投稿重視モードは既存データ互換のため、DBには `live` として保存します。
 フィルター管理をSupabase同期する場合は、`supabase/migrations/20260602_add_filter_profile.sql` をSQL Editorで実行し、`tanks.filter_profile` に掃除日、交換目安、流量メモを保存できる状態にしてください。
-リリース前の既存Supabase更新では、`supabase/migrations/20260603_release_schema_updates.sql` をSQL Editorで実行してください。水槽寸法 `tanks.dimensions` と、水槽ごとのリマインダー `reminders.tank_id` を追加します。
+リリース前の既存Supabase更新では、`supabase/migrations/20260603_release_schema_updates.sql` をSQL Editorで実行してください。水槽寸法 `tanks.dimensions`、水槽ごとのリマインダー `reminders.tank_id`、PWA実機テスト `pwa_device_tests`、最終リリース判定 `pwa_release_decisions` を追加します。
 
 ## 公開後の拡張メモ
 
