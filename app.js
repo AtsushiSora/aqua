@@ -6189,8 +6189,8 @@ function getTankResidentValue(tank = {}) {
 function getTankDetailItems(tank) {
   return [
     { label: "種類", value: tank.kind || "未設定" },
-    { label: "サイズ", value: tank.size || "未設定" },
-    { label: "容量", value: tank.volume || "未設定" },
+    { label: "寸法", value: getTankDimensionDetail(tank.dimensions) },
+    { label: "水量目安", value: tank.volume || "未設定" },
     { label: "生き物・水草", value: formatTankResidents(tank) },
     { label: "設備", value: tank.equipment || "未設定" },
   ];
@@ -6286,6 +6286,15 @@ function formatTankVolume(dimensionsValue, fallback = "容量未設定") {
   }
 
   return `約${formatDimensionNumber(volume)}L`;
+}
+
+function getTankDimensionDetail(dimensionsValue) {
+  const dimensions = normalizeTankDimensions(dimensionsValue);
+  if (!hasCompleteTankDimensions(dimensions)) {
+    return "縦・横・長さ未設定";
+  }
+
+  return `長さ ${formatDimensionNumber(dimensions.lengthCm)}cm / 横 ${formatDimensionNumber(dimensions.widthCm)}cm / 縦 ${formatDimensionNumber(dimensions.heightCm)}cm`;
 }
 
 function formatDimensionNumber(value) {
@@ -10091,6 +10100,10 @@ function renderDashboard() {
   document.querySelector("#metric-ph-note").textContent = latestLog ? `${latestLog.type}ログから表示` : "記録待ち";
   document.querySelector("#metric-water-change").textContent = waterChangeDays === null ? "--" : `${waterChangeDays}日前`;
   document.querySelector("#metric-water-change-note").textContent = getWaterChangeNote(waterChangeDays);
+  document.querySelector("#metric-volume").textContent = formatTankVolume(tank.dimensions, "--");
+  document.querySelector("#metric-volume-note").textContent = hasCompleteTankDimensions(tank.dimensions)
+    ? getTankDimensionDetail(tank.dimensions)
+    : "水槽管理で寸法を入力";
   document.querySelector("#metric-filter-status").textContent = filterStatus.label;
   document.querySelector("#metric-filter-note").textContent = filterStatus.nextLabel;
   document.querySelector("#metric-ai-status").textContent = aiStatus.status;

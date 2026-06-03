@@ -418,8 +418,12 @@ body[data-ui-mode="simple"] .metric-filter-card {
   order: 4;
 }
 
-body[data-ui-mode="simple"] .metric-ai-card {
+body[data-ui-mode="simple"] .metric-volume-card {
   order: 5;
+}
+
+body[data-ui-mode="simple"] .metric-ai-card {
+  order: 6;
 }
 
 body[data-ui-mode="simple"] .metric-card strong {
@@ -573,8 +577,12 @@ body[data-ui-mode="adult"] .metric-filter-card {
   order: 4;
 }
 
-body[data-ui-mode="adult"] .metric-ai-card {
+body[data-ui-mode="adult"] .metric-volume-card {
   order: 5;
+}
+
+body[data-ui-mode="adult"] .metric-ai-card {
+  order: 6;
 }
 
 body[data-ui-mode="adult"] .metric-grid,
@@ -810,8 +818,12 @@ body[data-ui-mode="live"] .metric-filter-card {
   order: 4;
 }
 
-body[data-ui-mode="live"] .metric-ai-card {
+body[data-ui-mode="live"] .metric-volume-card {
   order: 5;
+}
+
+body[data-ui-mode="live"] .metric-ai-card {
+  order: 6;
 }
 
 body[data-ui-mode="live"] .metric-grid {
