@@ -1804,6 +1804,7 @@ function handleMonitorFeedbackSubmit(event) {
     createdAt: new Date().toISOString(),
     participant: document.querySelector("#monitor-feedback-name-input").value,
     device: document.querySelector("#monitor-feedback-device-input").value,
+    screen: document.querySelector("#monitor-feedback-screen-input").value,
     kind: document.querySelector("#monitor-feedback-kind-input").value,
     priority: document.querySelector("#monitor-feedback-priority-input").value,
     status: document.querySelector("#monitor-feedback-status-input").value,
@@ -1888,6 +1889,7 @@ function renderMonitorFeedback() {
               <span>${escapeHtml(getMonitorFeedbackKindLabel(entry.kind))}</span>
               <span>${escapeHtml(getMonitorFeedbackPriorityLabel(entry.priority))}</span>
               <span class="${escapeHtml(entry.status)}">${escapeHtml(getMonitorFeedbackStatusLabel(entry.status))}</span>
+              <span>${escapeHtml(entry.screen || "画面未設定")}</span>
               <small>${escapeHtml(formatFullDate(entry.createdAt))}</small>
             </div>
             <strong>${escapeHtml(entry.participant || "参加者未設定")} / ${escapeHtml(entry.device || "端末未設定")}</strong>
@@ -1938,7 +1940,7 @@ function getMonitorFeedbackTriage(entries) {
       ? {
           id: next.id,
           title: `${getMonitorFeedbackPriorityLabel(next.priority)} / ${getMonitorFeedbackKindLabel(next.kind)} / ${next.participant || "参加者未設定"}`,
-          note: `${next.device || "端末未設定"}: ${next.note}`,
+          note: `${next.device || "端末未設定"} / ${next.screen || "画面未設定"}: ${next.note}`,
         }
       : null,
   };
@@ -1998,7 +2000,7 @@ function exportMonitorFeedbackCsv() {
 
   const triage = getMonitorFeedbackTriage(entries);
   const rows = [
-    ["kind", "priority", "status", "createdAt", "participant", "device", "note", "nextCandidate"],
+    ["kind", "priority", "status", "createdAt", "participant", "device", "screen", "note", "nextCandidate"],
     ...entries.sort(compareMonitorFeedbackForTriage).map((entry) => [
       getMonitorFeedbackKindLabel(entry.kind),
       getMonitorFeedbackPriorityLabel(entry.priority),
@@ -2006,6 +2008,7 @@ function exportMonitorFeedbackCsv() {
       entry.createdAt,
       entry.participant,
       entry.device,
+      entry.screen,
       entry.note,
       triage.next?.id === entry.id ? "yes" : "",
     ]),
@@ -2021,6 +2024,7 @@ function normalizeMonitorFeedback(entry = {}) {
     createdAt: entry.createdAt || new Date().toISOString(),
     participant: String(entry.participant || entry.name || "").trim(),
     device: String(entry.device || "").trim(),
+    screen: String(entry.screen || "").trim(),
     kind: getAllowedValue(entry.kind, MONITOR_FEEDBACK_KINDS, "impression"),
     priority: getAllowedValue(entry.priority, MONITOR_FEEDBACK_PRIORITIES, "watch"),
     status: getAllowedValue(entry.status, MONITOR_FEEDBACK_STATUSES, "open"),
