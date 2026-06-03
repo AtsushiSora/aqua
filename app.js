@@ -2315,9 +2315,17 @@ function renderPwaTestReview(results) {
 
 function getPwaModeQaSummary(results) {
   const scopeStatuses = getPwaScopeStatuses(results);
+  const latestTankSwitchResult = results.find((result) => result.scope === "tank_switch");
   const latestModeResult = results.find((result) => result.scope === "ui_modes");
   const latestImageResult = results.find((result) => result.scope === "custom_images");
   return [
+    {
+      label: "水槽変更",
+      ready: scopeStatuses.tank_switch === "passed",
+      note: latestTankSwitchResult?.note || "複数水槽を登録し、ホームの水槽変更で写真、状態カード、今日の管理が切り替わることを確認",
+      checks: PWA_SCOPE_QA_HINTS.tank_switch,
+      noteTemplate: PWA_SCOPE_NOTE_TEMPLATES.tank_switch,
+    },
     {
       label: "4モード表示",
       ready: scopeStatuses.ui_modes === "passed",
@@ -2519,8 +2527,8 @@ function renderPwaReleaseDecision() {
       <small>本番URL、残タスク、公開判断の理由を残します</small>
     </article>
     <div class="pwa-appearance-evidence">
-      <span>表示モードQA</span>
-      <strong>${escapeHtml(appearanceQa.every((item) => item.ready) ? "4モードと画像カスタム確認済み" : "表示モード確認が未完了")}</strong>
+      <span>主要操作QA</span>
+      <strong>${escapeHtml(appearanceQa.every((item) => item.ready) ? "水槽変更、4モード、画像カスタム確認済み" : "主要操作/表示確認が未完了")}</strong>
       <div>
         ${appearanceQa
           .map(
@@ -2902,7 +2910,7 @@ function getPwaReleaseHandoffMemo({ decision, coverage, handoffChecklist, gatewa
       `判定: ${getPwaReleaseDecisionLabel(decision.status)} / ${getPwaReleaseReviewStatusLabel(decision.reviewStatus)} / ${getPwaReleaseResultStatusLabel(decision.resultStatus)}`,
       `本番URL: ${decision.productionUrl || "未記録"}`,
       `実機QA: ${qaNote}`,
-      `表示QA: ${appearanceReady ? "4モードと画像カスタム確認済み" : "4モードまたは画像カスタムが未完了"}`,
+      `主要操作QA: ${appearanceReady ? "水槽変更、4モード、画像カスタム確認済み" : "水槽変更、4モード、画像カスタムのいずれかが未完了"}`,
       `Gateway: ${gatewayNote}`,
       `確認者: ${decision.reviewer || "未記録"}`,
       `残タスク: ${pendingLabels.length ? pendingLabels.join(" / ") : "なし"}`,
