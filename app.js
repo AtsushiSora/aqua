@@ -2137,6 +2137,7 @@ function getMonitorReadinessItems() {
   const setupReadyCount = setup.items.filter((item) => item.status === "ready").length;
   const coreFlowReadiness = getMonitorCoreFlowReadiness();
   const mediaReadiness = getMonitorMediaReadiness();
+  const decisionReadiness = getMonitorDecisionReadiness(decision);
   const filterReady = state.tanks.some((tank) => {
     const filter = normalizeTankFilter(tank.filter);
     return Boolean(filter.type || filter.lastCleanedAt || filter.note);
@@ -2175,9 +2176,9 @@ function getMonitorReadinessItems() {
     },
     {
       label: "判定メモ",
-      status: decision.productionUrl && decision.reviewer && decision.note ? "ready" : "manual",
-      value: decision.productionUrl ? "URLあり" : "URL未記録",
-      note: decision.productionUrl ? "モニターURL、確認者、残タスクを判定メモに残します" : "モニターで使うURLを最終リリース判定に保存します",
+      status: decisionReadiness.status,
+      value: decisionReadiness.value,
+      note: decisionReadiness.note,
     },
   ];
 }
@@ -2243,6 +2244,28 @@ function getMonitorMediaReadiness() {
     ready: false,
     value: "写真未確認",
     note: "モニター前にTOP写真または投稿写真を1件確認します",
+  };
+}
+
+function getMonitorDecisionReadiness(decision) {
+  const missing = [
+    decision.productionUrl ? "" : "URL",
+    decision.reviewer ? "" : "確認者",
+    decision.note ? "" : "判断メモ",
+  ].filter(Boolean);
+
+  if (!missing.length) {
+    return {
+      status: "ready",
+      value: "保存済み",
+      note: "モニターURL、確認者、残タスク・判断メモが揃っています",
+    };
+  }
+
+  return {
+    status: "manual",
+    value: `未入力: ${missing.join("・")}`,
+    note: "PWA最終リリース判定で不足項目を保存します",
   };
 }
 
