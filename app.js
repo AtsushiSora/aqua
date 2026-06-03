@@ -2125,7 +2125,7 @@ function getMonitorReadinessState() {
     ready: readyCount === items.length,
     readyCount,
     totalCount: items.length,
-    nextAction: nextItem ? `${nextItem.label}: ${nextItem.note}` : "モニター参加者へURLと案内文を渡して、実機フィードバックを集めます。",
+    nextAction: nextItem ? `${nextItem.label}: ${nextItem.action || nextItem.note}` : "モニター参加者へURLと案内文を渡して、実機フィードバックを集めます。",
     items,
   };
 }
@@ -2149,38 +2149,53 @@ function getMonitorReadinessItems() {
       status: coreFlowReadiness.status,
       value: coreFlowReadiness.value,
       note: coreFlowReadiness.note,
+      action: coreFlowReadiness.action,
     },
     {
       label: "フィルター管理",
       status: filterReady ? "ready" : "manual",
       value: filterReady ? "入力あり" : "要確認",
       note: filterReady ? "フィルター種類、掃除日、流量メモを表示できます" : "モニター前に1水槽でフィルター管理を入力します",
+      action: "1水槽でフィルター種類・前回掃除日を入力",
     },
     {
       label: "写真/メディア",
       status: mediaReadiness.ready ? "ready" : "manual",
       value: mediaReadiness.value,
       note: mediaReadiness.note,
+      action: mediaReadiness.action,
     },
     {
       label: "本番前設定",
       status: setup.ready ? "ready" : setupReadyCount >= 3 ? "manual" : "missing",
       value: `${setupReadyCount}/${setup.totalCount}`,
       note: setup.ready ? "Supabase、Storage、AI、通知、PWA QAが揃っています" : setup.nextAction,
+      action: getMonitorSetupNextAction(setup),
     },
     {
       label: "実機UI",
       status: pwaCoverage.ready ? "ready" : pwaCoverage.passedCount ? "manual" : "missing",
       value: `${pwaCoverage.passedCount}/${pwaCoverage.scopes.length}`,
       note: pwaCoverage.ready ? "必須実機QAはOKです" : "スマホで水槽変更、4モード、画像カスタムを確認します",
+      action: "PWA実機テスト結果で未OK項目を保存",
     },
     {
       label: "判定メモ",
       status: decisionReadiness.status,
       value: decisionReadiness.value,
       note: decisionReadiness.note,
+      action: decisionReadiness.action,
     },
   ];
+}
+
+function getMonitorSetupNextAction(setup) {
+  if (setup.ready) {
+    return "本番前セットアップは完了済み";
+  }
+
+  const nextItem = setup.items.find((item) => item.status === "missing") || setup.items.find((item) => item.status === "manual");
+  return nextItem ? `${nextItem.label}を確認` : "本番前セットアップを確認";
 }
 
 function getMonitorCoreFlowReadiness() {
@@ -2202,6 +2217,7 @@ function getMonitorCoreFlowReadiness() {
       status: "ready",
       value: "確認済み",
       note: `${configuredTank.name} で登録、記録、投稿へ進む流れを確認できます`,
+      action: "初回導線は確認済み",
     };
   }
 
@@ -2209,6 +2225,7 @@ function getMonitorCoreFlowReadiness() {
     status: "manual",
     value: "要確認",
     note: "初回空表示は準備済みです。モニター前に水槽登録と記録を1回試します",
+    action: "水槽登録と記録を1回試す",
   };
 }
 
@@ -2221,6 +2238,7 @@ function getMonitorMediaReadiness() {
       ready: true,
       value: `TOP写真 + 投稿${postMediaCount}件`,
       note: "TOP写真と投稿メディアの表示確認ができます",
+      action: "写真表示は確認済み",
     };
   }
 
@@ -2229,6 +2247,7 @@ function getMonitorMediaReadiness() {
       ready: true,
       value: "TOP写真あり",
       note: "自分の水槽写真がホームに大きく表示されることを確認できます",
+      action: "TOP写真表示は確認済み",
     };
   }
 
@@ -2237,6 +2256,7 @@ function getMonitorMediaReadiness() {
       ready: true,
       value: `投稿${postMediaCount}件`,
       note: "写真または動画の表示確認ができます",
+      action: "投稿メディア表示は確認済み",
     };
   }
 
@@ -2244,6 +2264,7 @@ function getMonitorMediaReadiness() {
     ready: false,
     value: "写真未確認",
     note: "モニター前にTOP写真または投稿写真を1件確認します",
+    action: "TOP写真または投稿写真を1件追加",
   };
 }
 
@@ -2259,6 +2280,7 @@ function getMonitorDecisionReadiness(decision) {
       status: "ready",
       value: "保存済み",
       note: "モニターURL、確認者、残タスク・判断メモが揃っています",
+      action: "判定メモは保存済み",
     };
   }
 
@@ -2266,6 +2288,7 @@ function getMonitorDecisionReadiness(decision) {
     status: "manual",
     value: `未入力: ${missing.join("・")}`,
     note: "PWA最終リリース判定で不足項目を保存します",
+    action: `${missing.join("・")}を保存`,
   };
 }
 
