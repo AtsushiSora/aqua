@@ -1970,6 +1970,10 @@ function getMonitorFeedbackExportSummary(entries = state.monitorFeedback || []) 
   const triage = getMonitorFeedbackTriage(normalizedEntries);
   const unresolved = normalizedEntries.filter((entry) => entry.status !== "done");
   const highUnresolved = unresolved.filter((entry) => entry.priority === "high");
+  const nextItems = unresolved
+    .sort(compareMonitorFeedbackForTriage)
+    .slice(0, 5)
+    .map((entry, index) => getMonitorFeedbackTriageItem(entry, index + 1));
 
   return {
     ready: unresolved.length === 0,
@@ -1979,6 +1983,18 @@ function getMonitorFeedbackExportSummary(entries = state.monitorFeedback || []) 
     resolvedCount: normalizedEntries.filter((entry) => entry.status === "done").length,
     latestAt: normalizedEntries[0]?.createdAt || null,
     triage,
+    nextItems,
+  };
+}
+
+function getMonitorFeedbackTriageItem(entry, rank) {
+  return {
+    rank,
+    id: entry.id,
+    title: `${getMonitorFeedbackPriorityLabel(entry.priority)} / ${getMonitorFeedbackKindLabel(entry.kind)} / ${entry.participant || "参加者未設定"}`,
+    note: `${entry.device || "端末未設定"} / ${entry.screen || "画面未設定"}: ${entry.note}`,
+    statusLabel: getMonitorFeedbackStatusLabel(entry.status),
+    resolutionNote: entry.resolutionNote,
   };
 }
 
@@ -2036,9 +2052,11 @@ function exportMonitorFeedbackCsv() {
   }
 
   const triage = getMonitorFeedbackTriage(entries);
+  const sortedEntries = entries.sort(compareMonitorFeedbackForTriage);
   const rows = [
-    ["kind", "priority", "status", "createdAt", "resolvedAt", "participant", "device", "screen", "note", "resolutionNote", "nextCandidate"],
-    ...entries.sort(compareMonitorFeedbackForTriage).map((entry) => [
+    ["triageRank", "kind", "priority", "status", "createdAt", "resolvedAt", "participant", "device", "screen", "note", "resolutionNote", "nextCandidate"],
+    ...sortedEntries.map((entry, index) => [
+      entry.status === "done" ? "" : String(index + 1),
       getMonitorFeedbackKindLabel(entry.kind),
       getMonitorFeedbackPriorityLabel(entry.priority),
       getMonitorFeedbackStatusLabel(entry.status),
