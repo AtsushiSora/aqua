@@ -4,6 +4,9 @@
 alter table public.tanks
 add column if not exists dimensions jsonb not null default '{}'::jsonb;
 
+alter table public.tanks
+add column if not exists filter_profile jsonb not null default '{}'::jsonb;
+
 alter table public.reminders
 add column if not exists tank_id uuid references public.tanks(id) on delete cascade;
 

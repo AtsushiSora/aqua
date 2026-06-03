@@ -289,7 +289,7 @@ JSONを書き出すと、書き出し日時が最終リリース判定メモに�
 最終QAでは、本番URL、実機結果、最終判定、クラウド保存、レビューJSONが揃っているかを確認できます。
 モニター感想・不具合メモでは、参加者、端末、画面名、分類、優先度、対応状況、対応日時、対応メモを保存し、CSV/JSONで書き出せます。
 
-既存のSupabase環境へ反映する場合は、`supabase/migrations/20260603_release_schema_updates.sql` をSQL Editorで実行してください。`pwa_device_tests` と `pwa_release_decisions` のテーブル、インデックス、RLSポリシー、既存 `pwa_release_decisions` の追加カラムも含めて反映します。
+既存のSupabase環境へ反映する場合は、`supabase/migrations/20260603_release_schema_updates.sql` をSQL Editorで実行してください。水槽寸法、フィルター管理、水槽別リマインダー、`pwa_device_tests` と `pwa_release_decisions` のテーブル、インデックス、RLSポリシー、既存 `pwa_release_decisions` の追加カラムも含めて反映します。
 
 公開前レビューの操作順:
 
@@ -314,8 +314,8 @@ AI画面の「AI比較ログ」には、Gateway結果とローカル分析の差
 既存のSupabase環境へ反映する場合は、`supabase/migrations/20260602_remove_glance_ui_mode.sql` をSQL Editorで実行し、古い一目モード値をベーシックへ戻してからプロフィール同期を確認してください。
 UIモード保存時に既存制約が残っている場合は、アプリ上でもこのSQL実行が必要なことを案内します。
 投稿重視モードは既存データ互換のため、DBには `live` として保存します。
-フィルター管理をSupabase同期する場合は、`supabase/migrations/20260602_add_filter_profile.sql` をSQL Editorで実行し、`tanks.filter_profile` に掃除日、交換目安、流量メモを保存できる状態にしてください。
-リリース前の既存Supabase更新では、`supabase/migrations/20260603_release_schema_updates.sql` をSQL Editorで実行してください。水槽寸法 `tanks.dimensions`、水槽ごとのリマインダー `reminders.tank_id`、水槽変更を含むPWA実機テスト `pwa_device_tests`、最終リリース判定 `pwa_release_decisions` を追加します。
+フィルター管理だけを先にSupabase同期する場合は、`supabase/migrations/20260602_add_filter_profile.sql` をSQL Editorで実行し、`tanks.filter_profile` に掃除日、交換目安、流量メモを保存できる状態にしてください。
+リリース前の既存Supabase更新では、`supabase/migrations/20260603_release_schema_updates.sql` をSQL Editorで実行してください。水槽寸法 `tanks.dimensions`、フィルター管理 `tanks.filter_profile`、水槽ごとのリマインダー `reminders.tank_id`、水槽変更を含むPWA実機テスト `pwa_device_tests`、最終リリース判定 `pwa_release_decisions` を追加します。
 
 ## 公開後の拡張メモ
 
