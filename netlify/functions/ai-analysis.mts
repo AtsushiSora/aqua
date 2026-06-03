@@ -103,7 +103,7 @@ export default async (request: Request) => {
 
 export const config: Config = {
   path: "/api/ai-analysis",
-  method: "POST",
+  method: ["GET", "POST"],
 };
 
 function buildMessages(payload: AnalysisRequest) {
