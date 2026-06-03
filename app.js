@@ -1808,6 +1808,8 @@ function handleMonitorFeedbackSubmit(event) {
     showToast("内容を入力してください");
     return;
   }
+  const status = document.querySelector("#monitor-feedback-status-input").value;
+  const resolutionNote = document.querySelector("#monitor-feedback-resolution-input").value.trim();
 
   const entry = normalizeMonitorFeedback({
     id: createId("monitor-feedback"),
@@ -1817,9 +1819,10 @@ function handleMonitorFeedbackSubmit(event) {
     screen: document.querySelector("#monitor-feedback-screen-input").value,
     kind: document.querySelector("#monitor-feedback-kind-input").value,
     priority: document.querySelector("#monitor-feedback-priority-input").value,
-    status: document.querySelector("#monitor-feedback-status-input").value,
+    status,
+    resolvedAt: status === "done" ? new Date().toISOString() : null,
     note,
-    resolutionNote: document.querySelector("#monitor-feedback-resolution-input").value,
+    resolutionNote: status === "done" && !resolutionNote ? "対応済みで記録" : resolutionNote,
   });
 
   state.monitorFeedback = [entry, ...(state.monitorFeedback || [])].slice(0, 80);
