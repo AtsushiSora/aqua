@@ -2798,8 +2798,22 @@ function renderPwaReleaseDecision() {
       <strong>${escapeHtml(monitorFeedback.ready ? "未対応なし" : `${monitorFeedback.unresolvedCount}件の未対応`)}</strong>
       <small>${escapeHtml(`記録 ${monitorFeedback.totalCount}件 / 高優先度未対応 ${monitorFeedback.highUnresolvedCount}件 / 対応済み ${monitorFeedback.resolvedCount}件`)}</small>
       ${
-        monitorFeedback.triage.next
-          ? `<p>${escapeHtml(`次候補: ${monitorFeedback.triage.next.title} - ${monitorFeedback.triage.next.note}`)}</p>`
+        monitorFeedback.nextItems?.length
+          ? `
+            <div class="pwa-monitor-feedback-next-list">
+              ${monitorFeedback.nextItems
+                .slice(0, 3)
+                .map(
+                  (item) => `
+                    <article>
+                      <span>${escapeHtml(`#${item.rank} ${item.title}`)}</span>
+                      <p>${escapeHtml(item.note)}</p>
+                    </article>
+                  `,
+                )
+                .join("")}
+            </div>
+          `
           : "<p>公開判断前に残っているモニター指摘はありません。</p>"
       }
     </div>

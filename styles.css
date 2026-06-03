@@ -4863,6 +4863,27 @@ textarea {
   color: var(--ink);
 }
 
+.pwa-monitor-feedback-next-list {
+  display: grid;
+  gap: 6px;
+}
+
+.pwa-monitor-feedback-next-list article {
+  padding: 8px;
+  border: 1px solid rgba(226, 162, 72, 0.24);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.58);
+}
+
+.pwa-monitor-feedback-next-list span,
+.pwa-monitor-feedback-next-list p {
+  display: block;
+}
+
+.pwa-monitor-feedback-next-list span {
+  color: var(--aqua-dark);
+}
+
 .pwa-gateway-evidence {
   display: grid;
   gap: 8px;
