@@ -1088,16 +1088,21 @@
                 </article>
                 <article>
                   <span>2</span>
+                  <strong>水槽変更</strong>
+                  <small>複数水槽を登録し、ホームの写真、状態カード、今日の管理が切り替わるか確認する</small>
+                </article>
+                <article>
+                  <span>3</span>
                   <strong>オフライン</strong>
                   <small>通信を切って再読み込みし、offline.htmlまたはキャッシュ済み画面が出るか確認する</small>
                 </article>
                 <article>
-                  <span>3</span>
+                  <span>4</span>
                   <strong>通知権限</strong>
                   <small>Push公開鍵、Service Worker、通知許可、購読同期をアカウント画面で確認する</small>
                 </article>
                 <article>
-                  <span>4</span>
+                  <span>5</span>
                   <strong>スマホ表示</strong>
                   <small>ベーシック、かんたん、管理重視、投稿重視モードをiPhone/Android幅で確認する</small>
                 </article>
@@ -1115,6 +1120,10 @@
                 <li>
                   <strong>本番URLで開く</strong>
                   <span>公開URLをiPhone SafariとAndroid Chromeで開き、ログインと初期表示を確認する</span>
+                </li>
+                <li>
+                  <strong>水槽変更</strong>
+                  <span>複数水槽を登録し、ホームの水槽変更で写真、状態カード、今日の管理が切り替わるか確認する</span>
                 </li>
                 <li>
                   <strong>ホーム追加</strong>
@@ -1167,13 +1176,13 @@
                 <label>
                   <span>確認項目</span>
                   <select id="pwa-test-scope-input">
+                    <option value="login">ログイン</option>
+                    <option value="tank_switch">水槽変更</option>
                     <option value="install">ホーム追加</option>
                     <option value="notification">通知受信</option>
                     <option value="offline">オフライン復帰</option>
                     <option value="ui_modes">4モード表示</option>
                     <option value="custom_images">画像カスタム</option>
-                    <option value="login">ログイン</option>
-                    <option value="tank_switch">水槽変更</option>
                   </select>
                 </label>
                 <div class="pwa-test-scope-hint full-field" id="pwa-test-scope-hint" aria-live="polite"></div>
