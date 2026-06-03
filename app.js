@@ -446,6 +446,15 @@ directViewButtons.forEach((button) => {
   button.addEventListener("click", () => showView(button.dataset.viewTarget));
 });
 
+document.querySelectorAll(".is-actionable[role='button']").forEach((item) => {
+  item.addEventListener("keydown", (event) => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      item.click();
+    }
+  });
+});
+
 if (globalSearchInput && searchResults) {
   globalSearchInput.addEventListener("input", renderSearchResults);
   globalSearchInput.addEventListener("focus", renderSearchResults);

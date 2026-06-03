@@ -1752,7 +1752,7 @@ body[data-custom-buttons="true"] .icon-button {
 }
 
 .metric-grid {
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   margin-top: 14px;
   position: relative;
   z-index: 2;
@@ -1892,6 +1892,15 @@ body[data-custom-buttons="true"] .icon-button {
   position: relative;
   padding: 16px;
   overflow: hidden;
+}
+
+.metric-card.is-actionable {
+  cursor: pointer;
+}
+
+.metric-card.is-actionable:focus-visible {
+  outline: 3px solid rgba(15, 143, 150, 0.42);
+  outline-offset: 2px;
 }
 
 .metric-card::before {

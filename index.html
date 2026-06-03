@@ -165,22 +165,22 @@
               </div>
 
               <div class="metric-grid" aria-label="今日の状態">
-                <article class="metric-card metric-temp-card">
+                <article class="metric-card metric-temp-card is-actionable" role="button" tabindex="0" data-add-log>
                   <span>水温</span>
                   <strong id="metric-temp">--</strong>
                   <small id="metric-temp-note">記録待ち</small>
                 </article>
-                <article class="metric-card metric-ph-card">
+                <article class="metric-card metric-ph-card is-actionable" role="button" tabindex="0" data-add-log>
                   <span>pH</span>
                   <strong id="metric-ph">--</strong>
                   <small id="metric-ph-note">記録待ち</small>
                 </article>
-                <article class="metric-card metric-water-card">
+                <article class="metric-card metric-water-card is-actionable" role="button" tabindex="0" data-add-log>
                   <span>水換え</span>
                   <strong id="metric-water-change">--</strong>
                   <small id="metric-water-change-note">記録待ち</small>
                 </article>
-                <article class="metric-card metric-volume-card">
+                <article class="metric-card metric-volume-card is-actionable" role="button" tabindex="0" data-view-target="tanks">
                   <span>水量</span>
                   <strong id="metric-volume">--</strong>
                   <small id="metric-volume-note">寸法未設定</small>
@@ -191,7 +191,7 @@
                   <small id="metric-filter-note">掃除日未設定</small>
                   <button class="text-button metric-card-action" type="button" data-filter-log>掃除を記録</button>
                 </article>
-                <article class="metric-card metric-ai-card alert" id="metric-ai-card">
+                <article class="metric-card metric-ai-card alert is-actionable" id="metric-ai-card" role="button" tabindex="0" data-view-target="ai">
                   <span>AI状態</span>
                   <strong id="metric-ai-status">注意</strong>
                   <small id="metric-ai-note">記録から簡易判定</small>
