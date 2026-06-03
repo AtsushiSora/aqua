@@ -10181,6 +10181,10 @@ function renderDashboard() {
 }
 
 function getRiskScore(levelClass) {
+  if (!levelClass) {
+    return "--";
+  }
+
   if (levelClass === "danger") {
     return "84";
   }
@@ -10342,7 +10346,7 @@ function analyzeTank({ water, fish, algae, days }) {
 
 function getLogBasedStatus(latestLog, latestWaterChange) {
   if (!latestLog) {
-    return { status: "未記録", levelClass: "warning", summary: "まず水温とpHを記録" };
+    return { status: "未記録", levelClass: "", summary: "水温とpHを記録すると状態メモを表示します" };
   }
 
   const ph = Number(latestLog.ph);
