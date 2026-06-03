@@ -1697,6 +1697,45 @@ body[data-custom-buttons="true"] .icon-button {
   margin-top: 12px;
 }
 
+.home-start-card {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  align-items: center;
+  margin-top: 12px;
+  padding: 14px;
+  border: 1px solid rgba(15, 143, 143, 0.18);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.82);
+  box-shadow: var(--shadow-soft);
+}
+
+.home-start-card[hidden] {
+  display: none;
+}
+
+.home-start-card h2,
+.home-start-card p {
+  margin: 0;
+}
+
+.home-start-card h2 {
+  font-size: 1.05rem;
+}
+
+.home-start-card p:not(.eyebrow) {
+  margin-top: 4px;
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.home-start-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
 .quick-dock button {
   min-height: 76px;
   display: grid;
@@ -6534,6 +6573,16 @@ textarea {
 
   .metric-grid {
     margin-top: 14px;
+  }
+
+  .home-start-card {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .home-start-actions {
+    display: grid;
+    grid-template-columns: 1fr;
   }
 
   .hero-actions,

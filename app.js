@@ -62,6 +62,9 @@ const heroMedia = document.querySelector(".hero-media");
 const heroPhotoStatus = document.querySelector("#hero-photo-status");
 const heroTankName = document.querySelector("#hero-tank-name");
 const heroPhotoNote = document.querySelector("#hero-photo-note");
+const homeStartCard = document.querySelector("#home-start-card");
+const homeStartNote = document.querySelector("#home-start-note");
+const homeStartPhotoButton = document.querySelector("#home-start-photo-button");
 const homeTankSelect = document.querySelector("#home-tank-select");
 const notificationButton = document.querySelector("#notification-button");
 const installAppButton = document.querySelector("#install-app-button");
@@ -1011,6 +1014,10 @@ heroPhotoButton.addEventListener("click", () => {
   heroPhotoInput.click();
 });
 
+homeStartPhotoButton?.addEventListener("click", () => {
+  heroPhotoInput.click();
+});
+
 heroMedia.addEventListener("click", () => {
   heroPhotoInput.click();
 });
@@ -1385,6 +1392,29 @@ function renderHeroPhoto() {
   heroPhotoNote.textContent = heroImage
     ? "この水槽をTOPに大きく表示しています"
     : "写真を設定すると、ここに自分の水槽が大きく表示されます";
+  renderHomeStartCard(tank, Boolean(heroImage));
+}
+
+function renderHomeStartCard(tank, hasHeroImage) {
+  if (!homeStartCard) {
+    return;
+  }
+
+  const hasStarterName = tank.id === "tank-main" && tank.name === "はじめての水槽";
+  const hasDimensions = hasCompleteTankDimensions(tank.dimensions);
+  const needsSetup = hasStarterName || !hasDimensions || !hasHeroImage;
+
+  homeStartCard.hidden = !needsSetup;
+  if (!needsSetup) {
+    return;
+  }
+
+  const missing = [
+    hasStarterName ? "水槽名" : "",
+    !hasDimensions ? "サイズ" : "",
+    !hasHeroImage ? "写真" : "",
+  ].filter(Boolean);
+  homeStartNote.textContent = `${missing.join("・")}を入れると、ホームが自分の水槽用に整います。`;
 }
 
 function renderAccount() {
