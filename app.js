@@ -1781,7 +1781,7 @@ function getMonitorGuideText(readiness = getMonitorReadinessState()) {
     "2. 自分の水槽を1つ登録し、写真をTOPに設定する",
     "3. 水温、pH、水換え、フィルター掃除を1回ずつ記録する",
     "4. 複数水槽を追加し、ホームの水槽変更で内容が切り替わるか試す",
-    "5. 投稿またはアルバムに写真を1枚追加する",
+    "5. TOP写真または投稿写真を1枚追加し、表示を確認する",
     "6. ベーシック、かんたん、管理重視、投稿重視モードを切り替えて感想を残す",
     "7. 可能なら通知許可、ホーム画面追加、オフライン復帰も試す",
     "",
@@ -2135,7 +2135,7 @@ function getMonitorReadinessItems() {
   const pwaCoverage = getPwaReleaseCoverage(state.pwaTestResults || []);
   const decision = normalizePwaReleaseDecision(state.pwaReleaseDecision || {});
   const setupReadyCount = setup.items.filter((item) => item.status === "ready").length;
-  const mediaCount = state.posts.filter((post) => hasPostMedia(post)).length;
+  const mediaReadiness = getMonitorMediaReadiness();
   const filterReady = state.tanks.some((tank) => {
     const filter = normalizeTankFilter(tank.filter);
     return Boolean(filter.type || filter.lastCleanedAt || filter.note);
@@ -2157,9 +2157,9 @@ function getMonitorReadinessItems() {
     },
     {
       label: "写真/メディア",
-      status: mediaCount ? "ready" : "manual",
-      value: mediaCount ? `${mediaCount}件` : "未投稿",
-      note: mediaCount ? "写真または動画の表示確認ができます" : "モニター前に写真投稿またはTOP画像を1件確認します",
+      status: mediaReadiness.ready ? "ready" : "manual",
+      value: mediaReadiness.value,
+      note: mediaReadiness.note,
     },
     {
       label: "本番前設定",
@@ -2180,6 +2180,41 @@ function getMonitorReadinessItems() {
       note: decision.productionUrl ? "モニターURL、確認者、残タスクを判定メモに残します" : "モニターで使うURLを最終リリース判定に保存します",
     },
   ];
+}
+
+function getMonitorMediaReadiness() {
+  const postMediaCount = state.posts.filter((post) => hasPostMedia(post)).length;
+  const hasTopPhoto = Boolean(state.heroPhotoDataUrl);
+
+  if (hasTopPhoto && postMediaCount) {
+    return {
+      ready: true,
+      value: `TOP写真 + 投稿${postMediaCount}件`,
+      note: "TOP写真と投稿メディアの表示確認ができます",
+    };
+  }
+
+  if (hasTopPhoto) {
+    return {
+      ready: true,
+      value: "TOP写真あり",
+      note: "自分の水槽写真がホームに大きく表示されることを確認できます",
+    };
+  }
+
+  if (postMediaCount) {
+    return {
+      ready: true,
+      value: `投稿${postMediaCount}件`,
+      note: "写真または動画の表示確認ができます",
+    };
+  }
+
+  return {
+    ready: false,
+    value: "写真未確認",
+    note: "モニター前にTOP写真または投稿写真を1件確認します",
+  };
 }
 
 function renderCustomAppearance() {
