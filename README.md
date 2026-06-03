@@ -185,6 +185,41 @@
 
 `netlify/functions/notification-delivery.mts` は15分ごとに `notification_deliveries` を確認するScheduled Functionです。既定では `NOTIFICATION_DELIVERY_DRY_RUN` が有効扱いになり、DB更新や送信は行いません。
 
+## Netlify本番設定チェックリスト
+
+本番公開前にNetlifyで設定する環境変数は、AI分析用、Supabaseサーバー処理用、通知用に分けて確認します。
+
+AI分析:
+
+- `OPENAI_BASE_URL`
+- `OPENAI_API_KEY` 任意
+- `AI_ANALYSIS_MODEL=gpt-4o-mini`
+
+Supabaseサーバー処理:
+
+- `SUPABASE_URL`
+- `SUPABASE_SERVICE_ROLE_KEY`
+
+通知配信:
+
+- `NOTIFICATION_DELIVERY_DRY_RUN=true` から開始
+- `RESEND_API_KEY` メール通知を使う場合
+- `NOTIFICATION_EMAIL_FROM` メール通知を使う場合
+- `WEB_PUSH_VAPID_SUBJECT`
+- `WEB_PUSH_VAPID_PUBLIC_KEY`
+- `WEB_PUSH_VAPID_PRIVATE_KEY`
+- `WEB_PUSH_TTL_SECONDS` 任意
+
+設定順:
+
+1. Supabase SQLとStorageを先に確認する。
+2. NetlifyにAI分析用の環境変数を入れ、AI画面の「AI API検証」でGateway経路を確認する。
+3. `node scripts/generate-vapid-keys.mjs` でVAPID鍵を生成する。
+4. 公開鍵を `supabase-config.js` の `AQUANOTE_PUSH_CONFIG.publicKey` に入れ、秘密鍵をNetlifyに入れる。
+5. `NOTIFICATION_DELIVERY_DRY_RUN=true` または未設定のまま、通知予約が作られることを確認する。
+6. 実機確認の最後に `NOTIFICATION_DELIVERY_DRY_RUN=false` へ切り替える。
+7. アカウント画面の「本番前セットアップ」「通知本番チェック」「PWA実機テスト結果」に確認結果を保存する。
+
 本番送信に必要な環境変数:
 
 - `SUPABASE_URL`
