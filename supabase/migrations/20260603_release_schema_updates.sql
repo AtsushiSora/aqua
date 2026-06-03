@@ -75,7 +75,7 @@ begin
 
   alter table public.pwa_device_tests
     add constraint pwa_device_tests_test_scope_check
-    check (test_scope in ('install', 'notification', 'offline', 'ui_modes', 'custom_images', 'login'));
+    check (test_scope in ('install', 'tank_switch', 'notification', 'offline', 'ui_modes', 'custom_images', 'login'));
   alter table public.pwa_device_tests
     add constraint pwa_device_tests_status_check
     check (status in ('passed', 'watch', 'failed'));

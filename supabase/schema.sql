@@ -286,7 +286,7 @@ create table if not exists public.pwa_device_tests (
   local_id text not null,
   device text not null default '未記録',
   browser text not null default '未記録',
-  test_scope text not null default 'install' check (test_scope in ('install', 'notification', 'offline', 'ui_modes', 'custom_images', 'login')),
+  test_scope text not null default 'install' check (test_scope in ('install', 'tank_switch', 'notification', 'offline', 'ui_modes', 'custom_images', 'login')),
   status text not null default 'watch' check (status in ('passed', 'watch', 'failed')),
   note text not null default '',
   tested_at timestamptz not null default now(),
@@ -307,7 +307,7 @@ begin
 
   alter table public.pwa_device_tests
     add constraint pwa_device_tests_test_scope_check
-    check (test_scope in ('install', 'notification', 'offline', 'ui_modes', 'custom_images', 'login'));
+    check (test_scope in ('install', 'tank_switch', 'notification', 'offline', 'ui_modes', 'custom_images', 'login'));
 end $$;
 
 create table if not exists public.pwa_release_decisions (

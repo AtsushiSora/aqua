@@ -313,7 +313,7 @@ AI画面の「AI比較ログ」には、Gateway結果とローカル分析の差
 UIモード保存時に既存制約が残っている場合は、アプリ上でもこのSQL実行が必要なことを案内します。
 投稿重視モードは既存データ互換のため、DBには `live` として保存します。
 フィルター管理をSupabase同期する場合は、`supabase/migrations/20260602_add_filter_profile.sql` をSQL Editorで実行し、`tanks.filter_profile` に掃除日、交換目安、流量メモを保存できる状態にしてください。
-リリース前の既存Supabase更新では、`supabase/migrations/20260603_release_schema_updates.sql` をSQL Editorで実行してください。水槽寸法 `tanks.dimensions`、水槽ごとのリマインダー `reminders.tank_id`、PWA実機テスト `pwa_device_tests`、最終リリース判定 `pwa_release_decisions` を追加します。
+リリース前の既存Supabase更新では、`supabase/migrations/20260603_release_schema_updates.sql` をSQL Editorで実行してください。水槽寸法 `tanks.dimensions`、水槽ごとのリマインダー `reminders.tank_id`、水槽変更を含むPWA実機テスト `pwa_device_tests`、最終リリース判定 `pwa_release_decisions` を追加します。
 
 ## 公開後の拡張メモ
 
