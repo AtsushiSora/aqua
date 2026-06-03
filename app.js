@@ -4186,7 +4186,9 @@ async function syncNotificationDeliveriesToSupabase(options = {}) {
     return true;
   }
 
-  const { error } = await supabaseClient.from("notification_deliveries").insert(payloads);
+  const { error } = await supabaseClient
+    .from("notification_deliveries")
+    .upsert(payloads, { onConflict: "owner_id,task_key,scheduled_for", ignoreDuplicates: true });
 
   if (error) {
     state.account.syncStatus = "local";
