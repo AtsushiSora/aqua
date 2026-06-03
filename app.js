@@ -755,12 +755,14 @@ pwaTestLog.addEventListener("click", async (event) => {
 monitorFeedbackList.addEventListener("click", (event) => {
   const statusButton = event.target.closest("[data-monitor-feedback-status]");
   if (statusButton) {
+    const nextStatus = statusButton.dataset.monitorFeedbackNextStatus;
     state.monitorFeedback = (state.monitorFeedback || []).map((entry) =>
       entry.id === statusButton.dataset.monitorFeedbackStatus
         ? normalizeMonitorFeedback({
             ...entry,
-            status: statusButton.dataset.monitorFeedbackNextStatus,
-            resolvedAt: statusButton.dataset.monitorFeedbackNextStatus === "done" ? new Date().toISOString() : null,
+            status: nextStatus,
+            resolvedAt: nextStatus === "done" ? new Date().toISOString() : null,
+            resolutionNote: nextStatus === "done" && !entry.resolutionNote ? "対応済みに変更" : entry.resolutionNote,
           })
         : entry,
     );
@@ -1905,7 +1907,7 @@ function renderMonitorFeedback() {
             <p>${escapeHtml(entry.note)}</p>
             ${
               entry.resolutionNote
-                ? `<p class="monitor-feedback-resolution">${escapeHtml(entry.resolutionNote)}</p>`
+                ? `<p class="monitor-feedback-resolution">${escapeHtml(`対応メモ: ${entry.resolutionNote}`)}</p>`
                 : ""
             }
             ${
