@@ -2507,6 +2507,7 @@ function renderPwaReleaseDecision() {
     decision,
     results: state.pwaTestResults || [],
   });
+  const monitorFeedback = getMonitorFeedbackExportSummary();
   document.querySelector("#pwa-release-decision-status-input").value = decision.status;
   document.querySelector("#pwa-release-review-status-input").value = decision.reviewStatus;
   document.querySelector("#pwa-release-result-status-input").value = decision.resultStatus;
@@ -2597,6 +2598,16 @@ function renderPwaReleaseDecision() {
               )
               .join("")
           : "<p>実機QAで要確認またはNGになった項目はありません。</p>"
+      }
+    </div>
+    <div class="pwa-monitor-feedback-evidence ${monitorFeedback.ready ? "ready" : "pending"}">
+      <span>モニター指摘</span>
+      <strong>${escapeHtml(monitorFeedback.ready ? "未対応なし" : `${monitorFeedback.unresolvedCount}件の未対応`)}</strong>
+      <small>${escapeHtml(`記録 ${monitorFeedback.totalCount}件 / 高優先度未対応 ${monitorFeedback.highUnresolvedCount}件 / 対応済み ${monitorFeedback.resolvedCount}件`)}</small>
+      ${
+        monitorFeedback.triage.next
+          ? `<p>${escapeHtml(`次候補: ${monitorFeedback.triage.next.title} - ${monitorFeedback.triage.next.note}`)}</p>`
+          : "<p>公開判断前に残っているモニター指摘はありません。</p>"
       }
     </div>
     <div class="pwa-gateway-evidence ${gatewayDecision.ready ? "ready" : "pending"}">

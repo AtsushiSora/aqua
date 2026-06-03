@@ -4810,6 +4810,40 @@ textarea {
   color: var(--ink);
 }
 
+.pwa-monitor-feedback-evidence {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid rgba(61, 173, 120, 0.3);
+  border-radius: 8px;
+  background: rgba(232, 248, 241, 0.78);
+}
+
+.pwa-monitor-feedback-evidence.pending {
+  border-color: rgba(226, 162, 72, 0.36);
+  background: rgba(255, 247, 230, 0.78);
+}
+
+.pwa-monitor-feedback-evidence span,
+.pwa-monitor-feedback-evidence strong,
+.pwa-monitor-feedback-evidence small,
+.pwa-monitor-feedback-evidence p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 850;
+}
+
+.pwa-monitor-feedback-evidence strong {
+  color: var(--aqua-dark);
+  font-size: 0.86rem;
+  font-weight: 900;
+}
+
+.pwa-monitor-feedback-evidence p {
+  color: var(--ink);
+}
+
 .pwa-gateway-evidence {
   display: grid;
   gap: 8px;
