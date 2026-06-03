@@ -2503,6 +2503,7 @@ function renderPwaReleaseDecision() {
     gatewayDecision,
     deviceQaActions,
     appearanceQa,
+    monitorFeedback,
   });
   const testerScript = getPwaReleaseTesterScript({ decision, coverage });
   const cloudReview = getPwaReleaseCloudReview({
@@ -2857,7 +2858,7 @@ function getPwaReleaseQaState(evidenceItems) {
     return {
       ready: true,
       title: "全チェック完了",
-      note: "本番URL、実機結果、最終判定、クラウド保存、レビューJSONが揃っています。",
+      note: "本番URL、実機結果、モニター指摘、最終判定、クラウド保存、レビューJSONが揃っています。",
     };
   }
 
@@ -2958,11 +2959,15 @@ function getPwaReleaseHandoffChecklist({ decision, coverage, deviceQaActions, ga
   };
 }
 
-function getPwaReleaseHandoffMemo({ decision, coverage, handoffChecklist, gatewayDecision, deviceQaActions, appearanceQa }) {
+function getPwaReleaseHandoffMemo({ decision, coverage, handoffChecklist, gatewayDecision, deviceQaActions, appearanceQa, monitorFeedback }) {
   const pendingLabels = handoffChecklist.items.filter((item) => !item.ready).map((item) => item.label);
   const appearanceReady = appearanceQa.every((item) => item.ready);
+  const feedbackSummary = monitorFeedback || getMonitorFeedbackExportSummary();
   const gatewayNote = gatewayDecision.ready ? "AI Gateway本番判定OK" : gatewayDecision.summary;
   const qaNote = `${coverage.passedCount}/${coverage.scopes.length}項目OK${deviceQaActions.length ? ` / 未解消${deviceQaActions.length}件` : ""}`;
+  const feedbackNote = feedbackSummary.ready
+    ? `未対応なし / 記録${feedbackSummary.totalCount}件`
+    : `未対応${feedbackSummary.unresolvedCount}件 / 高優先度${feedbackSummary.highUnresolvedCount}件`;
   const ready = handoffChecklist.ready;
 
   return {
@@ -2976,6 +2981,7 @@ function getPwaReleaseHandoffMemo({ decision, coverage, handoffChecklist, gatewa
       `本番URL: ${decision.productionUrl || "未記録"}`,
       `実機QA: ${qaNote}`,
       `主要操作QA: ${appearanceReady ? "水槽変更、4モード、画像カスタム確認済み" : "水槽変更、4モード、画像カスタムのいずれかが未完了"}`,
+      `モニター指摘: ${feedbackNote}`,
       `Gateway: ${gatewayNote}`,
       `確認者: ${decision.reviewer || "未記録"}`,
       `残タスク: ${pendingLabels.length ? pendingLabels.join(" / ") : "なし"}`,
@@ -5888,6 +5894,7 @@ async function exportPwaTestResults() {
     gatewayDecision: gatewayDecisionEvidence,
     deviceQaActions,
     appearanceQa,
+    monitorFeedback,
   });
   const testerScript = getPwaReleaseTesterScript({ decision: releaseDecision, coverage });
   const cloudReview = getPwaReleaseCloudReview({
