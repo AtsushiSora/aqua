@@ -1512,7 +1512,7 @@
                   </label>
                   <label class="full-field">
                     <span>確認メモ</span>
-                    <textarea id="production-supabase-note-input" rows="2" placeholder="schema.sql、UI mode migration、RLS、Auth登録確認など"></textarea>
+                    <textarea id="production-supabase-note-input" rows="2" placeholder="schema.sql、20260602_remove_glance_ui_mode.sql、20260603_release_schema_updates.sql、RLS、Auth登録確認など"></textarea>
                   </label>
                   <button class="ghost-button full-field" type="submit">Supabase確認を保存</button>
                 </form>
@@ -1593,7 +1593,7 @@
               <ol class="production-setup-list">
                 <li>
                   <strong>Supabase SQL</strong>
-                  <span><code>supabase/schema.sql</code> を実行。既存プロジェクトはUIモードとリリース用migrationで寸法・フィルター・リマインダーも反映。</span>
+                  <span><code>supabase/schema.sql</code> を実行。既存プロジェクトは <code>20260602_remove_glance_ui_mode.sql</code> と <code>20260603_release_schema_updates.sql</code> も実行。</span>
                   <span class="production-setup-target">確認場所: アカウント / Supabase Auth</span>
                 </li>
                 <li>

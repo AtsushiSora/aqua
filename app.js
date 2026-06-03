@@ -1644,7 +1644,13 @@ function getProductionSetupSummaryItems(results = state.pwaTestResults || []) {
       label: "Supabase",
       status: supabaseReady ? "ready" : supabaseIssue ? "missing" : setupStatus.ready && authSession?.user ? "ready" : setupStatus.ready ? "manual" : "missing",
       value: supabaseReady ? "SQL確認済み" : supabaseIssue ? "要対応" : authSession?.user ? "ログイン中" : setupStatus.ready ? "接続準備済み" : "未設定",
-      note: setupCheck.supabaseNote || (authSession?.user ? "プロフィール同期まで確認できます" : setupStatus.message),
+      note:
+        setupCheck.supabaseNote ||
+        (authSession?.user
+          ? "schema.sqlとリリース用migration実行後、プロフィール同期まで確認します"
+          : setupStatus.ready
+            ? "schema.sql、UIモードmigration、リリース用migrationを確認します"
+            : setupStatus.message),
       reviewer: setupCheck.supabaseReviewer,
       checkedAt: setupCheck.supabaseCheckedAt,
     },
