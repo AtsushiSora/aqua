@@ -112,6 +112,7 @@ const pwaTestNoteTemplateButton = document.querySelector("#pwa-test-note-templat
 const pwaReleaseDecisionForm = document.querySelector("#pwa-release-decision-form");
 const pwaReleaseDecisionChip = document.querySelector("#pwa-release-decision-chip");
 const pwaReleaseDecisionSummary = document.querySelector("#pwa-release-decision-summary");
+const pwaReleaseUseCurrentUrlButton = document.querySelector("#pwa-release-use-current-url-button");
 const monitorReadinessChip = document.querySelector("#monitor-readiness-chip");
 const monitorReadinessNext = document.querySelector("#monitor-readiness-next");
 const monitorReadinessSummary = document.querySelector("#monitor-readiness-summary");
@@ -726,6 +727,7 @@ monitorFeedbackFilterReset.addEventListener("click", () => {
 });
 productionSetupExportButton.addEventListener("click", exportProductionSetupStatus);
 pwaReleaseDecisionForm.addEventListener("submit", handlePwaReleaseDecisionSubmit);
+pwaReleaseUseCurrentUrlButton.addEventListener("click", applyCurrentProductionUrl);
 productionSupabaseCheckForm.addEventListener("submit", handleProductionSupabaseCheckSubmit);
 productionStorageCheckForm.addEventListener("submit", handleProductionStorageCheckSubmit);
 productionAiCheckForm.addEventListener("submit", handleProductionAiCheckSubmit);
@@ -2402,6 +2404,25 @@ async function handlePwaReleaseDecisionSubmit(event) {
     await syncPwaReleaseDecisionToSupabase({ silent: true });
   }
   showToast("PWA最終リリース判定を保存しました");
+}
+
+function applyCurrentProductionUrl() {
+  const urlInput = document.querySelector("#pwa-release-decision-url-input");
+  if (!urlInput) {
+    return;
+  }
+
+  const currentUrl = new URL(window.location.href);
+  currentUrl.hash = "";
+
+  if (!["http:", "https:"].includes(currentUrl.protocol)) {
+    showToast("公開URLで開いた時に現在URLを入力できます");
+    return;
+  }
+
+  urlInput.value = currentUrl.toString();
+  urlInput.focus();
+  showToast("現在のURLを本番URL欄に入れました");
 }
 
 function renderPwaReleaseDecision() {
