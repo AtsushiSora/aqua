@@ -6005,6 +6005,7 @@ function exportAppData() {
 
 function exportProductionSetupStatus() {
   const setupSummary = getProductionSetupSummaryState();
+  const monitorReadiness = getMonitorReadinessState();
   const payload = {
     app: "AquaNote",
     type: "production-setup-status",
@@ -6017,6 +6018,9 @@ function exportProductionSetupStatus() {
     totalCount: setupSummary.totalCount,
     setupCheck: normalizeProductionSetupCheck(state.productionSetupCheck || {}),
     items: setupSummary.items,
+    monitorReadiness,
+    monitorGuideText: getMonitorGuideText(monitorReadiness),
+    releaseDecision: normalizePwaReleaseDecision(state.pwaReleaseDecision || {}),
   };
 
   downloadFile(
@@ -6048,6 +6052,7 @@ async function exportPwaTestResults() {
   const scopeStatuses = getPwaScopeStatuses(results);
   const gatewayDecisionEvidence = getAiGatewayProductionDecisionEvidence();
   const prelaunchSetup = getProductionSetupSummaryState(results);
+  const monitorReadiness = getMonitorReadinessState();
   const appearanceQa = getPwaModeQaSummary(results);
   const deviceQaActions = getPwaDeviceQaActionItems(results);
   const allDeviceQaActions = getPwaDeviceQaActionItems(results, { includeResolved: true });
@@ -6108,6 +6113,7 @@ async function exportPwaTestResults() {
       history: allDeviceQaActions,
     },
     prelaunchSetup,
+    monitorReadiness,
     gatewayDecisionEvidence: getPwaGatewayDecisionExportEvidence(gatewayDecisionEvidence),
     handoffChecklist,
     handoffMemo,
