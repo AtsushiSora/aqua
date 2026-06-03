@@ -1,4 +1,4 @@
-const CACHE_NAME = "aquanote-production-v52";
+const CACHE_NAME = "aquanote-production-v53";
 const ASSETS = [
   "./",
   "./index.html",
@@ -42,8 +42,10 @@ self.addEventListener("fetch", (event) => {
   event.respondWith(
     fetch(event.request)
       .then((response) => {
-        const copy = response.clone();
-        caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
+        if (shouldCacheRequest(event.request, response)) {
+          const copy = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
+        }
         return response;
       })
       .catch(() =>
@@ -61,6 +63,19 @@ self.addEventListener("fetch", (event) => {
       )
   );
 });
+
+function shouldCacheRequest(request, response) {
+  const url = new URL(request.url);
+  if (url.origin !== self.location.origin || !response.ok) {
+    return false;
+  }
+
+  if (url.pathname.startsWith("/api/")) {
+    return false;
+  }
+
+  return ["document", "style", "script", "image", "manifest", ""].includes(request.destination);
+}
 
 self.addEventListener("push", (event) => {
   let data = {};
