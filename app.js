@@ -2449,7 +2449,28 @@ async function handlePwaReleaseDecisionSubmit(event) {
   if (authSession?.user) {
     await syncPwaReleaseDecisionToSupabase({ silent: true });
   }
-  showToast("PWA最終リリース判定を保存しました");
+  showPwaReleaseDecisionSavedToast();
+}
+
+function showPwaReleaseDecisionSavedToast() {
+  const decision = normalizePwaReleaseDecision(state.pwaReleaseDecision || {});
+  if (decision.status !== "ready") {
+    showToast("PWA最終リリース判定を保存しました");
+    return;
+  }
+
+  const coverage = getPwaReleaseCoverage();
+  const blockers = getPwaReleaseEvidenceItems(decision, coverage)
+    .filter((item) => !item.ready)
+    .map((item) => item.label);
+  if (!blockers.length) {
+    showToast("公開OKとして保存しました");
+    return;
+  }
+
+  const visibleBlockers = blockers.slice(0, 3).join(" / ");
+  const suffix = blockers.length > 3 ? ` ほか${blockers.length - 3}件` : "";
+  showToast(`公開OKを保存しました。未完了: ${visibleBlockers}${suffix}`);
 }
 
 function applyCurrentProductionUrl() {
