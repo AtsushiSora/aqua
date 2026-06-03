@@ -4335,6 +4335,11 @@ async function syncPushSubscriptionToSupabase(options = {}) {
     return false;
   }
 
+  state.account.syncStatus = "synced";
+  state.account.lastSyncedAt = new Date().toISOString();
+  saveState({ keepSyncStatus: true });
+  renderAccount();
+
   if (!options.silent) {
     showToast("PWA Push購読をSupabaseに同期しました");
   }
