@@ -2627,9 +2627,13 @@ function showPwaReleaseDecisionSavedToast() {
     return;
   }
 
+  const monitorFeedback = getMonitorFeedbackExportSummary();
+  const monitorWarning = !monitorFeedback.ready && monitorFeedback.triage.next
+    ? ` / 次候補: ${monitorFeedback.triage.next.title}`
+    : "";
   const visibleBlockers = blockers.slice(0, 3).join(" / ");
   const suffix = blockers.length > 3 ? ` ほか${blockers.length - 3}件` : "";
-  showToast(`公開OKを保存しました。未完了: ${visibleBlockers}${suffix}`);
+  showToast(`公開OKを保存しました。未完了: ${visibleBlockers}${suffix}${monitorWarning}`);
 }
 
 function applyPwaReleasePendingNoteTemplate() {
