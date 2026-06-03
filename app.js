@@ -113,6 +113,7 @@ const pwaReleaseDecisionForm = document.querySelector("#pwa-release-decision-for
 const pwaReleaseDecisionChip = document.querySelector("#pwa-release-decision-chip");
 const pwaReleaseDecisionSummary = document.querySelector("#pwa-release-decision-summary");
 const pwaReleaseUseCurrentUrlButton = document.querySelector("#pwa-release-use-current-url-button");
+const pwaReleasePendingNoteButton = document.querySelector("#pwa-release-pending-note-button");
 const monitorReadinessChip = document.querySelector("#monitor-readiness-chip");
 const monitorReadinessNext = document.querySelector("#monitor-readiness-next");
 const monitorReadinessSummary = document.querySelector("#monitor-readiness-summary");
@@ -730,6 +731,7 @@ monitorFeedbackFilterReset.addEventListener("click", () => {
 productionSetupExportButton.addEventListener("click", exportProductionSetupStatus);
 pwaReleaseDecisionForm.addEventListener("submit", handlePwaReleaseDecisionSubmit);
 pwaReleaseUseCurrentUrlButton.addEventListener("click", applyCurrentProductionUrl);
+pwaReleasePendingNoteButton.addEventListener("click", applyPwaReleasePendingNoteTemplate);
 productionSupabaseCheckForm.addEventListener("submit", handleProductionSupabaseCheckSubmit);
 productionStorageCheckForm.addEventListener("submit", handleProductionStorageCheckSubmit);
 productionAiCheckForm.addEventListener("submit", handleProductionAiCheckSubmit);
@@ -2435,13 +2437,7 @@ function getPwaReleaseCoverage(results = state.pwaTestResults || []) {
 
 async function handlePwaReleaseDecisionSubmit(event) {
   event.preventDefault();
-  state.pwaReleaseDecision = normalizePwaReleaseDecision({
-    status: document.querySelector("#pwa-release-decision-status-input").value,
-    reviewStatus: document.querySelector("#pwa-release-review-status-input").value,
-    resultStatus: document.querySelector("#pwa-release-result-status-input").value,
-    reviewer: document.querySelector("#pwa-release-decision-reviewer-input").value,
-    productionUrl: document.querySelector("#pwa-release-decision-url-input").value,
-    note: document.querySelector("#pwa-release-decision-note-input").value,
+  state.pwaReleaseDecision = getPwaReleaseDecisionFormDraft({
     decidedAt: new Date().toISOString(),
   });
   saveState();
@@ -2450,6 +2446,18 @@ async function handlePwaReleaseDecisionSubmit(event) {
     await syncPwaReleaseDecisionToSupabase({ silent: true });
   }
   showPwaReleaseDecisionSavedToast();
+}
+
+function getPwaReleaseDecisionFormDraft(options = {}) {
+  return normalizePwaReleaseDecision({
+    status: document.querySelector("#pwa-release-decision-status-input").value,
+    reviewStatus: document.querySelector("#pwa-release-review-status-input").value,
+    resultStatus: document.querySelector("#pwa-release-result-status-input").value,
+    reviewer: document.querySelector("#pwa-release-decision-reviewer-input").value,
+    productionUrl: document.querySelector("#pwa-release-decision-url-input").value,
+    note: document.querySelector("#pwa-release-decision-note-input").value,
+    decidedAt: options.decidedAt || state.pwaReleaseDecision?.decidedAt || null,
+  });
 }
 
 function showPwaReleaseDecisionSavedToast() {
@@ -2471,6 +2479,24 @@ function showPwaReleaseDecisionSavedToast() {
   const visibleBlockers = blockers.slice(0, 3).join(" / ");
   const suffix = blockers.length > 3 ? ` ほか${blockers.length - 3}件` : "";
   showToast(`公開OKを保存しました。未完了: ${visibleBlockers}${suffix}`);
+}
+
+function applyPwaReleasePendingNoteTemplate() {
+  const noteInput = document.querySelector("#pwa-release-decision-note-input");
+  if (!noteInput) {
+    return;
+  }
+
+  const decision = getPwaReleaseDecisionFormDraft();
+  const coverage = getPwaReleaseCoverage();
+  const blockers = getPwaReleaseEvidenceItems(decision, coverage).filter((item) => !item.ready);
+  const templateLines = blockers.length
+    ? ["公開前残タスク:", ...blockers.map((item) => `- ${item.label}: ${item.note}`)]
+    : ["公開前残タスク: なし", "公開判断: 本番URLレビュー、実機QA、モニター指摘、クラウド同期を確認済み"];
+  const template = templateLines.join("\n");
+  noteInput.value = noteInput.value ? `${noteInput.value.trim()}\n\n${template}` : template;
+  noteInput.focus();
+  showToast(blockers.length ? "残タスクを判定メモに入れました" : "公開OK用の判定メモを入れました");
 }
 
 function applyCurrentProductionUrl() {
