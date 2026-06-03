@@ -1097,7 +1097,7 @@ tankForm.addEventListener("submit", (event) => {
   resetFilterForm("tank");
   resetTankIdentifyAssist();
   renderApp();
-  showToast("水槽を追加しました");
+  showToast("水槽を登録しました");
 });
 
 tankEditForm.addEventListener("submit", (event) => {

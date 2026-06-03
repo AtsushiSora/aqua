@@ -338,6 +338,12 @@
             </div>
 
             <form class="tank-form" id="tank-form">
+              <div class="tank-form-intro full-field">
+                <strong>水槽登録</strong>
+                <span>1. 基本情報</span>
+                <span>2. サイズ入力</span>
+                <span>3. 生き物・設備</span>
+              </div>
               <label>
                 <span>名前</span>
                 <input id="tank-name-input" type="text" placeholder="例: ベランダ睡蓮鉢" required>
@@ -353,7 +359,7 @@
                 </select>
               </label>
               <fieldset class="tank-dimensions-field full-field">
-                <legend>水槽サイズ</legend>
+                <legend>水槽サイズ <small>3つ入れると水量を自動計算します</small></legend>
                 <label>
                   <span>縦 cm</span>
                   <input id="tank-height-input" type="number" min="0" step="0.1" inputmode="decimal" placeholder="例: 30">
@@ -388,7 +394,7 @@
                 <button class="text-button species-add-button" type="button" data-species-add="tank-equipment-list">設備を追加</button>
               </div>
               <fieldset class="filter-management-field full-field">
-                <legend>フィルター管理</legend>
+                <legend>フィルター管理 <small>あとからでも設定できます</small></legend>
                 <label>
                   <span>フィルター種類</span>
                   <input id="tank-filter-type-input" type="text" placeholder="例: 外部フィルター">
@@ -425,7 +431,7 @@
                 </label>
                 <p id="tank-identify-status">魚、生き物、水草が見える写真を選ぶと候補を入れます。</p>
               </div>
-              <button class="ghost-button" type="submit">水槽を追加</button>
+              <button class="ghost-button" type="submit">水槽を登録</button>
             </form>
           </section>
 
