@@ -2,6 +2,7 @@
   "name": "AquaNote",
   "short_name": "AquaNote",
   "description": "水槽・池の管理、投稿、AI分析、飼育ガイドをまとめたアクアリウムアプリ",
+  "lang": "ja",
   "id": "./",
   "start_url": "./index.html",
   "scope": "./",
