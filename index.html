@@ -1455,6 +1455,27 @@
               </div>
               <div class="production-setup-next" id="production-setup-next-action"></div>
               <div class="production-setup-summary" id="production-setup-summary"></div>
+              <section class="production-netlify-guide" aria-label="Netlify本番設定">
+                <div>
+                  <p class="eyebrow">Netlify production</p>
+                  <h3>Netlify本番設定</h3>
+                  <span>AI分析、通知、dry-run解除をこの順番で確認します。</span>
+                </div>
+                <ol>
+                  <li>
+                    <strong>AI分析</strong>
+                    <span><code>OPENAI_BASE_URL</code>、必要なら <code>OPENAI_API_KEY</code>、<code>AI_ANALYSIS_MODEL</code></span>
+                  </li>
+                  <li>
+                    <strong>通知予約</strong>
+                    <span><code>SUPABASE_SERVICE_ROLE_KEY</code> とVAPID鍵を入れ、dry-runで配信ログを確認</span>
+                  </li>
+                  <li>
+                    <strong>本番送信</strong>
+                    <span>最後に <code>NOTIFICATION_DELIVERY_DRY_RUN=false</code> へ切り替えて実機受信を確認</span>
+                  </li>
+                </ol>
+              </section>
               <div class="production-setup-check-grid">
                 <form class="production-setup-check-form" id="production-supabase-check-form">
                   <label>

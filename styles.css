@@ -5741,6 +5741,84 @@ textarea {
   margin-bottom: 12px;
 }
 
+.production-netlify-guide {
+  display: grid;
+  grid-template-columns: minmax(220px, 0.9fr) minmax(0, 2fr);
+  gap: 12px;
+  align-items: stretch;
+  margin-bottom: 12px;
+  padding: 12px;
+  border: 1px solid rgba(18, 148, 142, 0.18);
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.5), transparent),
+    rgba(237, 249, 246, 0.74);
+}
+
+.production-netlify-guide h3,
+.production-netlify-guide p,
+.production-netlify-guide ol {
+  margin: 0;
+}
+
+.production-netlify-guide h3 {
+  color: var(--aqua-dark);
+  font-size: 1rem;
+}
+
+.production-netlify-guide > div > span {
+  display: block;
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+  line-height: 1.5;
+}
+
+.production-netlify-guide ol {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  padding: 0;
+  list-style: none;
+}
+
+.production-netlify-guide li {
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid rgba(18, 148, 142, 0.14);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.64);
+}
+
+.production-netlify-guide strong,
+.production-netlify-guide span {
+  display: block;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.production-netlify-guide strong {
+  color: var(--aqua-dark);
+  font-size: 0.86rem;
+}
+
+.production-netlify-guide span {
+  margin-top: 5px;
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-weight: 800;
+  line-height: 1.55;
+}
+
+.production-netlify-guide code {
+  padding: 1px 4px;
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.72);
+  color: var(--aqua-dark);
+  font-size: 0.72rem;
+}
+
 .production-setup-check-form {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -6435,6 +6513,7 @@ textarea {
   .manager-layout,
   .community-tools,
   .production-setup-check-grid,
+  .production-netlify-guide,
   .schema-grid,
   .monitor-readiness-summary,
   .monitor-feedback-form,
@@ -6447,6 +6526,10 @@ textarea {
   .guide-grid,
   .ranking-list {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .production-netlify-guide ol {
+    grid-template-columns: 1fr;
   }
 
   .tank-profile {
@@ -6692,6 +6775,8 @@ textarea {
   .ai-condition-coverage ul,
   .production-setup-check-grid,
   .production-setup-check-form,
+  .production-netlify-guide,
+  .production-netlify-guide ol,
   .schema-grid,
   .monitor-readiness-summary,
   .monitor-feedback-form,
