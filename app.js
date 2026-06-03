@@ -2135,19 +2135,19 @@ function getMonitorReadinessItems() {
   const pwaCoverage = getPwaReleaseCoverage(state.pwaTestResults || []);
   const decision = normalizePwaReleaseDecision(state.pwaReleaseDecision || {});
   const setupReadyCount = setup.items.filter((item) => item.status === "ready").length;
+  const coreFlowReadiness = getMonitorCoreFlowReadiness();
   const mediaReadiness = getMonitorMediaReadiness();
   const filterReady = state.tanks.some((tank) => {
     const filter = normalizeTankFilter(tank.filter);
     return Boolean(filter.type || filter.lastCleanedAt || filter.note);
   });
-  const hasCoreUserFlow = state.tanks.length > 0 && typeof getTankResidentValue(getActiveTank()) === "string";
 
   return [
     {
       label: "初回導線",
-      status: hasCoreUserFlow ? "ready" : "missing",
-      value: hasCoreUserFlow ? "OK" : "未確認",
-      note: hasCoreUserFlow ? "空表示、水槽登録、記録、投稿へ進める構成です" : "初回空表示から水槽登録、記録までの流れを確認します",
+      status: coreFlowReadiness.status,
+      value: coreFlowReadiness.value,
+      note: coreFlowReadiness.note,
     },
     {
       label: "フィルター管理",
@@ -2180,6 +2180,35 @@ function getMonitorReadinessItems() {
       note: decision.productionUrl ? "モニターURL、確認者、残タスクを判定メモに残します" : "モニターで使うURLを最終リリース判定に保存します",
     },
   ];
+}
+
+function getMonitorCoreFlowReadiness() {
+  const configuredTank = state.tanks.find((tank) => {
+    const filter = normalizeTankFilter(tank.filter);
+    return (
+      tank.name !== "はじめての水槽" ||
+      hasCompleteTankDimensions(tank.dimensions) ||
+      Boolean(getTankResidentValue(tank)) ||
+      Boolean(tank.equipment) ||
+      Boolean(tank.logs?.length) ||
+      Boolean(tank.featuredPostId) ||
+      Boolean(filter.type || filter.lastCleanedAt || filter.note)
+    );
+  });
+
+  if (configuredTank) {
+    return {
+      status: "ready",
+      value: "確認済み",
+      note: `${configuredTank.name} で登録、記録、投稿へ進む流れを確認できます`,
+    };
+  }
+
+  return {
+    status: "manual",
+    value: "要確認",
+    note: "初回空表示は準備済みです。モニター前に水槽登録と記録を1回試します",
+  };
 }
 
 function getMonitorMediaReadiness() {
