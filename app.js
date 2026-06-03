@@ -2488,11 +2488,13 @@ function renderPwaReleaseDecision() {
   ).length;
   const gatewayDecision = getAiGatewayProductionDecisionEvidence();
   const gatewayExportEvidence = getPwaGatewayDecisionExportEvidence(gatewayDecision);
+  const monitorFeedback = getMonitorFeedbackExportSummary();
   const handoffChecklist = getPwaReleaseHandoffChecklist({
     decision,
     coverage,
     deviceQaActions,
     gatewayDecision,
+    monitorFeedback,
   });
   const handoffMemo = getPwaReleaseHandoffMemo({
     decision,
@@ -2507,7 +2509,6 @@ function renderPwaReleaseDecision() {
     decision,
     results: state.pwaTestResults || [],
   });
-  const monitorFeedback = getMonitorFeedbackExportSummary();
   document.querySelector("#pwa-release-decision-status-input").value = decision.status;
   document.querySelector("#pwa-release-review-status-input").value = decision.reviewStatus;
   document.querySelector("#pwa-release-result-status-input").value = decision.resultStatus;
@@ -2702,6 +2703,7 @@ function renderPwaReleaseDecision() {
 function getPwaReleaseEvidenceItems(decision, coverage) {
   const results = Array.isArray(state.pwaTestResults) ? state.pwaTestResults : [];
   const gatewayDecision = getAiGatewayProductionDecisionEvidence();
+  const monitorFeedback = getMonitorFeedbackExportSummary();
   return [
     {
       label: "実機レビュー",
@@ -2742,6 +2744,13 @@ function getPwaReleaseEvidenceItems(decision, coverage) {
       label: "Gateway判定",
       ready: gatewayDecision.ready,
       note: gatewayDecision.summary,
+    },
+    {
+      label: "モニター指摘",
+      ready: monitorFeedback.ready,
+      note: monitorFeedback.ready
+        ? "未対応なし"
+        : `${monitorFeedback.unresolvedCount}件の未対応 / 高優先度 ${monitorFeedback.highUnresolvedCount}件`,
     },
     {
       label: "確認者",
@@ -2877,6 +2886,7 @@ function getPwaReleaseHandoffState(evidenceItems) {
     NGなし: "NG記録の原因を解消し、再テスト結果を保存",
     本番URL: "本番URLを入力して判定メモを保存",
     公開判断: "判定を公開OKに更新",
+    モニター指摘: "未対応のモニター指摘を対応済みにする、または保留理由を判定メモに残す",
     確認者: "確認者名を入力して判定メモを保存",
     クラウド保存: "Supabaseログイン中に判定メモを保存して同期",
     レビューJSON: "JSONボタンで本番URLレビュー結果を書き出す",
@@ -2890,7 +2900,8 @@ function getPwaReleaseHandoffState(evidenceItems) {
   };
 }
 
-function getPwaReleaseHandoffChecklist({ decision, coverage, deviceQaActions, gatewayDecision }) {
+function getPwaReleaseHandoffChecklist({ decision, coverage, deviceQaActions, gatewayDecision, monitorFeedback }) {
+  const feedbackSummary = monitorFeedback || getMonitorFeedbackExportSummary();
   const items = [
     {
       label: "本番URLを固定",
@@ -2910,6 +2921,13 @@ function getPwaReleaseHandoffChecklist({ decision, coverage, deviceQaActions, ga
       label: "Gateway判定を確認",
       ready: gatewayDecision.ready,
       note: gatewayDecision.ready ? "AI Gateway本番判定OK" : gatewayDecision.nextAction || gatewayDecision.summary,
+    },
+    {
+      label: "モニター指摘を確認",
+      ready: feedbackSummary.ready,
+      note: feedbackSummary.ready
+        ? "未対応のモニター指摘はありません"
+        : `${feedbackSummary.unresolvedCount}件の未対応 / 高優先度 ${feedbackSummary.highUnresolvedCount}件`,
     },
     {
       label: "公開判断を保存",
@@ -5855,11 +5873,13 @@ async function exportPwaTestResults() {
   const deviceQaActions = getPwaDeviceQaActionItems(results);
   const allDeviceQaActions = getPwaDeviceQaActionItems(results, { includeResolved: true });
   const evidence = getPwaReleaseEvidenceItems(releaseDecision, coverage);
+  const monitorFeedback = getMonitorFeedbackExportSummary();
   const handoffChecklist = getPwaReleaseHandoffChecklist({
     decision: releaseDecision,
     coverage,
     deviceQaActions,
     gatewayDecision: gatewayDecisionEvidence,
+    monitorFeedback,
   });
   const handoffMemo = getPwaReleaseHandoffMemo({
     decision: releaseDecision,
@@ -5874,7 +5894,6 @@ async function exportPwaTestResults() {
     decision: releaseDecision,
     results,
   });
-  const monitorFeedback = getMonitorFeedbackExportSummary();
   const readyForRelease = coverage.ready && releaseDecision.status === "ready" && evidence.every((item) => item.ready);
 
   const payload = {
