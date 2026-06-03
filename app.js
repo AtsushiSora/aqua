@@ -2491,12 +2491,20 @@ function applyPwaReleasePendingNoteTemplate() {
   const coverage = getPwaReleaseCoverage();
   const blockers = getPwaReleaseEvidenceItems(decision, coverage).filter((item) => !item.ready);
   const templateLines = blockers.length
-    ? ["公開前残タスク:", ...blockers.map((item) => `- ${item.label}: ${item.note}`)]
-    : ["公開前残タスク: なし", "公開判断: 本番URLレビュー、実機QA、モニター指摘、クラウド同期を確認済み"];
+    ? ["公開前残タスク:", ...blockers.map((item) => `- ${item.label}: ${item.note}`), "公開前残タスクここまで"]
+    : ["公開前残タスク: なし", "公開判断: 本番URLレビュー、実機QA、モニター指摘、クラウド同期を確認済み", "公開前残タスクここまで"];
   const template = templateLines.join("\n");
-  noteInput.value = noteInput.value ? `${noteInput.value.trim()}\n\n${template}` : template;
+  const existingNote = removePwaReleasePendingNoteBlock(noteInput.value);
+  noteInput.value = existingNote ? `${existingNote}\n\n${template}` : template;
   noteInput.focus();
   showToast(blockers.length ? "残タスクを判定メモに入れました" : "公開OK用の判定メモを入れました");
+}
+
+function removePwaReleasePendingNoteBlock(note) {
+  return String(note || "")
+    .replace(/\n{0,2}公開前残タスク:[\s\S]*?公開前残タスクここまで/g, "")
+    .replace(/\n{0,2}公開前残タスク:[\s\S]*$/g, "")
+    .trim();
 }
 
 function applyCurrentProductionUrl() {
