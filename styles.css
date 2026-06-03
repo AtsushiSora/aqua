@@ -6314,6 +6314,14 @@ textarea {
   overflow-wrap: anywhere;
 }
 
+.monitor-feedback-main .monitor-feedback-resolution {
+  padding: 8px 10px;
+  border: 1px solid rgba(40, 117, 74, 0.18);
+  border-radius: 8px;
+  background: rgba(236, 247, 240, 0.72);
+  color: #28754a;
+}
+
 .monitor-feedback-meta {
   display: flex;
   flex-wrap: wrap;

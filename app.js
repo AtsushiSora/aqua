@@ -1809,6 +1809,7 @@ function handleMonitorFeedbackSubmit(event) {
     priority: document.querySelector("#monitor-feedback-priority-input").value,
     status: document.querySelector("#monitor-feedback-status-input").value,
     note,
+    resolutionNote: document.querySelector("#monitor-feedback-resolution-input").value,
   });
 
   state.monitorFeedback = [entry, ...(state.monitorFeedback || [])].slice(0, 80);
@@ -1894,6 +1895,11 @@ function renderMonitorFeedback() {
             </div>
             <strong>${escapeHtml(entry.participant || "参加者未設定")} / ${escapeHtml(entry.device || "端末未設定")}</strong>
             <p>${escapeHtml(entry.note)}</p>
+            ${
+              entry.resolutionNote
+                ? `<p class="monitor-feedback-resolution">${escapeHtml(entry.resolutionNote)}</p>`
+                : ""
+            }
           </div>
           <div class="monitor-feedback-actions">
             ${getMonitorFeedbackStatusActions(entry)}
@@ -2000,7 +2006,7 @@ function exportMonitorFeedbackCsv() {
 
   const triage = getMonitorFeedbackTriage(entries);
   const rows = [
-    ["kind", "priority", "status", "createdAt", "participant", "device", "screen", "note", "nextCandidate"],
+    ["kind", "priority", "status", "createdAt", "participant", "device", "screen", "note", "resolutionNote", "nextCandidate"],
     ...entries.sort(compareMonitorFeedbackForTriage).map((entry) => [
       getMonitorFeedbackKindLabel(entry.kind),
       getMonitorFeedbackPriorityLabel(entry.priority),
@@ -2010,6 +2016,7 @@ function exportMonitorFeedbackCsv() {
       entry.device,
       entry.screen,
       entry.note,
+      entry.resolutionNote,
       triage.next?.id === entry.id ? "yes" : "",
     ]),
   ];
@@ -2030,6 +2037,7 @@ function normalizeMonitorFeedback(entry = {}) {
     status: getAllowedValue(entry.status, MONITOR_FEEDBACK_STATUSES, "open"),
     resolvedAt: entry.resolvedAt || null,
     note: String(entry.note || "").trim(),
+    resolutionNote: String(entry.resolutionNote || entry.resolution || "").trim(),
   };
 }
 
