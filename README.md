@@ -104,9 +104,9 @@
 - `localStorage` からSupabaseへ差し替えるための永続化レイヤー入口
 - Supabase Authのメールログイン/登録UI
 - ログイン中ユーザーのSupabaseプロフィール読み込み/同期
-- ローカル水槽プロフィールのSupabase `tanks` 同期
+- ローカル水槽プロフィール、寸法・水量、フィルター管理のSupabase `tanks` 同期
 - 管理ログのSupabase `logs` 同期
-- リマインダー設定のSupabase `reminders` 同期
+- 水槽ごとのリマインダー設定のSupabase `reminders` 同期
 - ホームの水槽選択と、水槽ごとの今日の管理・リマインダー切り替え
 - 投稿とコメントのSupabase `posts` / `comments` 同期
 - いいねとランキングのSupabase `post_likes` / `post_stats` 同期
