@@ -158,9 +158,10 @@ const UI_MODES = ["standard", "simple", "adult", "live"];
 const MONITOR_FEEDBACK_KINDS = ["impression", "bug", "ui", "request"];
 const MONITOR_FEEDBACK_PRIORITIES = ["watch", "high", "low"];
 const MONITOR_FEEDBACK_STATUSES = ["open", "doing", "done"];
-const PWA_REQUIRED_SCOPES = ["login", "install", "notification", "offline", "ui_modes", "custom_images"];
+const PWA_REQUIRED_SCOPES = ["login", "tank_switch", "install", "notification", "offline", "ui_modes", "custom_images"];
 const PWA_SCOPE_QA_HINTS = {
   login: ["ログイン状態", "プロフィール同期", "再読み込み後の維持"],
+  tank_switch: ["複数水槽登録", "ホームの水槽変更", "写真・状態カード・今日の管理の切り替わり"],
   install: ["ホーム画面追加", "アイコン起動", "スタンドアロン表示"],
   notification: ["通知許可", "Push購読", "dry-run解除後の受信"],
   offline: ["機内モード再読み込み", "オフラインページ", "復帰後の再表示"],
@@ -169,6 +170,7 @@ const PWA_SCOPE_QA_HINTS = {
 };
 const PWA_SCOPE_NOTE_TEMPLATES = {
   login: "ログイン状態: OK / プロフィール同期: OK / 再読み込み後の維持: OK",
+  tank_switch: "複数水槽登録: OK / ホームの水槽変更: OK / 写真・状態カード・今日の管理の切り替わり: OK",
   install: "ホーム画面追加: OK / アイコン起動: OK / スタンドアロン表示: OK",
   notification: "通知許可: OK / Push購読: OK / dry-run解除後の受信: 未確認",
   offline: "機内モード再読み込み: OK / オフラインページ: OK / 復帰後の再表示: OK",
@@ -2252,8 +2254,8 @@ function renderPwaTestReview(results) {
   const ready = passedCount === scopes.length && failedCount === 0;
   const reviewLabel = ready ? "公開前OK" : totalCount ? "確認中" : "未記録";
   const reviewNote = ready
-    ? "必須項目はOKです。最後に本番URLで再読み込みして、通知、オフライン復帰、画像カスタムをもう一度確認します。"
-    : "本番URLでログイン、ホーム追加、通知受信、オフライン復帰、4モード表示、画像カスタムを確認して記録します。";
+    ? "必須項目はOKです。最後に本番URLで再読み込みして、水槽変更、通知、オフライン復帰、画像カスタムをもう一度確認します。"
+    : "本番URLでログイン、水槽変更、ホーム追加、通知受信、オフライン復帰、4モード表示、画像カスタムを確認して記録します。";
 
   pwaTestReview.innerHTML = `
     <div class="pwa-test-score ${ready ? "ready" : "pending"}">
@@ -2816,7 +2818,7 @@ function getPwaReleaseHandoffState(evidenceItems) {
     実機レビュー: "実機レビューを完了に更新",
     結果確認: "実機結果、最終判定、レビューJSONを確認済みに更新",
     実機記録: "本番URLを実機で確認し、PWA実機テスト結果を保存",
-    必須項目: "ログイン、ホーム追加、通知受信、オフライン復帰、4モード表示、画像カスタムをOKにする",
+    必須項目: "ログイン、水槽変更、ホーム追加、通知受信、オフライン復帰、4モード表示、画像カスタムをOKにする",
     NGなし: "NG記録の原因を解消し、再テスト結果を保存",
     本番URL: "本番URLを入力して判定メモを保存",
     公開判断: "判定を公開OKに更新",
@@ -2998,6 +3000,7 @@ function getPwaTestScopeLabel(scope) {
     ui_modes: "4モード表示",
     custom_images: "画像カスタム",
     login: "ログイン",
+    tank_switch: "水槽変更",
   };
   return labels[scope] || labels.install;
 }
