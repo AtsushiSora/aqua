@@ -347,14 +347,25 @@
                   <option>海水水槽</option>
                 </select>
               </label>
-              <label>
-                <span>サイズ</span>
-                <input id="tank-size-input" type="text" placeholder="例: 45cm">
-              </label>
-              <label>
-                <span>容量</span>
-                <input id="tank-volume-input" type="text" placeholder="例: 18L">
-              </label>
+              <fieldset class="tank-dimensions-field full-field">
+                <legend>水槽サイズ</legend>
+                <label>
+                  <span>縦 cm</span>
+                  <input id="tank-height-input" type="number" min="0" step="0.1" inputmode="decimal" placeholder="例: 30">
+                </label>
+                <label>
+                  <span>横 cm</span>
+                  <input id="tank-width-input" type="number" min="0" step="0.1" inputmode="decimal" placeholder="例: 30">
+                </label>
+                <label>
+                  <span>長さ cm</span>
+                  <input id="tank-length-input" type="number" min="0" step="0.1" inputmode="decimal" placeholder="例: 45">
+                </label>
+                <div class="calculated-volume full-field">
+                  <span>水量目安</span>
+                  <strong id="tank-volume-output">未計算</strong>
+                </div>
+              </fieldset>
               <div class="species-field full-field">
                 <div class="species-field-head">
                   <span>生き物・水草</span>
@@ -483,14 +494,25 @@
                     <option>海水水槽</option>
                   </select>
                 </label>
-                <label>
-                  <span>サイズ</span>
-                  <input id="edit-tank-size" type="text">
-                </label>
-                <label>
-                  <span>容量</span>
-                  <input id="edit-tank-volume" type="text">
-                </label>
+                <fieldset class="tank-dimensions-field full-field">
+                  <legend>水槽サイズ</legend>
+                  <label>
+                    <span>縦 cm</span>
+                    <input id="edit-tank-height" type="number" min="0" step="0.1" inputmode="decimal">
+                  </label>
+                  <label>
+                    <span>横 cm</span>
+                    <input id="edit-tank-width" type="number" min="0" step="0.1" inputmode="decimal">
+                  </label>
+                  <label>
+                    <span>長さ cm</span>
+                    <input id="edit-tank-length" type="number" min="0" step="0.1" inputmode="decimal">
+                  </label>
+                  <div class="calculated-volume full-field">
+                    <span>水量目安</span>
+                    <strong id="edit-tank-volume-output">未計算</strong>
+                  </div>
+                </fieldset>
                 <div class="species-field full-field">
                   <div class="species-field-head">
                     <span>生き物・水草</span>

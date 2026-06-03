@@ -63,6 +63,7 @@ create table if not exists public.tanks (
   kind text not null,
   size_label text,
   volume_label text,
+  dimensions jsonb not null default '{}'::jsonb,
   residents text,
   animal_names text,
   plant_names text,
@@ -74,6 +75,9 @@ create table if not exists public.tanks (
   updated_at timestamptz not null default now(),
   unique (owner_id, local_id)
 );
+
+alter table public.tanks
+add column if not exists dimensions jsonb not null default '{}'::jsonb;
 
 alter table public.tanks
 add column if not exists animal_names text;

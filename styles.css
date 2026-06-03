@@ -2415,6 +2415,46 @@ body[data-custom-buttons="true"] .icon-button {
   background: rgba(245, 252, 250, 0.72);
 }
 
+.tank-dimensions-field {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid var(--glass-border);
+  border-radius: 8px;
+  background: rgba(248, 250, 248, 0.7);
+}
+
+.tank-dimensions-field legend {
+  padding: 0 6px;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
+.calculated-volume {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  min-height: 42px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: rgba(9, 143, 150, 0.1);
+  color: var(--ink);
+}
+
+.calculated-volume span {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
+.calculated-volume strong {
+  font-size: 1rem;
+  font-weight: 900;
+}
+
 .tank-photo-preview {
   min-height: 92px;
   display: grid;
@@ -6565,6 +6605,10 @@ textarea {
   }
 
   .tank-photo-assist {
+    grid-template-columns: 1fr;
+  }
+
+  .tank-dimensions-field {
     grid-template-columns: 1fr;
   }
 

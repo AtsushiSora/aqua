@@ -335,6 +335,11 @@ const defaultState = {
       kind: "水草水槽",
       size: "サイズ未設定",
       volume: "容量未設定",
+      dimensions: {
+        heightCm: null,
+        widthCm: null,
+        lengthCm: null,
+      },
       animals: "",
       plants: "",
       residents: "",
@@ -1041,13 +1046,20 @@ document.querySelectorAll("[data-species-add]").forEach((button) => {
   });
 });
 
+["tank", "edit-tank"].forEach((prefix) => {
+  getTankDimensionInputs(prefix).forEach((input) => {
+    input?.addEventListener("input", () => updateTankVolumeOutput(prefix));
+  });
+});
+
 tankForm.addEventListener("submit", (event) => {
   event.preventDefault();
 
   const name = document.querySelector("#tank-name-input").value.trim();
   const kind = document.querySelector("#tank-kind-input").value;
-  const size = document.querySelector("#tank-size-input").value.trim() || "サイズ未設定";
-  const volume = document.querySelector("#tank-volume-input").value.trim() || "容量未設定";
+  const dimensions = getTankDimensionsFormValue("tank");
+  const size = formatTankSize(dimensions);
+  const volume = formatTankVolume(dimensions);
   const residents = getSpeciesListValue("tank-species-list");
   const equipment = getSpeciesListValue("tank-equipment-list");
   const filter = getFilterFormValue("tank");
@@ -1058,6 +1070,7 @@ tankForm.addEventListener("submit", (event) => {
     kind,
     size,
     volume,
+    dimensions,
     animals,
     plants,
     residents,
@@ -1080,6 +1093,7 @@ tankForm.addEventListener("submit", (event) => {
   tankForm.reset();
   resetSpeciesList("tank-species-list");
   resetSpeciesList("tank-equipment-list");
+  resetTankDimensionsForm("tank");
   resetFilterForm("tank");
   resetTankIdentifyAssist();
   renderApp();
@@ -1098,8 +1112,9 @@ tankEditForm.addEventListener("submit", (event) => {
 
   tank.name = document.querySelector("#edit-tank-name").value.trim() || tank.name;
   tank.kind = document.querySelector("#edit-tank-kind").value;
-  tank.size = document.querySelector("#edit-tank-size").value.trim() || "サイズ未設定";
-  tank.volume = document.querySelector("#edit-tank-volume").value.trim() || "容量未設定";
+  tank.dimensions = getTankDimensionsFormValue("edit-tank");
+  tank.size = formatTankSize(tank.dimensions);
+  tank.volume = formatTankVolume(tank.dimensions);
   tank.residents = getSpeciesListValue("edit-tank-species-list");
   tank.equipment = getSpeciesListValue("edit-tank-equipment-list");
   tank.filter = getFilterFormValue("edit-tank");
@@ -3589,9 +3604,17 @@ async function loadTanksFromSupabase() {
 
   let { data, error } = await supabaseClient
     .from("tanks")
-    .select("id, local_id, name, kind, size_label, volume_label, residents, animal_names, plant_names, equipment_names, filter_profile, tags, featured_post_id, updated_at")
+    .select("id, local_id, name, kind, size_label, volume_label, dimensions, residents, animal_names, plant_names, equipment_names, filter_profile, tags, featured_post_id, updated_at")
     .eq("owner_id", authSession.user.id)
     .order("created_at", { ascending: true });
+
+  if (isMissingTankDimensionsColumnError(error)) {
+    ({ data, error } = await supabaseClient
+      .from("tanks")
+      .select("id, local_id, name, kind, size_label, volume_label, residents, animal_names, plant_names, equipment_names, filter_profile, tags, featured_post_id, updated_at")
+      .eq("owner_id", authSession.user.id)
+      .order("created_at", { ascending: true }));
+  }
 
   if (isMissingTankFilterProfileColumnError(error)) {
     ({ data, error } = await supabaseClient
@@ -3929,13 +3952,24 @@ async function syncTanksToSupabase(options = {}) {
   }
 
   const payloads = state.tanks.map((tank) => getTankPayload(tank, authSession.user));
+  let activeTankPayloads = payloads;
   let { data, error } = await supabaseClient
     .from("tanks")
     .upsert(payloads, { onConflict: "owner_id,local_id" })
-    .select("id, local_id, name, kind, size_label, volume_label, residents, animal_names, plant_names, equipment_names, filter_profile, tags, featured_post_id, updated_at");
+    .select("id, local_id, name, kind, size_label, volume_label, dimensions, residents, animal_names, plant_names, equipment_names, filter_profile, tags, featured_post_id, updated_at");
+
+  if (isMissingTankDimensionsColumnError(error)) {
+    const dimensionlessPayloads = payloads.map(({ dimensions, ...payload }) => payload);
+    activeTankPayloads = dimensionlessPayloads;
+    ({ data, error } = await supabaseClient
+      .from("tanks")
+      .upsert(dimensionlessPayloads, { onConflict: "owner_id,local_id" })
+      .select("id, local_id, name, kind, size_label, volume_label, residents, animal_names, plant_names, equipment_names, filter_profile, tags, featured_post_id, updated_at"));
+  }
 
   if (isMissingTankFilterProfileColumnError(error)) {
-    const filterlessPayloads = payloads.map(({ filter_profile, ...payload }) => payload);
+    const filterlessPayloads = activeTankPayloads.map(({ filter_profile, ...payload }) => payload);
+    activeTankPayloads = filterlessPayloads;
     ({ data, error } = await supabaseClient
       .from("tanks")
       .upsert(filterlessPayloads, { onConflict: "owner_id,local_id" })
@@ -3943,7 +3977,7 @@ async function syncTanksToSupabase(options = {}) {
   }
 
   if (isMissingTankSplitColumnsError(error)) {
-    const legacyPayloads = payloads.map(({ animal_names, plant_names, equipment_names, filter_profile, ...payload }) => payload);
+    const legacyPayloads = activeTankPayloads.map(({ animal_names, plant_names, equipment_names, filter_profile, ...payload }) => payload);
     ({ data, error } = await supabaseClient
       .from("tanks")
       .upsert(legacyPayloads, { onConflict: "owner_id,local_id" })
@@ -4659,6 +4693,7 @@ function getTankPayload(tank, user) {
     kind: tank.kind || "水槽",
     size_label: tank.size || null,
     volume_label: tank.volume || null,
+    dimensions: normalizeTankDimensions(tank.dimensions),
     residents: getTankResidentValue(tank) || null,
     animal_names: tank.animals || null,
     plant_names: tank.plants || null,
@@ -4684,6 +4719,14 @@ function isMissingTankSplitColumnsError(error) {
   }
 
   return /animal_names|plant_names|equipment_names/i.test(`${error.message || ""} ${error.details || ""} ${error.hint || ""}`);
+}
+
+function isMissingTankDimensionsColumnError(error) {
+  if (!error) {
+    return false;
+  }
+
+  return /dimensions/i.test(`${error.message || ""} ${error.details || ""} ${error.hint || ""}`);
 }
 
 function isMissingReminderTankColumnError(error) {
@@ -5038,8 +5081,13 @@ function applyRemoteTanks(remoteTanks) {
     nextTank.cloudId = remoteTank.id;
     nextTank.name = remoteTank.name || nextTank.name || "名前未設定の水槽";
     nextTank.kind = remoteTank.kind || nextTank.kind || "水槽";
-    nextTank.size = remoteTank.size_label || nextTank.size || "サイズ未設定";
-    nextTank.volume = remoteTank.volume_label || nextTank.volume || "容量未設定";
+    nextTank.dimensions = normalizeTankDimensions(remoteTank.dimensions || nextTank.dimensions);
+    nextTank.size = hasCompleteTankDimensions(nextTank.dimensions)
+      ? formatTankSize(nextTank.dimensions)
+      : remoteTank.size_label || nextTank.size || "サイズ未設定";
+    nextTank.volume = hasCompleteTankDimensions(nextTank.dimensions)
+      ? formatTankVolume(nextTank.dimensions)
+      : remoteTank.volume_label || nextTank.volume || "容量未設定";
     const remoteParts = getTankResidentParts({
       animals: remoteTank.animal_names,
       plants: remoteTank.plant_names,
@@ -6148,6 +6196,102 @@ function getTankDetailItems(tank) {
   ];
 }
 
+function getTankDimensionInputs(prefix) {
+  const suffix = prefix === "tank" ? "-input" : "";
+  return ["height", "width", "length"].map((key) => document.querySelector(`#${prefix}-${key}${suffix}`));
+}
+
+function getTankDimensionsFormValue(prefix) {
+  const [heightInput, widthInput, lengthInput] = getTankDimensionInputs(prefix);
+
+  return normalizeTankDimensions({
+    heightCm: heightInput?.value,
+    widthCm: widthInput?.value,
+    lengthCm: lengthInput?.value,
+  });
+}
+
+function setTankDimensionsFormValue(prefix, dimensionsValue) {
+  const dimensions = normalizeTankDimensions(dimensionsValue);
+  const [heightInput, widthInput, lengthInput] = getTankDimensionInputs(prefix);
+
+  if (heightInput) heightInput.value = formatDimensionInputValue(dimensions.heightCm);
+  if (widthInput) widthInput.value = formatDimensionInputValue(dimensions.widthCm);
+  if (lengthInput) lengthInput.value = formatDimensionInputValue(dimensions.lengthCm);
+  updateTankVolumeOutput(prefix);
+}
+
+function resetTankDimensionsForm(prefix) {
+  setTankDimensionsFormValue(prefix, {});
+}
+
+function updateTankVolumeOutput(prefix) {
+  const output = document.querySelector(`#${prefix}-volume-output`);
+  if (!output) {
+    return;
+  }
+
+  const dimensions = getTankDimensionsFormValue(prefix);
+  output.textContent = formatTankVolume(dimensions, "未計算");
+}
+
+function normalizeTankDimensions(value = {}) {
+  return {
+    heightCm: parseDimensionCm(value.heightCm ?? value.height_cm ?? value.height),
+    widthCm: parseDimensionCm(value.widthCm ?? value.width_cm ?? value.width),
+    lengthCm: parseDimensionCm(value.lengthCm ?? value.length_cm ?? value.length),
+  };
+}
+
+function parseDimensionCm(value) {
+  const number = Number(value);
+  if (!Number.isFinite(number) || number <= 0) {
+    return null;
+  }
+
+  return Math.round(number * 10) / 10;
+}
+
+function formatDimensionInputValue(value) {
+  return Number.isFinite(Number(value)) && Number(value) > 0 ? String(value) : "";
+}
+
+function hasCompleteTankDimensions(dimensionsValue) {
+  const dimensions = normalizeTankDimensions(dimensionsValue);
+  return [dimensions.heightCm, dimensions.widthCm, dimensions.lengthCm].every((value) => Number.isFinite(value));
+}
+
+function getTankVolumeLiters(dimensionsValue) {
+  const dimensions = normalizeTankDimensions(dimensionsValue);
+  if (!hasCompleteTankDimensions(dimensions)) {
+    return null;
+  }
+
+  return Math.round((dimensions.heightCm * dimensions.widthCm * dimensions.lengthCm) / 100) / 10;
+}
+
+function formatTankSize(dimensionsValue, fallback = "サイズ未設定") {
+  const dimensions = normalizeTankDimensions(dimensionsValue);
+  if (!hasCompleteTankDimensions(dimensions)) {
+    return fallback;
+  }
+
+  return `長さ${formatDimensionNumber(dimensions.lengthCm)}cm × 横${formatDimensionNumber(dimensions.widthCm)}cm × 縦${formatDimensionNumber(dimensions.heightCm)}cm`;
+}
+
+function formatTankVolume(dimensionsValue, fallback = "容量未設定") {
+  const volume = getTankVolumeLiters(dimensionsValue);
+  if (volume === null) {
+    return fallback;
+  }
+
+  return `約${formatDimensionNumber(volume)}L`;
+}
+
+function formatDimensionNumber(value) {
+  return Number.isInteger(value) ? String(value) : value.toFixed(1);
+}
+
 function getFilterFormValue(prefix) {
   const interval = Number(document.querySelector(`#${prefix}-filter-interval${prefix === "tank" ? "-input" : ""}`)?.value || 30);
   return normalizeTankFilter({
@@ -6525,8 +6669,7 @@ function renderTankProfile() {
 
   document.querySelector("#edit-tank-name").value = tank.name;
   document.querySelector("#edit-tank-kind").value = tank.kind;
-  document.querySelector("#edit-tank-size").value = tank.size;
-  document.querySelector("#edit-tank-volume").value = tank.volume;
+  setTankDimensionsFormValue("edit-tank", tank.dimensions);
   setSpeciesListValues("edit-tank-species-list", getTankResidentValue(tank));
   setSpeciesListValues("edit-tank-equipment-list", tank.equipment || "");
   setFilterFormValue("edit-tank", tank.filter);
@@ -10358,7 +10501,9 @@ function normalizeState(saved) {
 
     return {
       ...nextTank,
-      volume: nextTank.volume || "容量未設定",
+      dimensions: normalizeTankDimensions(nextTank.dimensions),
+      size: hasCompleteTankDimensions(nextTank.dimensions) ? formatTankSize(nextTank.dimensions) : nextTank.size || "サイズ未設定",
+      volume: hasCompleteTankDimensions(nextTank.dimensions) ? formatTankVolume(nextTank.dimensions) : nextTank.volume || "容量未設定",
       residents: getTankResidentValue(nextTank),
       equipment: normalizeSpeciesValues(nextTank.equipment || nextTank.equipment_names || "").join("、"),
       filter: normalizeTankFilter(nextTank.filter),
@@ -11054,6 +11199,7 @@ function escapeCssIdentifier(value) {
 setDefaultLogDate();
 resetSpeciesList("tank-species-list");
 resetSpeciesList("tank-equipment-list");
+resetTankDimensionsForm("tank");
 resetFilterForm("tank");
 renderPostImagePreview();
 renderApp();
