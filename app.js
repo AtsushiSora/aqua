@@ -5744,7 +5744,7 @@ function exportProductionSetupStatus() {
   showToast("本番前セットアップを書き出しました");
 }
 
-function exportPwaTestResults() {
+async function exportPwaTestResults() {
   const results = Array.isArray(state.pwaTestResults) ? state.pwaTestResults : [];
   if (!results.length) {
     showToast("書き出すPWA実機テスト結果がありません");
@@ -5756,6 +5756,9 @@ function exportPwaTestResults() {
     reviewExportedAt: new Date().toISOString(),
   });
   saveState();
+  if (authSession?.user) {
+    await syncPwaReleaseDecisionToSupabase({ silent: true });
+  }
 
   const releaseDecision = normalizePwaReleaseDecision(state.pwaReleaseDecision || {});
   const coverage = getPwaReleaseCoverage(results);
@@ -5844,9 +5847,6 @@ function exportPwaTestResults() {
     "application/json;charset=utf-8",
   );
   renderPwaReleaseDecision();
-  if (authSession?.user) {
-    syncPwaReleaseDecisionToSupabase({ silent: true });
-  }
   showToast("PWA本番URLレビュー結果を書き出しました");
 }
 
