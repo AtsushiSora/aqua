@@ -6322,6 +6322,12 @@ textarea {
   color: #28754a;
 }
 
+.monitor-feedback-resolved-at {
+  color: #28754a;
+  font-size: 0.76rem;
+  font-weight: 900;
+}
+
 .monitor-feedback-meta {
   display: flex;
   flex-wrap: wrap;

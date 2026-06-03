@@ -1900,6 +1900,11 @@ function renderMonitorFeedback() {
                 ? `<p class="monitor-feedback-resolution">${escapeHtml(entry.resolutionNote)}</p>`
                 : ""
             }
+            ${
+              entry.resolvedAt
+                ? `<small class="monitor-feedback-resolved-at">対応済み: ${escapeHtml(formatFullDate(entry.resolvedAt))}</small>`
+                : ""
+            }
           </div>
           <div class="monitor-feedback-actions">
             ${getMonitorFeedbackStatusActions(entry)}
@@ -2006,12 +2011,13 @@ function exportMonitorFeedbackCsv() {
 
   const triage = getMonitorFeedbackTriage(entries);
   const rows = [
-    ["kind", "priority", "status", "createdAt", "participant", "device", "screen", "note", "resolutionNote", "nextCandidate"],
+    ["kind", "priority", "status", "createdAt", "resolvedAt", "participant", "device", "screen", "note", "resolutionNote", "nextCandidate"],
     ...entries.sort(compareMonitorFeedbackForTriage).map((entry) => [
       getMonitorFeedbackKindLabel(entry.kind),
       getMonitorFeedbackPriorityLabel(entry.priority),
       getMonitorFeedbackStatusLabel(entry.status),
       entry.createdAt,
+      entry.resolvedAt || "",
       entry.participant,
       entry.device,
       entry.screen,
