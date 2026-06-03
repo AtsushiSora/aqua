@@ -2449,14 +2449,16 @@ async function handlePwaReleaseDecisionSubmit(event) {
 }
 
 function getPwaReleaseDecisionFormDraft(options = {}) {
+  const currentDecision = normalizePwaReleaseDecision(state.pwaReleaseDecision || {});
   return normalizePwaReleaseDecision({
+    ...currentDecision,
     status: document.querySelector("#pwa-release-decision-status-input").value,
     reviewStatus: document.querySelector("#pwa-release-review-status-input").value,
     resultStatus: document.querySelector("#pwa-release-result-status-input").value,
     reviewer: document.querySelector("#pwa-release-decision-reviewer-input").value,
     productionUrl: document.querySelector("#pwa-release-decision-url-input").value,
     note: document.querySelector("#pwa-release-decision-note-input").value,
-    decidedAt: options.decidedAt || state.pwaReleaseDecision?.decidedAt || null,
+    decidedAt: options.decidedAt || currentDecision.decidedAt,
   });
 }
 
