@@ -2003,6 +2003,16 @@ function getMonitorFeedbackTriageItem(entry, rank) {
   };
 }
 
+function getMonitorFeedbackReleaseBlockerNote(monitorFeedback) {
+  const summary = `${monitorFeedback.unresolvedCount}件の未対応 / 高優先度 ${monitorFeedback.highUnresolvedCount}件`;
+  const nextItems = Array.isArray(monitorFeedback.nextItems) ? monitorFeedback.nextItems.slice(0, 2) : [];
+  if (!nextItems.length) {
+    return summary;
+  }
+
+  return `${summary} / 次候補: ${nextItems.map((item) => `#${item.rank} ${item.title} - ${item.note}`).join(" / ")}`;
+}
+
 function compareMonitorFeedbackForTriage(a, b) {
   const statusRank = { open: 0, doing: 1, done: 2 };
   const priorityRank = { high: 0, watch: 1, low: 2 };
@@ -2961,7 +2971,7 @@ function getPwaReleaseEvidenceItems(decision, coverage) {
       ready: monitorFeedback.ready,
       note: monitorFeedback.ready
         ? "未対応なし"
-        : `${monitorFeedback.unresolvedCount}件の未対応 / 高優先度 ${monitorFeedback.highUnresolvedCount}件`,
+        : getMonitorFeedbackReleaseBlockerNote(monitorFeedback),
     },
     {
       label: "確認者",
