@@ -806,6 +806,12 @@ pwaReleaseDecisionSummary.addEventListener("click", (event) => {
   openMonitorLaunchFromReleaseDecision();
 });
 monitorReadinessNext?.addEventListener("click", (event) => {
+  const startButton = event.target.closest("[data-monitor-start-action]");
+  if (startButton) {
+    openMonitorStartAction();
+    return;
+  }
+
   const actionButton = event.target.closest("[data-monitor-readiness-action]");
   if (!actionButton) {
     return;
@@ -1871,6 +1877,14 @@ function renderMonitorReadiness() {
       <span>${escapeHtml(`停止 ${readiness.missingCount}`)}</span>
       <span>${escapeHtml(`目視 ${readiness.manualCount}`)}</span>
     </div>
+    <div class="monitor-start-card ${readiness.ready ? "ready" : "pending"}">
+      <span>${escapeHtml(readiness.ready ? "開始アクション" : "次にやること")}</span>
+      <strong>${escapeHtml(readiness.ready ? "案内文をコピーして2人へ共有" : readiness.nextAction)}</strong>
+      <small>${escapeHtml(readiness.ready ? "職場モニター2人へ送ったら、返信をフィードバック欄に貼ります。" : "未完了項目を開いて保存すると進捗率が上がります。")}</small>
+      <button class="${readiness.ready ? "primary-button" : "ghost-button"}" type="button" data-monitor-start-action="open">
+        ${escapeHtml(readiness.ready ? "案内文へ進む" : "次を開く")}
+      </button>
+    </div>
     ${
       preflight.nextItems.length
         ? `
@@ -1902,6 +1916,19 @@ function renderMonitorReadiness() {
     )
     .join("");
   renderMonitorGuideCopyPreview(readiness);
+}
+
+function openMonitorStartAction() {
+  const readiness = getMonitorReadinessState();
+  if (!readiness.ready) {
+    const nextItem = readiness.items.find((item) => item.status === "missing") || readiness.items.find((item) => item.status === "manual");
+    openMonitorReadinessAction(nextItem?.label || "");
+    return;
+  }
+
+  monitorGuideCopyButton?.scrollIntoView({ behavior: "smooth", block: "center" });
+  monitorGuideCopyButton?.focus({ preventScroll: true });
+  showToast("案内文コピーへ進めます");
 }
 
 function openMonitorReadinessAction(label) {

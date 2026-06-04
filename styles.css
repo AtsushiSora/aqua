@@ -6016,6 +6016,38 @@ textarea {
   font-weight: 900;
 }
 
+.monitor-start-card {
+  display: grid;
+  gap: 6px;
+  margin-top: 6px;
+  padding: 10px;
+  border: 1px solid rgba(226, 162, 72, 0.24);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.58);
+}
+
+.monitor-start-card.ready {
+  border-color: rgba(40, 117, 74, 0.24);
+  background: rgba(236, 247, 240, 0.78);
+}
+
+.monitor-start-card span,
+.monitor-start-card small {
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 900;
+}
+
+.monitor-start-card strong {
+  color: var(--ink);
+  font-size: 0.94rem;
+}
+
+.monitor-start-card .primary-button,
+.monitor-start-card .ghost-button {
+  justify-self: start;
+}
+
 .monitor-preflight-list {
   display: grid;
   gap: 4px;
