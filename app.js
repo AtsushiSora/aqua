@@ -2720,11 +2720,6 @@ function renderPwaReleaseDecision() {
   });
   const releasePriority = getPwaReleasePriorityState(decision, coverage, state.pwaTestResults || []);
   const handoffChecklist = getPwaReleaseHandoffChecklist({
-    decision,
-    coverage,
-    deviceQaActions,
-    gatewayDecision,
-    monitorFeedback,
     releasePriority,
   });
   const handoffMemo = getPwaReleaseHandoffMemo({
@@ -6214,11 +6209,6 @@ async function exportPwaTestResults() {
   });
   const releasePriority = getPwaReleasePriorityState(releaseDecision, coverage, results);
   const handoffChecklist = getPwaReleaseHandoffChecklist({
-    decision: releaseDecision,
-    coverage,
-    deviceQaActions,
-    gatewayDecision: gatewayDecisionEvidence,
-    monitorFeedback,
     releasePriority,
   });
   const handoffMemo = getPwaReleaseHandoffMemo({
