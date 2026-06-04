@@ -2069,15 +2069,15 @@ function getMonitorLaunchKitReview(readiness = getMonitorReadinessState(), decis
     },
     {
       label: "送付文",
-      ready: guideText.includes("所要時間の目安") && guideText.includes("空欄があっても大丈夫"),
+      ready: guideText.includes("3つだけ見てください") && guideText.includes("空欄OK"),
       status: `${guideText.split(/\r?\n/).filter(Boolean).length}行`,
-      note: "所要時間、試してほしい操作、回答観点を含みます",
+      note: "所要時間、3つの確認、短い回答欄を含みます",
     },
     {
       label: "返信テンプレート",
-      ready: replyTemplate.includes("端末:") && replyTemplate.includes("見た画面:") && replyTemplate.includes("その他:"),
+      ready: replyTemplate.includes("端末:") && replyTemplate.includes("迷ったところ:") && replyTemplate.includes("直してほしいところ:"),
       status: `${replyTemplate.split(/\r?\n/).length}項目`,
-      note: "端末、画面、使いやすいモード、不具合、その他を回収します",
+      note: "端末、良かったところ、迷ったところ、直してほしいところを回収します",
     },
     {
       label: "直前判定",
@@ -2104,37 +2104,26 @@ function getMonitorGuideText(readiness = getMonitorReadinessState()) {
     : `準備状況: ${readiness.readyCount}/${readiness.totalCount}項目確認済み、優先確認は「${readiness.nextAction}」です`;
 
   return [
-    "AquaNote モニター確認のお願いです",
+    "AquaNoteモニターのお願いです",
     urlLine,
     nextLine,
     "",
     "所要時間の目安: 5〜10分くらいです。",
-    "分からないところや使わない機能は飛ばして大丈夫です。",
+    "分からないところは飛ばして大丈夫です。空欄OKです。",
     "",
-    "試してほしいこと:",
-    "1. 新規登録して、最初のホームに勝手な数字や投稿が入っていないか見る",
-    "2. 自分の水槽を1つ登録して、写真をTOPに設定する",
-    "3. 水温、pH、水換え、フィルター掃除を1回ずつ記録する",
-    "4. 水槽をもう1つ追加して、ホームの水槽変更で内容が切り替わるか見る",
-    "5. TOP写真または投稿写真を1枚追加して、見やすいか見る",
-    "6. ベーシック、かんたん、管理重視、投稿重視モードを切り替えて、分かりやすい順を教える",
-    "7. 余裕があれば、通知許可、ホーム画面追加、オフライン復帰も試す",
+    "3つだけ見てください:",
+    "1. 新規登録後、最初の画面に勝手な数字や投稿がないか",
+    "2. 水槽登録、写真、記録が迷わずできるか",
+    "3. ベーシック、かんたん、管理重視、投稿重視の中でどれが分かりやすいか",
     "",
-    "見てほしいポイント:",
-    "- 初めてでも次に押す場所が分かるか",
-    "- 文字が切れていないか、ボタンが押しにくくないか",
-    "- TOP写真、水槽変更、投稿、記録、表示モード変更が自然に使えるか",
-    "- 小学生でも分かりそうな画面になっているか",
+    "余裕があれば:",
+    "- 水槽を2つにして、ホームの水槽変更を試す",
+    "- 文字切れ、押しにくいボタン、分かりにくい言葉を見る",
+    "- 通知許可、ホーム画面追加、オフライン復帰を試す",
     "",
-    "教えてほしいこと:",
-    "1. 一番分かりやすかったところ",
-    "2. 一番迷ったところ",
-    "3. もう一度使うなら直してほしいところ",
-    "4. どのモードが一番使いやすかったか",
+    "返信はこの下だけで大丈夫です:",
     "",
     getMonitorFeedbackReplyTemplate(),
-    "",
-    "空欄があっても大丈夫です。気づいたことだけ教えてください。",
   ].join("\n");
 }
 
@@ -2142,12 +2131,10 @@ function getMonitorFeedbackReplyTemplate() {
   return [
     "返信テンプレート:",
     "端末:",
-    "見た画面:",
-    "一番使いやすかったモード:",
+    "使いやすかったモード:",
     "良かったところ:",
     "迷ったところ:",
-    "気になった不具合:",
-    "もう一度使うなら直してほしいところ:",
+    "直してほしいところ:",
     "その他:",
   ].join("\n");
 }
@@ -2345,17 +2332,17 @@ function getMonitorParticipantReminderText(participant) {
   const decision = normalizePwaReleaseDecision(state.pwaReleaseDecision || {});
   const urlLine = decision.productionUrl ? `URL: ${decision.productionUrl}` : "URL: 共有済みのリンクから開いてください";
   return [
-    `${participant.name}さん、AquaNoteのモニター確認のお願いです。`,
+    `${participant.name}さん、AquaNoteモニターのお願いです。`,
     "",
-    "時間があるときで大丈夫なので、5〜10分くらい触って感想をもらえると助かります。",
+    "5〜10分くらい触って、気づいたことだけ返してもらえると助かります。",
     urlLine,
     "",
-    "見てほしいところ:",
-    "- 最初に何を押せばいいか分かるか",
-    "- 文字が切れていないか、押しにくいところがないか",
-    "- 水槽登録、写真、記録、表示モードが分かりやすいか",
+    "見てほしいところは3つです:",
+    "- 最初の画面に勝手な数字や投稿がないか",
+    "- 水槽登録、写真、記録が迷わずできるか",
+    "- 文字切れ、押しにくいボタン、分かりにくい言葉がないか",
     "",
-    "返信は短くて大丈夫です。",
+    "返信は空欄があっても大丈夫です。",
     getMonitorFeedbackReplyTemplate(),
   ].join("\n");
 }
@@ -2436,7 +2423,7 @@ function applyMonitorFeedbackReplyFields() {
   } else if (fields["迷ったところ"]) {
     kindInput.value = "ui";
     priorityInput.value = "watch";
-  } else if (fields["もう一度使うなら直してほしいところ"]) {
+  } else if (fields["直してほしいところ"] || fields["もう一度使うなら直してほしいところ"]) {
     kindInput.value = "request";
     priorityInput.value = "watch";
   }
@@ -2476,7 +2463,7 @@ function getMonitorFeedbackDraftState() {
   const priority = document.querySelector("#monitor-feedback-priority-input")?.value || "watch";
   const fields = parseMonitorFeedbackReply(note);
   const hasTypedTemplate = Boolean(Object.keys(fields).length);
-  const hasIssueSignal = Boolean(fields["気になった不具合"] || fields["迷ったところ"] || fields["もう一度使うなら直してほしいところ"]);
+  const hasIssueSignal = Boolean(fields["気になった不具合"] || fields["迷ったところ"] || fields["直してほしいところ"] || fields["もう一度使うなら直してほしいところ"]);
   const hasMeaningfulNote = getMonitorFeedbackMeaningfulNoteText(note, fields).length > 0;
   const requiredItems = [
     { label: "参加者", ready: Boolean(participant) },
@@ -2535,10 +2522,12 @@ function parseMonitorFeedbackReply(text) {
   const labels = [
     "端末",
     "見た画面",
+    "使いやすかったモード",
     "一番使いやすかったモード",
     "良かったところ",
     "迷ったところ",
     "気になった不具合",
+    "直してほしいところ",
     "もう一度使うなら直してほしいところ",
     "その他",
   ];
