@@ -126,6 +126,7 @@ const monitorFeedbackNext = document.querySelector("#monitor-feedback-next");
 const monitorFeedbackList = document.querySelector("#monitor-feedback-list");
 const monitorFeedbackTemplateButton = document.querySelector("#monitor-feedback-template-button");
 const monitorFeedbackParseButton = document.querySelector("#monitor-feedback-parse-button");
+const monitorFeedbackActionCopyButton = document.querySelector("#monitor-feedback-action-copy-button");
 const monitorFeedbackExportCsvButton = document.querySelector("#monitor-feedback-export-csv-button");
 const monitorFeedbackExportButton = document.querySelector("#monitor-feedback-export-button");
 const monitorFeedbackStatusFilter = document.querySelector("#monitor-feedback-status-filter");
@@ -711,6 +712,7 @@ importDataInput.addEventListener("change", importAppData);
 pwaTestForm.addEventListener("submit", handlePwaTestSubmit);
 pwaTestExportButton.addEventListener("click", exportPwaTestResults);
 monitorFeedbackForm.addEventListener("submit", handleMonitorFeedbackSubmit);
+monitorFeedbackActionCopyButton.addEventListener("click", copyMonitorFeedbackActionList);
 monitorFeedbackExportCsvButton.addEventListener("click", exportMonitorFeedbackCsv);
 monitorFeedbackExportButton.addEventListener("click", exportMonitorFeedback);
 monitorGuideCopyButton.addEventListener("click", copyMonitorGuideText);
@@ -2150,6 +2152,62 @@ function getMonitorFeedbackReleaseBlockerNote(monitorFeedback) {
   }
 
   return `${summary} / 次候補: ${nextItems.map((item) => `#${item.rank} ${item.title} - ${item.note}`).join(" / ")}`;
+}
+
+async function copyMonitorFeedbackActionList() {
+  const text = getMonitorFeedbackActionListText();
+  if (!text) {
+    showToast("未対応のフィードバックはありません");
+    return;
+  }
+
+  if (navigator.clipboard?.writeText) {
+    try {
+      await navigator.clipboard.writeText(text);
+      showToast("モニター修正リストをコピーしました");
+      return;
+    } catch (error) {
+      console.warn("Clipboard copy failed", error);
+    }
+  }
+
+  downloadFile(
+    `aquanote-monitor-action-list-${getDateKey(new Date())}.txt`,
+    text,
+    "text/plain;charset=utf-8",
+  );
+  showToast("コピーできないため修正リストを書き出しました");
+}
+
+function getMonitorFeedbackActionListText(entries = state.monitorFeedback || []) {
+  const normalizedEntries = entries.map(normalizeMonitorFeedback);
+  const unresolved = normalizedEntries
+    .filter((entry) => entry.status !== "done")
+    .sort(compareMonitorFeedbackForTriage)
+    .slice(0, 5);
+
+  if (!unresolved.length) {
+    return "";
+  }
+
+  const lines = [
+    "AquaNote モニター修正リスト",
+    `作成日: ${formatFullDate(new Date().toISOString())}`,
+    `未対応: ${normalizedEntries.filter((entry) => entry.status !== "done").length}件`,
+    "",
+  ];
+
+  unresolved.forEach((entry, index) => {
+    lines.push(
+      `${index + 1}. ${getMonitorFeedbackPriorityLabel(entry.priority)} / ${getMonitorFeedbackKindLabel(entry.kind)} / ${entry.screen || "画面未設定"}`,
+      `参加者: ${entry.participant || "未設定"} / 端末: ${entry.device || "未設定"}`,
+      `内容: ${entry.note}`,
+      `対応メモ: ${entry.resolutionNote || "これから記入"}`,
+      "",
+    );
+  });
+
+  return lines.join("\n").trim();
 }
 
 function compareMonitorFeedbackForTriage(a, b) {
