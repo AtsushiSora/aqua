@@ -797,6 +797,14 @@ monitorGuidePreviewToggle.addEventListener("click", () => {
   renderMonitorGuideCopyPreview();
 });
 monitorKitExportButton.addEventListener("click", exportMonitorLaunchKit);
+pwaReleaseDecisionSummary.addEventListener("click", (event) => {
+  const actionButton = event.target.closest("[data-pwa-release-monitor-action]");
+  if (!actionButton) {
+    return;
+  }
+
+  openMonitorLaunchFromReleaseDecision();
+});
 monitorReadinessNext?.addEventListener("click", (event) => {
   const actionButton = event.target.closest("[data-monitor-readiness-action]");
   if (!actionButton) {
@@ -3956,6 +3964,32 @@ function applyCurrentProductionUrl() {
   showToast("現在のURLを本番URL欄に入れました");
 }
 
+function openMonitorLaunchFromReleaseDecision() {
+  const decision = normalizePwaReleaseDecision(state.pwaReleaseDecision || {});
+  const missingTarget =
+    !decision.productionUrl
+      ? "#pwa-release-decision-url-input"
+      : !decision.reviewer
+        ? "#pwa-release-decision-reviewer-input"
+        : !decision.note
+          ? "#pwa-release-decision-note-input"
+          : "";
+
+  if (missingTarget) {
+    const target = document.querySelector(missingTarget);
+    target?.scrollIntoView({ behavior: "smooth", block: "center" });
+    target?.focus({ preventScroll: true });
+    showToast("本番URL、確認者、判断メモを保存してください");
+    return;
+  }
+
+  renderMonitorReadiness();
+  const target = state.monitorLaunchKitExportedAt ? monitorGuideCopyButton : monitorKitExportButton;
+  target?.scrollIntoView({ behavior: "smooth", block: "center" });
+  target?.focus({ preventScroll: true });
+  showToast(state.monitorLaunchKitExportedAt ? "案内文コピーへ進めます" : "配布セットJSONを作成できます");
+}
+
 function renderPwaReleaseDecision() {
   if (!pwaReleaseDecisionForm || !pwaReleaseDecisionChip || !pwaReleaseDecisionSummary) {
     return;
@@ -4006,6 +4040,8 @@ function renderPwaReleaseDecision() {
   const readinessNote = coverage.ready
     ? "必須項目はOKです。公開OKにする場合は確認者と判断メモを残します。"
     : "公開OKにする前に、未OKまたはNGのPWA確認項目を解消します。";
+  const monitorLaunchReady = Boolean(decision.productionUrl && decision.reviewer && decision.note);
+  const monitorLaunchKitReady = Boolean(decision.productionUrl && state.monitorLaunchKitExportedAt);
 
   pwaReleaseDecisionSummary.innerHTML = `
     <div class="pwa-release-priority-list ${releasePriority.ready ? "ready" : "pending"}">
@@ -4066,6 +4102,20 @@ function renderPwaReleaseDecision() {
           `
           : ""
       }
+    </article>
+    <article class="pwa-release-monitor-launch ${monitorLaunchReady ? "ready" : "pending"}">
+      <span>モニター配布</span>
+      <strong>${escapeHtml(monitorLaunchReady ? (monitorLaunchKitReady ? "案内文を共有できます" : "配布セットJSONへ進めます") : "URL・確認者・メモを保存")}</strong>
+      <small>${escapeHtml(
+        monitorLaunchReady
+          ? monitorLaunchKitReady
+            ? "配布セットは作成済みです。案内文コピーへ進めます。"
+            : "本番URL、確認者、判断メモが揃っています。配布セットJSONを作成できます。"
+          : "PWA最終リリース判定で本番URL、確認者、残タスク・判断メモを保存します。",
+      )}</small>
+      <button class="${monitorLaunchReady ? "primary-button" : "ghost-button"}" type="button" data-pwa-release-monitor-action="open">
+        ${escapeHtml(monitorLaunchReady ? (monitorLaunchKitReady ? "案内文へ進む" : "配布セットへ進む") : "不足項目を入力")}
+      </button>
     </article>
     <article class="${escapeHtml(decision.status)}">
       <span>判定状況</span>

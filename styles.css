@@ -5352,6 +5352,26 @@ textarea {
     rgba(255, 247, 230, 0.84);
 }
 
+.pwa-release-decision-summary article.pwa-release-monitor-launch.ready {
+  border-color: rgba(61, 173, 120, 0.42);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.58), transparent),
+    rgba(232, 248, 241, 0.84);
+}
+
+.pwa-release-decision-summary article.pwa-release-monitor-launch.pending {
+  border-color: rgba(226, 162, 72, 0.34);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.58), transparent),
+    rgba(255, 250, 241, 0.84);
+}
+
+.pwa-release-monitor-launch .primary-button,
+.pwa-release-monitor-launch .ghost-button {
+  justify-self: start;
+  margin-top: 2px;
+}
+
 .pwa-release-ok-check ul {
   display: grid;
   gap: 6px;
