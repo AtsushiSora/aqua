@@ -5,6 +5,8 @@ const EXPORT_VERSION = 1;
 const MEDIA_BUCKET = "aquanote-media";
 const MEDIA_SIGNED_URL_EXPIRES_SECONDS = 60 * 60;
 const AI_ANALYSIS_ENDPOINT = "/api/ai-analysis";
+const MONITOR_TARGET_PARTICIPANTS = 3;
+const MONITOR_TARGET_DEVICES = 2;
 
 const viewLinks = document.querySelectorAll("[data-view-link]");
 const directViewButtons = document.querySelectorAll("[data-view-target]");
@@ -1979,6 +1981,7 @@ function renderMonitorFeedback() {
   const doneCount = entries.filter((entry) => entry.status === "done").length;
   const participantCount = new Set(entries.map((entry) => entry.participant.trim()).filter(Boolean)).size;
   const deviceCount = new Set(entries.map((entry) => entry.device.trim()).filter(Boolean)).size;
+  const collection = getMonitorFeedbackCollectionState(entries);
   const latest = entries[0]?.createdAt ? formatFullDate(entries[0].createdAt) : "まだ記録なし";
   monitorFeedbackStatusFilter.value = activeMonitorFeedbackStatusFilter;
   monitorFeedbackKindFilter.value = activeMonitorFeedbackKindFilter;
@@ -1998,7 +2001,7 @@ function renderMonitorFeedback() {
     <article>
       <span>回収状況</span>
       <strong>${participantCount}人</strong>
-      <small>端末 ${deviceCount}種類 / 最新 ${escapeHtml(latest)}</small>
+      <small>${escapeHtml(collection.note)} / 最新 ${escapeHtml(latest)}</small>
     </article>
     <article>
       <span>優先度高</span>
@@ -2114,6 +2117,7 @@ function getMonitorFeedbackExportSummary(entries = state.monitorFeedback || []) 
   const triage = getMonitorFeedbackTriage(normalizedEntries);
   const unresolved = normalizedEntries.filter((entry) => entry.status !== "done");
   const highUnresolved = unresolved.filter((entry) => entry.priority === "high");
+  const collection = getMonitorFeedbackCollectionState(normalizedEntries);
   const nextItems = unresolved
     .sort(compareMonitorFeedbackForTriage)
     .slice(0, 5)
@@ -2122,14 +2126,37 @@ function getMonitorFeedbackExportSummary(entries = state.monitorFeedback || []) 
   return {
     ready: unresolved.length === 0,
     totalCount: normalizedEntries.length,
-    participantCount: new Set(normalizedEntries.map((entry) => entry.participant.trim()).filter(Boolean)).size,
-    deviceCount: new Set(normalizedEntries.map((entry) => entry.device.trim()).filter(Boolean)).size,
+    participantCount: collection.participantCount,
+    deviceCount: collection.deviceCount,
+    participantTarget: MONITOR_TARGET_PARTICIPANTS,
+    deviceTarget: MONITOR_TARGET_DEVICES,
+    collectionReady: collection.ready,
+    collectionNote: collection.note,
     unresolvedCount: unresolved.length,
     highUnresolvedCount: highUnresolved.length,
     resolvedCount: normalizedEntries.filter((entry) => entry.status === "done").length,
     latestAt: normalizedEntries[0]?.createdAt || null,
     triage,
     nextItems,
+  };
+}
+
+function getMonitorFeedbackCollectionState(entries = []) {
+  const participantCount = new Set(entries.map((entry) => entry.participant.trim()).filter(Boolean)).size;
+  const deviceCount = new Set(entries.map((entry) => entry.device.trim()).filter(Boolean)).size;
+  const missingParticipants = Math.max(0, MONITOR_TARGET_PARTICIPANTS - participantCount);
+  const missingDevices = Math.max(0, MONITOR_TARGET_DEVICES - deviceCount);
+  const ready = missingParticipants === 0 && missingDevices === 0;
+
+  return {
+    ready,
+    participantCount,
+    deviceCount,
+    missingParticipants,
+    missingDevices,
+    note: ready
+      ? `目標達成 ${participantCount}/${MONITOR_TARGET_PARTICIPANTS}人・${deviceCount}/${MONITOR_TARGET_DEVICES}端末`
+      : `目標 ${participantCount}/${MONITOR_TARGET_PARTICIPANTS}人・${deviceCount}/${MONITOR_TARGET_DEVICES}端末`,
   };
 }
 
@@ -3059,7 +3086,7 @@ function renderPwaReleaseDecision() {
     <div class="pwa-monitor-feedback-evidence ${monitorFeedback.ready ? "ready" : "pending"}">
       <span>モニター指摘</span>
       <strong>${escapeHtml(monitorFeedback.ready ? "未対応なし" : `${monitorFeedback.unresolvedCount}件の未対応`)}</strong>
-      <small>${escapeHtml(`記録 ${monitorFeedback.totalCount}件 / 高優先度未対応 ${monitorFeedback.highUnresolvedCount}件 / 対応済み ${monitorFeedback.resolvedCount}件`)}</small>
+      <small>${escapeHtml(`${monitorFeedback.collectionNote} / 記録 ${monitorFeedback.totalCount}件 / 高優先度未対応 ${monitorFeedback.highUnresolvedCount}件 / 対応済み ${monitorFeedback.resolvedCount}件`)}</small>
       ${
         monitorFeedback.nextItems?.length
           ? `
@@ -3213,6 +3240,14 @@ function getPwaReleasePriorityItems({ decision, coverage, deviceQaActions, gatew
       ready: gatewayDecision.ready,
       status: gatewayDecision.ready ? "OK" : "確認中",
       note: gatewayDecision.ready ? "AI Gateway本番判定は公開OKです" : gatewayDecision.nextAction || gatewayDecision.summary,
+    },
+    {
+      label: "モニター回収",
+      ready: monitorFeedback.collectionReady,
+      status: `${monitorFeedback.participantCount}/${monitorFeedback.participantTarget}人・${monitorFeedback.deviceCount}/${monitorFeedback.deviceTarget}端末`,
+      note: monitorFeedback.collectionReady
+        ? "最低限の参加者数と端末種類を回収済みです"
+        : `あと${Math.max(0, monitorFeedback.participantTarget - monitorFeedback.participantCount)}人、${Math.max(0, monitorFeedback.deviceTarget - monitorFeedback.deviceCount)}端末分の感想を集めます`,
     },
     {
       label: "モニター指摘",
