@@ -24,6 +24,11 @@
   --shadow-soft: 0 8px 24px rgba(21, 36, 38, 0.06);
   --custom-background-image: none;
   --custom-button-image: none;
+  --ambient-aquarium:
+    radial-gradient(circle at 18% 16%, rgba(140, 236, 233, 0.32), transparent 22%),
+    radial-gradient(circle at 76% 22%, rgba(255, 255, 255, 0.26), transparent 18%),
+    repeating-linear-gradient(104deg, rgba(255, 255, 255, 0.16) 0 2px, transparent 2px 54px),
+    linear-gradient(145deg, #e2f7f3 0%, #8dd7d0 44%, #23656d 76%, #0b3038 100%);
 }
 
 * {
@@ -54,7 +59,7 @@ body::before {
   background:
     linear-gradient(180deg, rgba(246, 248, 246, 0.52), rgba(246, 248, 246, 0.82)),
     linear-gradient(125deg, rgba(10, 95, 99, 0.22), transparent 42%),
-    url("assets/site-concept.png") center / cover no-repeat;
+    var(--ambient-aquarium);
   opacity: 0.34;
   pointer-events: none;
 }
@@ -185,7 +190,7 @@ body[data-ui-mode="simple"]::before {
   background:
     linear-gradient(180deg, rgba(242, 251, 250, 0.66), rgba(242, 251, 250, 0.9)),
     linear-gradient(135deg, rgba(12, 159, 176, 0.2), transparent 48%),
-    url("assets/site-concept.png") center / cover no-repeat;
+    var(--ambient-aquarium);
   opacity: 0.42;
 }
 
@@ -199,7 +204,7 @@ body[data-ui-mode="adult"]::before {
   background:
     linear-gradient(180deg, rgba(243, 245, 242, 0.82), rgba(239, 244, 241, 0.92)),
     linear-gradient(120deg, rgba(29, 85, 88, 0.16), transparent 46%),
-    url("assets/site-concept.png") center / cover no-repeat;
+    var(--ambient-aquarium);
   opacity: 0.26;
 }
 
@@ -213,7 +218,7 @@ body[data-ui-mode="live"]::before {
   background:
     linear-gradient(180deg, rgba(232, 248, 246, 0.34), rgba(232, 248, 246, 0.86)),
     linear-gradient(126deg, rgba(16, 168, 186, 0.2), transparent 46%),
-    url("assets/site-concept.png") center / cover no-repeat;
+    var(--ambient-aquarium);
   opacity: 0.5;
 }
 
@@ -1568,12 +1573,11 @@ body[data-custom-buttons="true"] .icon-button {
 .hero-media.is-placeholder {
   background:
     linear-gradient(180deg, rgba(6, 45, 49, 0.18), rgba(7, 30, 35, 0.82)),
-    radial-gradient(circle at 24% 18%, rgba(137, 247, 255, 0.22), transparent 28%),
-    linear-gradient(145deg, #d8f3ef, #65bcb8 58%, #153e46);
+    var(--ambient-aquarium);
 }
 
 .hero-media.is-placeholder img {
-  opacity: 1;
+  opacity: 0;
 }
 
 .hero-media.is-placeholder::before {

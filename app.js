@@ -9,6 +9,7 @@ const MEDIA_SIGNED_URL_EXPIRES_SECONDS = 60 * 60;
 const AI_ANALYSIS_ENDPOINT = "/api/ai-analysis";
 const MONITOR_TARGET_PARTICIPANTS = 2;
 const MONITOR_TARGET_DEVICES = 2;
+const TRANSPARENT_IMAGE_SRC = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==";
 
 const viewLinks = document.querySelectorAll("[data-view-link]");
 const directViewButtons = document.querySelectorAll("[data-view-target]");
@@ -396,6 +397,7 @@ const defaultState = {
       taskDate: getDateKey(new Date()),
       reminders: cloneState(defaultReminders),
       latestAi: null,
+      photoDataUrl: null,
       featuredPostId: null,
       albumOrder: [],
     },
@@ -1291,10 +1293,13 @@ heroPhotoInput.addEventListener("change", async () => {
   }
 
   try {
-    state.heroPhotoDataUrl = await resizeImageFile(file, 1400, 0.84);
+    const tank = getActiveTank();
+    tank.photoDataUrl = await resizeImageFile(file, 1400, 0.84);
+    state.heroPhotoDataUrl = null;
     saveState();
     renderHeroPhoto();
-    showToast("トップ写真を変更しました");
+    renderTankProfile();
+    showToast(`${tank.name} の水槽写真を変更しました`);
   } catch {
     showToast("写真を読み込めませんでした");
   } finally {
@@ -1347,6 +1352,7 @@ tankForm.addEventListener("submit", (event) => {
     taskDate: getDateKey(new Date()),
     reminders: cloneState(defaultReminders),
     latestAi: null,
+    photoDataUrl: null,
     featuredPostId: null,
     albumOrder: [],
   };
@@ -1516,6 +1522,7 @@ postForm.addEventListener("submit", async (event) => {
         videoDuration: pendingPostVideoDuration,
       });
       addPostToTankAlbumOrder(existingPost);
+      setPostAsTankCoverIfEmpty(existingPost);
     }
     existingPost.updatedAt = new Date().toISOString();
 
@@ -1558,6 +1565,7 @@ postForm.addEventListener("submit", async (event) => {
 
   state.posts.unshift(post);
   addPostToTankAlbumOrder(post);
+  setPostAsTankCoverIfEmpty(post);
   saveState();
   renderApp();
   resetPostForm();
@@ -1627,21 +1635,67 @@ function renderPostControls() {
 
 function renderHeroPhoto() {
   const tank = getActiveTank();
-  const featuredPost = state.posts.find(
-    (post) => post.id === tank.featuredPostId && !String(post.id).startsWith("sample-") && getPostThumbnailSrc(post),
-  );
-  const featuredImage = featuredPost ? getPostThumbnailSrc(featuredPost) : null;
-  const heroImage = state.heroPhotoDataUrl || featuredImage;
+  const cover = getTankCoverImage(tank);
+  const heroImage = cover.src;
 
-  heroPhoto.src = heroImage || "assets/site-concept.png";
+  heroPhoto.src = heroImage || TRANSPARENT_IMAGE_SRC;
   heroPhoto.alt = heroImage ? `${tank.name} の水槽写真` : "水槽写真未設定";
   heroMedia.classList.toggle("is-placeholder", !heroImage);
-  heroPhotoStatus.textContent = state.heroPhotoDataUrl ? "トップ写真" : featuredImage ? "メイン水槽写真" : "写真未設定";
+  heroPhotoStatus.textContent = cover.label;
   heroTankName.textContent = tank.name;
   heroPhotoNote.textContent = heroImage
-    ? "この水槽をTOPに大きく表示しています"
+    ? "選択中の水槽画像をTOPに大きく表示しています"
     : "写真を設定すると、ここに自分の水槽が大きく表示されます";
   renderHomeStartCard(tank, Boolean(heroImage));
+}
+
+function getTankCoverImage(tank = getActiveTank()) {
+  if (tank.photoDataUrl) {
+    return {
+      src: tank.photoDataUrl,
+      label: "水槽写真",
+      source: "tank-photo",
+    };
+  }
+
+  const featuredPost = getTankFeaturedPost(tank);
+  const featuredImage = featuredPost ? getPostThumbnailSrc(featuredPost) : null;
+  if (featuredImage) {
+    return {
+      src: featuredImage,
+      label: "水槽表紙",
+      source: "featured-post",
+    };
+  }
+
+  return {
+    src: null,
+    label: "写真未設定",
+    source: "none",
+  };
+}
+
+function getTankFeaturedPost(tank = getActiveTank()) {
+  if (!tank?.featuredPostId) {
+    return null;
+  }
+
+  return state.posts.find(
+    (post) => post.id === tank.featuredPostId && !String(post.id).startsWith("sample-") && getPostThumbnailSrc(post),
+  ) || null;
+}
+
+function setPostAsTankCoverIfEmpty(post) {
+  if (!post || !getPostThumbnailSrc(post)) {
+    return;
+  }
+
+  const tank = state.tanks.find((item) => item.id === post.tankId);
+  if (!tank || tank.photoDataUrl || tank.featuredPostId) {
+    return;
+  }
+
+  tank.featuredPostId = post.id;
 }
 
 function renderHomeStartCard(tank, hasHeroImage) {
@@ -2369,18 +2423,23 @@ function getMonitorGuideText(readiness = getMonitorReadinessState()) {
     "2. アカウント画面で新規登録する",
     "3. メール確認が出たら確認してログインする",
     "4. 最初の画面に勝手な数字や投稿が入っていないか見る",
+    "5. ログアウトして、同じメールで再ログインできるか見る",
     "",
-    "まずやってほしいこと:",
+    "最低限見てほしいこと:",
     "1. 自分の水槽を1つ登録する",
     "2. 水槽写真を入れて、ホームの大きい写真に表示されるか見る",
     "3. 水温、pH、水換え、フィルター掃除を1回ずつ記録する",
-    "4. ベーシック、かんたん、管理重視、投稿重視の中で分かりやすい表示を選ぶ",
+    "4. 投稿で写真を1つ追加する",
+    "5. ベーシック、かんたん、管理重視、投稿重視の中で分かりやすい表示を選ぶ",
     "",
     "余裕があれば:",
     "- 水槽を2つにして、ホームの水槽変更を試す",
-    "- 投稿で写真または動画を1つ追加する",
     "- 文字切れ、押しにくいボタン、分かりにくい言葉を見る",
     "- 通知許可、ホーム画面追加、オフライン復帰を試す",
+    "",
+    "困った時:",
+    "- どの画面で止まったかだけ送ってください",
+    "- 可能ならスクショも一緒にもらえると助かります",
     "",
     "返信はこの下だけで大丈夫です:",
     "",
@@ -2393,10 +2452,18 @@ function getMonitorFeedbackReplyTemplate() {
     "返信テンプレート:",
     "名前:",
     "端末:",
+    "ブラウザ:",
+    "登録できた:",
+    "ログアウト/ログインできた:",
+    "水槽登録できた:",
+    "写真投稿できた:",
+    "見た画面:",
     "登録で困ったところ:",
     "使いやすかったモード:",
     "良かったところ:",
     "迷ったところ:",
+    "気になった不具合:",
+    "スクショの有無:",
     "直してほしいところ:",
     "その他:",
   ].join("\n");
@@ -2881,12 +2948,19 @@ function parseMonitorFeedbackReply(text) {
     "名前",
     "参加者",
     "端末",
+    "ブラウザ",
+    "登録できた",
+    "ログアウト/ログインできた",
+    "水槽登録できた",
+    "写真投稿できた",
     "見た画面",
+    "登録で困ったところ",
     "使いやすかったモード",
     "一番使いやすかったモード",
     "良かったところ",
     "迷ったところ",
     "気になった不具合",
+    "スクショの有無",
     "直してほしいところ",
     "もう一度使うなら直してほしいところ",
     "その他",
@@ -3671,6 +3745,7 @@ function getMonitorCoreFlowReadiness() {
       Boolean(getTankResidentValue(tank)) ||
       Boolean(tank.equipment) ||
       Boolean(tank.logs?.length) ||
+      Boolean(tank.photoDataUrl) ||
       Boolean(tank.featuredPostId) ||
       Boolean(filter.type || filter.lastCleanedAt || filter.note)
     );
@@ -3695,13 +3770,14 @@ function getMonitorCoreFlowReadiness() {
 
 function getMonitorMediaReadiness() {
   const postMediaCount = state.posts.filter((post) => hasPostMedia(post)).length;
-  const hasTopPhoto = Boolean(state.heroPhotoDataUrl);
+  const tankPhotoCount = state.tanks.filter((tank) => Boolean(getTankCoverImage(tank).src)).length;
+  const hasTopPhoto = tankPhotoCount > 0;
 
   if (hasTopPhoto && postMediaCount) {
     return {
       ready: true,
-      value: `TOP写真 + 投稿${postMediaCount}件`,
-      note: "TOP写真と投稿メディアの表示確認ができます",
+      value: `水槽写真${tankPhotoCount}件 + 投稿${postMediaCount}件`,
+      note: "水槽ごとのホーム画像と投稿メディアの表示確認ができます",
       action: "写真表示は確認済み",
     };
   }
@@ -3709,9 +3785,9 @@ function getMonitorMediaReadiness() {
   if (hasTopPhoto) {
     return {
       ready: true,
-      value: "TOP写真あり",
-      note: "自分の水槽写真がホームに大きく表示されることを確認できます",
-      action: "TOP写真表示は確認済み",
+      value: `水槽写真${tankPhotoCount}件`,
+      note: "選択した水槽ごとにホーム画像が切り替わることを確認できます",
+      action: "水槽写真表示は確認済み",
     };
   }
 
@@ -3727,8 +3803,8 @@ function getMonitorMediaReadiness() {
   return {
     ready: false,
     value: "写真未確認",
-    note: "モニター前にTOP写真または投稿写真を1件確認します",
-    action: "TOP写真または投稿写真を1件追加",
+    note: "モニター前に水槽写真または投稿写真を1件確認します",
+    action: "水槽写真または投稿写真を1件追加",
   };
 }
 
@@ -6441,6 +6517,7 @@ async function syncCommunityToSupabase(options = {}) {
   await loadMediaFromSupabase(postCloudIds);
   await loadPostStatsFromSupabase(postCloudIds);
   await loadPostLikesFromSupabase(postCloudIds);
+  await syncTanksToSupabase({ silent: true });
 
   state.account.syncStatus = "synced";
   state.account.lastSyncedAt = new Date().toISOString();
@@ -6804,9 +6881,14 @@ function getTankPayload(tank, user) {
     equipment_names: tank.equipment || null,
     filter_profile: normalizeTankFilter(tank.filter),
     tags: Array.isArray(tank.tags) ? tank.tags : [tank.kind || "水槽"],
-    featured_post_id: null,
+    featured_post_id: getFeaturedPostCloudId(tank),
     updated_at: new Date().toISOString(),
   };
+}
+
+function getFeaturedPostCloudId(tank) {
+  const post = state.posts.find((item) => item.id === tank.featuredPostId);
+  return post?.cloudId || null;
 }
 
 function isMissingTankFilterProfileColumnError(error) {
@@ -7178,7 +7260,9 @@ function applyRemoteTanks(remoteTanks) {
       id: localId,
       logs: [],
       latestAi: null,
+      photoDataUrl: null,
       featuredPostId: null,
+      featuredPostCloudId: null,
       albumOrder: [],
     };
 
@@ -7204,6 +7288,11 @@ function applyRemoteTanks(remoteTanks) {
     nextTank.equipment = remoteTank.equipment_names || nextTank.equipment || "";
     nextTank.filter = normalizeTankFilter(remoteTank.filter_profile || nextTank.filter);
     nextTank.tags = Array.isArray(remoteTank.tags) && remoteTank.tags.length ? remoteTank.tags : [nextTank.kind];
+    nextTank.featuredPostCloudId = remoteTank.featured_post_id || nextTank.featuredPostCloudId || null;
+    const featuredPost = nextTank.featuredPostCloudId
+      ? state.posts.find((post) => post.cloudId === nextTank.featuredPostCloudId)
+      : null;
+    nextTank.featuredPostId = featuredPost?.id || nextTank.featuredPostId || null;
 
     if (!existingTank) {
       state.tanks.push(nextTank);
@@ -7323,6 +7412,20 @@ function applyRemotePosts(remotePosts) {
   });
 
   state.posts.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+  resolveTankFeaturedPostsFromCloud();
+}
+
+function resolveTankFeaturedPostsFromCloud() {
+  state.tanks.forEach((tank) => {
+    if (!tank.featuredPostCloudId) {
+      return;
+    }
+
+    const post = state.posts.find((item) => item.cloudId === tank.featuredPostCloudId);
+    if (post) {
+      tank.featuredPostId = post.id;
+    }
+  });
 }
 
 function applyRemotePostStats(remoteStats) {
@@ -8809,11 +8912,10 @@ function renderTankList() {
 function renderTankProfile() {
   const tank = getActiveTank();
   const aquariumVisual = document.querySelector(".aquarium-visual");
-  const featuredPost = state.posts.find((post) => post.id === tank.featuredPostId && getPostThumbnailSrc(post));
-  const featuredImage = featuredPost ? getPostThumbnailSrc(featuredPost) : null;
+  const cover = getTankCoverImage(tank);
 
-  aquariumVisual.classList.toggle("has-cover", Boolean(featuredImage));
-  aquariumVisual.style.backgroundImage = featuredImage ? `url("${featuredImage}")` : "";
+  aquariumVisual.classList.toggle("has-cover", Boolean(cover.src));
+  aquariumVisual.style.backgroundImage = cover.src ? `url("${cover.src}")` : "";
   document.querySelector("#tank-profile-name").textContent = tank.name;
   document.querySelector("#tank-profile-detail").textContent = `${tank.kind} / ${tank.size} / ${tank.volume}`;
   document.querySelector("#tank-detail-grid").innerHTML = getTankDetailItems(tank)
@@ -9615,10 +9717,15 @@ function featurePost(postId) {
   }
 
   tank.featuredPostId = post.id;
+  tank.featuredPostCloudId = post.cloudId || tank.featuredPostCloudId || null;
+  tank.photoDataUrl = null;
   state.activeTankId = tank.id;
   saveState();
   renderApp();
   showToast("水槽アルバムの表紙にしました");
+  if (authSession?.user) {
+    syncTanksToSupabase({ silent: true });
+  }
 }
 
 function deletePost(postId) {
@@ -12691,11 +12798,22 @@ function normalizeState(saved) {
       taskDate: nextTank.taskDate || (nextTank.id === normalized.activeTankId ? normalized.taskDate : getDateKey(new Date())),
       reminders: normalizeReminders(nextTank.reminders || savedReminders),
       latestAi: nextTank.latestAi ? normalizeAiResult(nextTank.latestAi) : null,
+      photoDataUrl: isImageDataUrl(nextTank.photoDataUrl) ? nextTank.photoDataUrl : null,
       featuredPostId: nextTank.featuredPostId || null,
+      featuredPostCloudId: nextTank.featuredPostCloudId || null,
       albumOrder: Array.isArray(nextTank.albumOrder) ? nextTank.albumOrder : [],
       cloudId: nextTank.cloudId || null,
     };
   });
+
+  const activeTankForHeroMigration = normalized.tanks.find((tank) => tank.id === normalized.activeTankId) || normalized.tanks[0];
+  if (isImageDataUrl(normalized.heroPhotoDataUrl) && activeTankForHeroMigration && !activeTankForHeroMigration.photoDataUrl) {
+    activeTankForHeroMigration.photoDataUrl = normalized.heroPhotoDataUrl;
+    normalized.heroPhotoDataUrl = null;
+  } else if (!isImageDataUrl(normalized.heroPhotoDataUrl)) {
+    normalized.heroPhotoDataUrl = null;
+  }
+
   normalized.posts = normalized.posts.map((post, index) => {
     const fallbackTank = normalized.tanks[index % normalized.tanks.length] || normalized.tanks[0];
     const tankId = normalized.tanks.some((tank) => tank.id === post.tankId) ? post.tankId : fallbackTank.id;
