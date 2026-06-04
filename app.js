@@ -2439,10 +2439,14 @@ function renderPwaTestReview(results) {
   const actionItems = getPwaDeviceQaActionItems(results);
   const resolvedActionCount = getPwaDeviceQaActionItems(results, { includeResolved: true }).filter((item) => item.resolved).length;
   const ready = passedCount === scopes.length && failedCount === 0;
+  const nextScope = scopes.find((scope) => scopeStatuses[scope] !== "passed");
+  const nextScopeStatus = nextScope ? scopeStatuses[nextScope] : "";
   const reviewLabel = ready ? "公開前OK" : totalCount ? "確認中" : "未記録";
   const reviewNote = ready
-    ? "必須項目はOKです。最後に本番URLで再読み込みして、水槽変更、通知、オフライン復帰、画像カスタムをもう一度確認します。"
-    : "本番URLでログイン、水槽変更、ホーム追加とショートカット、通知受信、オフライン復帰、4モード表示、画像カスタムを確認して記録します。";
+    ? "必須項目はOKです。最後に本番URLで再読み込みして、ホーム追加・ショートカット、水槽変更、通知、オフライン復帰、画像カスタムをもう一度確認します。"
+    : nextScope
+      ? `次は${getPwaTestScopeLabel(nextScope)}を${nextScopeStatus === "missing" ? "実機で確認して保存" : "再確認してOKで保存"}します。`
+      : "本番URLでログイン、水槽変更、ホーム追加とショートカット、通知受信、オフライン復帰、4モード表示、画像カスタムを確認して記録します。";
 
   pwaTestReview.innerHTML = `
     <div class="pwa-test-score ${ready ? "ready" : "pending"}">
