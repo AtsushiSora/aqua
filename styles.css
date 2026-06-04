@@ -6750,7 +6750,14 @@ textarea {
   gap: 12px;
 }
 
-.monitor-participants-panel .section-head .ghost-button {
+.monitor-participant-head-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.monitor-participant-head-actions .ghost-button {
   white-space: nowrap;
 }
 

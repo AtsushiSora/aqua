@@ -124,6 +124,7 @@ const monitorGuidePreviewToggle = document.querySelector("#monitor-guide-preview
 const monitorKitExportButton = document.querySelector("#monitor-kit-export-button");
 const monitorGuideCopyPreview = document.querySelector("#monitor-guide-copy-preview");
 const monitorWorkplaceAddButton = document.querySelector("#monitor-workplace-add-button");
+const monitorWorkplaceSentButton = document.querySelector("#monitor-workplace-sent-button");
 const monitorParticipantForm = document.querySelector("#monitor-participant-form");
 const monitorParticipantSummary = document.querySelector("#monitor-participant-summary");
 const monitorParticipantList = document.querySelector("#monitor-participant-list");
@@ -789,6 +790,7 @@ monitorReadinessNext?.addEventListener("click", (event) => {
   openMonitorReadinessAction(actionButton.dataset.monitorReadinessAction);
 });
 monitorWorkplaceAddButton?.addEventListener("click", addWorkplaceMonitorParticipants);
+monitorWorkplaceSentButton?.addEventListener("click", markWorkplaceMonitorParticipantsSent);
 monitorFeedbackTemplateButton.addEventListener("click", applyMonitorFeedbackReplyTemplate);
 monitorFeedbackParseButton.addEventListener("click", applyMonitorFeedbackReplyFields);
 monitorFeedbackForm.addEventListener("input", renderMonitorFeedbackFormCheck);
@@ -2202,6 +2204,53 @@ function addWorkplaceMonitorParticipants() {
   renderMonitorParticipants();
   renderMonitorReadiness();
   showToast(`${workplaceParticipants.length}人を職場モニターとして追加しました`);
+}
+
+function markWorkplaceMonitorParticipantsSent() {
+  addMissingWorkplaceMonitorParticipants();
+  const now = new Date().toISOString();
+  let updatedCount = 0;
+  state.monitorParticipants = (state.monitorParticipants || []).map((participant) => {
+    const normalized = normalizeMonitorParticipant(participant);
+    const isWorkplace = ["職場モニター1", "職場モニター2"].includes(normalized.name);
+    if (!isWorkplace || normalized.status === "sent" || normalized.status === "replied") {
+      return normalized;
+    }
+
+    updatedCount += 1;
+    return normalizeMonitorParticipant({
+      ...normalized,
+      status: "sent",
+      sentAt: normalized.sentAt || now,
+      note: normalized.note || "職場で案内文を送付",
+    });
+  });
+  saveState();
+  renderMonitorParticipants();
+  renderMonitorReadiness();
+  showToast(updatedCount ? `職場モニター${updatedCount}人を送付済みにしました` : "職場モニター2人は送付済みです");
+}
+
+function addMissingWorkplaceMonitorParticipants() {
+  const existing = (state.monitorParticipants || []).map(normalizeMonitorParticipant);
+  const existingNames = new Set(existing.map((participant) => normalizeMonitorParticipantName(participant.name)));
+  const now = new Date().toISOString();
+  const missing = ["職場モニター1", "職場モニター2"]
+    .filter((name) => !existingNames.has(normalizeMonitorParticipantName(name)))
+    .map((name) =>
+      normalizeMonitorParticipant({
+        id: createId("monitor-participant"),
+        name,
+        contact: "職場で直接依頼",
+        status: "planned",
+        note: "名前と端末はあとで差し替え",
+        createdAt: now,
+      }),
+    );
+
+  if (missing.length) {
+    state.monitorParticipants = [...missing, ...existing].slice(0, 50);
+  }
 }
 
 function renderMonitorParticipants() {
