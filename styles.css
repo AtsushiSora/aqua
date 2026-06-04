@@ -4978,6 +4978,38 @@ textarea {
   color: var(--ink);
 }
 
+.pwa-monitor-judgment-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.pwa-monitor-judgment-grid article {
+  display: grid;
+  gap: 3px;
+  padding: 8px;
+  border: 1px solid rgba(61, 173, 120, 0.2);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.56);
+}
+
+.pwa-monitor-judgment-grid article.pending {
+  border-color: rgba(194, 57, 52, 0.24);
+}
+
+.pwa-monitor-judgment-grid article.later {
+  border-color: rgba(226, 162, 72, 0.22);
+}
+
+.pwa-monitor-judgment-grid span,
+.pwa-monitor-judgment-grid strong {
+  margin: 0;
+}
+
+.pwa-monitor-judgment-grid strong {
+  color: var(--ink);
+}
+
 .pwa-monitor-feedback-next-list {
   display: grid;
   gap: 6px;
@@ -7539,6 +7571,7 @@ textarea {
   .pwa-appearance-evidence > div,
   .pwa-release-decision-form,
   .pwa-release-evidence-grid,
+  .pwa-monitor-judgment-grid,
   .preference-toggles,
   .quiet-hours,
   .ai-api-status-grid,

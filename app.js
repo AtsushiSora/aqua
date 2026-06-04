@@ -2795,13 +2795,14 @@ function getMonitorFeedbackExportSummary(entries = state.monitorFeedback || []) 
   const unresolved = normalizedEntries.filter((entry) => entry.status !== "done");
   const highUnresolved = unresolved.filter((entry) => entry.priority === "high");
   const collection = getMonitorFeedbackCollectionState(normalizedEntries);
+  const releaseJudgment = getMonitorReleaseJudgment(normalizedEntries);
   const nextItems = unresolved
     .sort(compareMonitorFeedbackForTriage)
     .slice(0, 5)
     .map((entry, index) => getMonitorFeedbackTriageItem(entry, index + 1));
 
   return {
-    ready: unresolved.length === 0,
+    ready: releaseJudgment.beforeRelease.length === 0,
     totalCount: normalizedEntries.length,
     participantCount: collection.participantCount,
     deviceCount: collection.deviceCount,
@@ -2812,9 +2813,11 @@ function getMonitorFeedbackExportSummary(entries = state.monitorFeedback || []) 
     unresolvedCount: unresolved.length,
     highUnresolvedCount: highUnresolved.length,
     resolvedCount: normalizedEntries.filter((entry) => entry.status === "done").length,
+    beforeReleaseCount: releaseJudgment.beforeRelease.length,
+    laterCount: releaseJudgment.later.length,
     latestAt: normalizedEntries[0]?.createdAt || null,
     triage,
-    releaseJudgment: getMonitorReleaseJudgment(normalizedEntries),
+    releaseJudgment,
     nextItems,
   };
 }
@@ -2850,13 +2853,14 @@ function getMonitorFeedbackTriageItem(entry, rank) {
 }
 
 function getMonitorFeedbackReleaseBlockerNote(monitorFeedback) {
-  const summary = `${monitorFeedback.unresolvedCount}件の未対応 / 高優先度 ${monitorFeedback.highUnresolvedCount}件`;
-  const nextItems = Array.isArray(monitorFeedback.nextItems) ? monitorFeedback.nextItems.slice(0, 2) : [];
+  const beforeItems = Array.isArray(monitorFeedback.releaseJudgment?.beforeRelease) ? monitorFeedback.releaseJudgment.beforeRelease : [];
+  const summary = `公開前に直す ${monitorFeedback.beforeReleaseCount || beforeItems.length}件 / あとで直す ${monitorFeedback.laterCount || 0}件`;
+  const nextItems = beforeItems.slice(0, 2);
   if (!nextItems.length) {
     return summary;
   }
 
-  return `${summary} / 次候補: ${nextItems.map((item) => `#${item.rank} ${item.title} - ${item.note}`).join(" / ")}`;
+  return `${summary} / 次候補: ${nextItems.map((item, index) => `#${index + 1} ${item.title} - ${item.note}`).join(" / ")}`;
 }
 
 async function copyMonitorFeedbackActionList() {
@@ -3814,18 +3818,32 @@ function renderPwaReleaseDecision() {
     </div>
     <div class="pwa-monitor-feedback-evidence ${monitorFeedback.ready ? "ready" : "pending"}">
       <span>モニター指摘</span>
-      <strong>${escapeHtml(monitorFeedback.ready ? "未対応なし" : `${monitorFeedback.unresolvedCount}件の未対応`)}</strong>
-      <small>${escapeHtml(`${monitorFeedback.collectionNote} / 記録 ${monitorFeedback.totalCount}件 / 高優先度未対応 ${monitorFeedback.highUnresolvedCount}件 / 対応済み ${monitorFeedback.resolvedCount}件`)}</small>
+      <strong>${escapeHtml(monitorFeedback.ready ? "公開前OK" : `公開前に直す ${monitorFeedback.beforeReleaseCount}件`)}</strong>
+      <small>${escapeHtml(`${monitorFeedback.collectionNote} / あとで直す ${monitorFeedback.laterCount}件 / 未対応 ${monitorFeedback.unresolvedCount}件 / 対応済み ${monitorFeedback.resolvedCount}件`)}</small>
+      <div class="pwa-monitor-judgment-grid">
+        <article class="${monitorFeedback.beforeReleaseCount ? "pending" : "ready"}">
+          <span>公開前に直す</span>
+          <strong>${escapeHtml(`${monitorFeedback.beforeReleaseCount}件`)}</strong>
+        </article>
+        <article class="later">
+          <span>あとで直す</span>
+          <strong>${escapeHtml(`${monitorFeedback.laterCount}件`)}</strong>
+        </article>
+        <article class="ready">
+          <span>対応済み</span>
+          <strong>${escapeHtml(`${monitorFeedback.resolvedCount}件`)}</strong>
+        </article>
+      </div>
       ${
-        monitorFeedback.nextItems?.length
+        monitorFeedback.releaseJudgment?.beforeRelease?.length
           ? `
             <div class="pwa-monitor-feedback-next-list">
-              ${monitorFeedback.nextItems
+              ${monitorFeedback.releaseJudgment.beforeRelease
                 .slice(0, 3)
                 .map(
-                  (item) => `
+                  (item, index) => `
                     <article>
-                      <span>${escapeHtml(`#${item.rank} ${item.title}`)}</span>
+                      <span>${escapeHtml(`#${index + 1} ${item.title}`)}</span>
                       <p>${escapeHtml(item.note)}</p>
                     </article>
                   `,
@@ -3981,9 +3999,9 @@ function getPwaReleasePriorityItems({ decision, coverage, deviceQaActions, gatew
     {
       label: "モニター指摘",
       ready: monitorFeedback.ready,
-      status: monitorFeedback.ready ? "未対応なし" : `${monitorFeedback.unresolvedCount}件未対応`,
+      status: monitorFeedback.ready ? "公開前OK" : `${monitorFeedback.beforeReleaseCount}件要対応`,
       note: monitorFeedback.ready
-        ? `記録${monitorFeedback.totalCount}件、未対応はありません`
+        ? `公開前に直す項目なし / あとで直す ${monitorFeedback.laterCount}件 / 対応済み ${monitorFeedback.resolvedCount}件`
         : getMonitorFeedbackReleaseBlockerNote(monitorFeedback),
     },
     {
