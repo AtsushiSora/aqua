@@ -337,6 +337,7 @@ const defaultState = {
     decidedAt: null,
     reviewExportedAt: null,
   },
+  monitorLaunchKitExportedAt: null,
   tanks: [
     {
       id: "tank-main",
@@ -1771,6 +1772,8 @@ async function copyMonitorGuideText() {
 }
 
 function exportMonitorLaunchKit() {
+  state.monitorLaunchKitExportedAt = new Date().toISOString();
+  saveState();
   const readiness = getMonitorReadinessState();
   const decision = normalizePwaReleaseDecision(state.pwaReleaseDecision || {});
   const pwaResults = Array.isArray(state.pwaTestResults) ? state.pwaTestResults : [];
@@ -1783,6 +1786,7 @@ function exportMonitorLaunchKit() {
     exportedAt: new Date().toISOString(),
     ready: readiness.ready,
     nextAction: readiness.nextAction,
+    launchKitExportedAt: state.monitorLaunchKitExportedAt,
     readiness,
     monitorUrl: decision.productionUrl || "",
     guideText: getMonitorGuideText(readiness),
@@ -1797,6 +1801,7 @@ function exportMonitorLaunchKit() {
     JSON.stringify(payload, null, 2),
     "application/json;charset=utf-8",
   );
+  renderMonitorReadiness();
   showToast("モニター配布セットを書き出しました");
 }
 
@@ -2231,6 +2236,7 @@ function getMonitorReadinessItems() {
   const coreFlowReadiness = getMonitorCoreFlowReadiness();
   const mediaReadiness = getMonitorMediaReadiness();
   const decisionReadiness = getMonitorDecisionReadiness(decision);
+  const launchKitReady = Boolean(state.monitorLaunchKitExportedAt);
   const filterReady = state.tanks.some((tank) => {
     const filter = normalizeTankFilter(tank.filter);
     return Boolean(filter.type || filter.lastCleanedAt || filter.note);
@@ -2278,6 +2284,13 @@ function getMonitorReadinessItems() {
       value: decisionReadiness.value,
       note: decisionReadiness.note,
       action: decisionReadiness.action,
+    },
+    {
+      label: "配布準備",
+      status: launchKitReady ? "ready" : "manual",
+      value: launchKitReady ? "書き出し済み" : "未書き出し",
+      note: launchKitReady ? `${formatFullDate(state.monitorLaunchKitExportedAt)} に配布セットを作成` : "案内文、返信テンプレート、準備状況をJSONで書き出します",
+      action: "配布セットJSONを書き出す",
     },
   ];
 }
@@ -6227,6 +6240,7 @@ function exportProductionSetupStatus() {
     setupCheck: normalizeProductionSetupCheck(state.productionSetupCheck || {}),
     items: setupSummary.items,
     monitorReadiness,
+    monitorLaunchKitExportedAt: state.monitorLaunchKitExportedAt,
     monitorGuideText: getMonitorGuideText(monitorReadiness),
     monitorFeedbackReplyTemplate: getMonitorFeedbackReplyTemplate(),
     releasePriority,
@@ -11078,6 +11092,7 @@ function normalizeState(saved) {
     reminders: savedReminders,
     pwaTestResults: Array.isArray(saved.pwaTestResults) ? saved.pwaTestResults.map(normalizePwaTestResult) : [],
     monitorFeedback: Array.isArray(saved.monitorFeedback) ? saved.monitorFeedback.map(normalizeMonitorFeedback) : [],
+    monitorLaunchKitExportedAt: saved.monitorLaunchKitExportedAt || null,
     productionSetupCheck: normalizeProductionSetupCheck(saved.productionSetupCheck || {}),
     notificationProductionCheck: normalizeNotificationProductionCheck(saved.notificationProductionCheck || {}),
     pwaReleaseDecision: normalizePwaReleaseDecision(saved.pwaReleaseDecision || {}),
