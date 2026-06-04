@@ -731,11 +731,15 @@ pwaTestDevicePresetButtons.forEach((button) => {
 });
 pwaTestReview.addEventListener("click", (event) => {
   const actionButton = event.target.closest("[data-pwa-next-scope]");
-  if (!actionButton) {
+  if (actionButton) {
+    applyPwaNextScope(actionButton.dataset.pwaNextScope);
     return;
   }
 
-  applyPwaNextScope(actionButton.dataset.pwaNextScope);
+  const releaseButton = event.target.closest("[data-pwa-release-action]");
+  if (releaseButton) {
+    openPwaReleaseDecisionFromQa();
+  }
 });
 pwaTestExportButton.addEventListener("click", exportPwaTestResults);
 monitorParticipantForm.addEventListener("submit", handleMonitorParticipantSubmit);
@@ -3673,6 +3677,18 @@ function renderPwaTestReview(results) {
         `
         : ""
     }
+    ${
+      ready
+        ? `
+          <div class="pwa-test-release-card">
+            <span>次のステップ</span>
+            <strong>最終リリース判定へ進む</strong>
+            <small>実機QAは揃っています。判定メモに残タスクを入れて、本番URLレビューを保存します。</small>
+            <button class="primary-button" type="button" data-pwa-release-action="open-decision">判定メモへ進む</button>
+          </div>
+        `
+        : ""
+    }
     <div class="pwa-test-scope-grid">
       ${scopes
         .map((scope) => {
@@ -3732,6 +3748,14 @@ function applyPwaNextScope(scope) {
   }
   pwaTestNoteInput.focus();
   showToast(`${getPwaTestScopeLabel(allowedScope)}を入力できる状態にしました`);
+}
+
+function openPwaReleaseDecisionFromQa() {
+  applyPwaReleasePendingNoteTemplate();
+  const releaseForm = document.querySelector("#pwa-release-decision-form");
+  releaseForm?.scrollIntoView({ behavior: "smooth", block: "start" });
+  document.querySelector("#pwa-release-decision-url-input")?.focus({ preventScroll: true });
+  showToast("最終リリース判定を開きました");
 }
 
 function getPwaModeQaSummary(results) {
