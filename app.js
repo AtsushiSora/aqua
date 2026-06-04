@@ -5,7 +5,7 @@ const EXPORT_VERSION = 1;
 const MEDIA_BUCKET = "aquanote-media";
 const MEDIA_SIGNED_URL_EXPIRES_SECONDS = 60 * 60;
 const AI_ANALYSIS_ENDPOINT = "/api/ai-analysis";
-const MONITOR_TARGET_PARTICIPANTS = 3;
+const MONITOR_TARGET_PARTICIPANTS = 2;
 const MONITOR_TARGET_DEVICES = 2;
 
 const viewLinks = document.querySelectorAll("[data-view-link]");
@@ -3281,7 +3281,7 @@ function getMonitorReadinessItems() {
       status: participantSummary.sentReady ? "ready" : "manual",
       value: `${participantSummary.sentCount}/${MONITOR_TARGET_PARTICIPANTS}人`,
       note: participantSummary.sentReady ? "参加者への送付数は目標達成です" : "モニター参加者を登録し、送付済みにします",
-      action: "3人以上を参加者に登録して送付済みにする",
+      action: "2人以上を参加者に登録して送付済みにする",
     },
   ];
 }
