@@ -4721,6 +4721,111 @@ textarea {
     rgba(248, 252, 251, 0.8);
 }
 
+.pwa-release-priority-list {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid rgba(226, 162, 72, 0.34);
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.62), transparent),
+    rgba(255, 247, 230, 0.82);
+}
+
+.pwa-release-priority-list.ready {
+  border-color: rgba(61, 173, 120, 0.34);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.62), transparent),
+    rgba(232, 248, 241, 0.86);
+}
+
+.pwa-release-priority-list > span,
+.pwa-release-priority-list > strong,
+.pwa-release-priority-list > small {
+  color: var(--aqua-dark);
+  font-size: 0.9rem;
+  font-weight: 900;
+}
+
+.pwa-release-priority-list > small {
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+.pwa-release-priority-list ol {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.pwa-release-priority-list li {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+  padding: 10px;
+  border: 1px solid rgba(226, 162, 72, 0.28);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.7);
+}
+
+.pwa-release-priority-list li.ready {
+  border-color: rgba(61, 173, 120, 0.24);
+  background: rgba(255, 255, 255, 0.52);
+}
+
+.pwa-release-priority-list li > span {
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  background: rgba(10, 95, 99, 0.12);
+  color: var(--aqua-dark);
+  font-size: 0.78rem;
+  font-weight: 950;
+}
+
+.pwa-release-priority-list li.ready > span {
+  background: rgba(61, 173, 120, 0.16);
+  color: #247a57;
+}
+
+.pwa-release-priority-list li div {
+  min-width: 0;
+}
+
+.pwa-release-priority-list li strong,
+.pwa-release-priority-list li small,
+.pwa-release-priority-list li p {
+  display: block;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.pwa-release-priority-list li strong {
+  color: var(--aqua-dark);
+  font-size: 0.86rem;
+}
+
+.pwa-release-priority-list li small {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-weight: 900;
+}
+
+.pwa-release-priority-list li p {
+  margin-top: 5px;
+  color: var(--ink);
+  font-size: 0.78rem;
+  font-weight: 800;
+  line-height: 1.45;
+}
+
 .pwa-release-evidence-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));

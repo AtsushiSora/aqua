@@ -2731,6 +2731,14 @@ function renderPwaReleaseDecision() {
     decision,
     results: state.pwaTestResults || [],
   });
+  const releasePriority = getPwaReleasePriorityItems({
+    decision,
+    coverage,
+    deviceQaActions,
+    gatewayDecision,
+    monitorFeedback,
+    cloudReview,
+  });
   document.querySelector("#pwa-release-decision-status-input").value = decision.status;
   document.querySelector("#pwa-release-review-status-input").value = decision.reviewStatus;
   document.querySelector("#pwa-release-result-status-input").value = decision.resultStatus;
@@ -2746,6 +2754,27 @@ function renderPwaReleaseDecision() {
     : "公開OKにする前に、未OKまたはNGのPWA確認項目を解消します。";
 
   pwaReleaseDecisionSummary.innerHTML = `
+    <div class="pwa-release-priority-list ${releasePriority.ready ? "ready" : "pending"}">
+      <span>リリースまでの優先順位</span>
+      <strong>${escapeHtml(releasePriority.ready ? "公開前の主要タスクは完了です" : `残り${releasePriority.activeCount}件を上から確認`)}</strong>
+      <small>${escapeHtml(releasePriority.note)}</small>
+      <ol>
+        ${releasePriority.items
+          .map(
+            (item) => `
+              <li class="${item.ready ? "ready" : "pending"}">
+                <span>${escapeHtml(item.displayRank)}</span>
+                <div>
+                  <strong>${escapeHtml(item.label)}</strong>
+                  <small>${escapeHtml(item.status)}</small>
+                  <p>${escapeHtml(item.note)}</p>
+                </div>
+              </li>
+            `,
+          )
+          .join("")}
+      </ol>
+    </div>
     <article class="pwa-release-handoff ${handoff.ready ? "ready" : "pending"}">
       <span>${escapeHtml(handoff.ready ? "公開前レビュー完了" : "次アクション")}</span>
       <strong>${escapeHtml(handoff.title)}</strong>
@@ -2934,6 +2963,86 @@ function renderPwaReleaseDecision() {
         .join("")}
     </div>
   `;
+}
+
+function getPwaReleasePriorityItems({ decision, coverage, deviceQaActions, gatewayDecision, monitorFeedback, cloudReview }) {
+  const setupItems = getProductionSetupSummaryItems(state.pwaTestResults || []).filter((item) => item.label !== "PWA実機QA");
+  const nextSetupItem = setupItems.find((item) => item.status === "missing") || setupItems.find((item) => item.status === "manual");
+  const setupReadyCount = setupItems.filter((item) => item.status === "ready").length;
+  const setupReady = setupReadyCount === setupItems.length;
+  const decisionReady = decision.status === "ready" && Boolean(decision.reviewer) && Boolean(decision.note);
+  const deviceQaReady = coverage.ready && deviceQaActions.length === 0;
+  const items = [
+    {
+      label: "本番環境設定",
+      ready: setupReady,
+      status: setupReady ? "OK" : `${setupReadyCount}/${setupItems.length} OK`,
+      note: setupReady ? "Supabase、Storage、AI、通知の確認メモが揃っています" : nextSetupItem ? `${nextSetupItem.label}: ${nextSetupItem.note}` : "本番前セットアップを確認します",
+    },
+    {
+      label: "本番URL入力",
+      ready: Boolean(decision.productionUrl),
+      status: decision.productionUrl ? "入力済み" : "未入力",
+      note: decision.productionUrl || "PWA最終リリース判定に公開URLを入れます",
+    },
+    {
+      label: "実機QA",
+      ready: deviceQaReady,
+      status: deviceQaReady ? "OK" : `${coverage.passedCount}/${coverage.scopes.length} OK`,
+      note: deviceQaActions.length
+        ? `${deviceQaActions.length}件の要確認/NGを後続OKで解消します`
+        : coverage.ready
+          ? "必須項目はOKです"
+          : "ログイン、水槽変更、ホーム追加・ショートカット、通知、オフライン、4モード、画像カスタムを確認します",
+    },
+    {
+      label: "AI Gateway判定",
+      ready: gatewayDecision.ready,
+      status: gatewayDecision.ready ? "OK" : "確認中",
+      note: gatewayDecision.ready ? "AI Gateway本番判定は公開OKです" : gatewayDecision.nextAction || gatewayDecision.summary,
+    },
+    {
+      label: "モニター指摘",
+      ready: monitorFeedback.ready,
+      status: monitorFeedback.ready ? "未対応なし" : `${monitorFeedback.unresolvedCount}件未対応`,
+      note: monitorFeedback.ready
+        ? `記録${monitorFeedback.totalCount}件、未対応はありません`
+        : getMonitorFeedbackReleaseBlockerNote(monitorFeedback),
+    },
+    {
+      label: "公開判断保存",
+      ready: decisionReady,
+      status: getPwaReleaseDecisionLabel(decision.status),
+      note: decisionReady ? "公開OK、確認者、判断理由が保存されています" : "公開OK、確認者、判断理由を判定メモに残します",
+    },
+    {
+      label: "レビューJSON",
+      ready: Boolean(decision.reviewExportedAt),
+      status: decision.reviewExportedAt ? "書き出し済み" : "未書き出し",
+      note: decision.reviewExportedAt ? `${formatFullDate(decision.reviewExportedAt)} に書き出し済み` : "JSONボタンで本番URLレビュー結果を書き出します",
+    },
+    {
+      label: "クラウド同期",
+      ready: Boolean(decision.cloudId) && cloudReview.ready,
+      status: cloudReview.ready ? "OK" : "要確認",
+      note: cloudReview.ready ? "実機結果、最終判定、同期状態、レビューJSONが揃っています" : cloudReview.note,
+    },
+  ];
+  const pendingItems = items.filter((item) => !item.ready);
+  const readyItems = items.filter((item) => item.ready);
+  const orderedItems = [...pendingItems, ...readyItems].map((item, index) => ({
+    ...item,
+    displayRank: item.ready ? "OK" : String(index + 1),
+  }));
+
+  return {
+    ready: pendingItems.length === 0,
+    activeCount: pendingItems.length,
+    note: pendingItems.length
+      ? `${pendingItems[0].label}から進めると、公開判定まで迷わず確認できます。`
+      : "本番URLレビューJSONを書き出し、公開作業へ進めます。",
+    items: orderedItems,
+  };
 }
 
 function getPwaReleaseEvidenceItems(decision, coverage) {
@@ -6141,6 +6250,14 @@ async function exportPwaTestResults() {
     decision: releaseDecision,
     results,
   });
+  const releasePriority = getPwaReleasePriorityItems({
+    decision: releaseDecision,
+    coverage,
+    deviceQaActions,
+    gatewayDecision: gatewayDecisionEvidence,
+    monitorFeedback,
+    cloudReview,
+  });
   const readyForRelease = coverage.ready && releaseDecision.status === "ready" && evidence.every((item) => item.ready);
   const releaseWarnings = getPwaReleaseWarnings(releaseDecision, coverage);
 
@@ -6182,6 +6299,7 @@ async function exportPwaTestResults() {
     handoffChecklist,
     handoffMemo,
     testerScript,
+    releasePriority,
     cloudReview,
     monitorFeedback,
     releaseDecision: {
