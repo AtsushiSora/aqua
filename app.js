@@ -3594,7 +3594,7 @@ function showPwaReleaseDecisionSavedToast() {
     return;
   }
 
-  showToast(`公開OKを保存しました。未完了: ${warnings.toast}`);
+  showToast(`公開OKを保存しました。公開前チェックは未完了${warnings.blockers.length}件: ${warnings.toast}`);
 }
 
 function getPwaReleaseWarnings(decision, coverage = getPwaReleaseCoverage(), results = state.pwaTestResults || []) {
@@ -3703,6 +3703,7 @@ function renderPwaReleaseDecision() {
   const testerScript = getPwaReleaseTesterScript({ decision, coverage });
   const handoff = getPwaReleaseHandoffState(releasePriority);
   const qaState = getPwaReleaseQaState(releasePriority);
+  const releaseWarnings = getPwaReleaseWarnings(decision, coverage, state.pwaTestResults || []);
   document.querySelector("#pwa-release-decision-status-input").value = decision.status;
   document.querySelector("#pwa-release-review-status-input").value = decision.reviewStatus;
   document.querySelector("#pwa-release-result-status-input").value = decision.resultStatus;
@@ -3748,6 +3749,34 @@ function renderPwaReleaseDecision() {
       <span>最終QA</span>
       <strong>${escapeHtml(qaState.title)}</strong>
       <small>${escapeHtml(qaState.note)}</small>
+    </article>
+    <article class="pwa-release-ok-check ${releaseWarnings.ready ? "ready" : "pending"}">
+      <span>公開OK保存前チェック</span>
+      <strong>${escapeHtml(releaseWarnings.ready ? "未完了なし" : `未完了${releaseWarnings.blockers.length}件`)}</strong>
+      <small>${escapeHtml(
+        releaseWarnings.ready
+          ? "公開OKにしても、主要チェックは揃っています。"
+          : `公開OK保存前に確認: ${releaseWarnings.toast}`,
+      )}</small>
+      ${
+        releaseWarnings.blockers.length
+          ? `
+            <ul>
+              ${releaseWarnings.blockers
+                .slice(0, 5)
+                .map(
+                  (item) => `
+                    <li>
+                      <strong>${escapeHtml(`${item.displayRank}. ${item.label}`)}</strong>
+                      <span>${escapeHtml(item.status)}</span>
+                    </li>
+                  `,
+                )
+                .join("")}
+            </ul>
+          `
+          : ""
+      }
     </article>
     <article class="${escapeHtml(decision.status)}">
       <span>判定状況</span>

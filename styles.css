@@ -5328,6 +5328,51 @@ textarea {
   border-color: rgba(226, 162, 72, 0.42);
 }
 
+.pwa-release-decision-summary article.pwa-release-ok-check.ready {
+  border-color: rgba(61, 173, 120, 0.42);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.58), transparent),
+    rgba(232, 248, 241, 0.84);
+}
+
+.pwa-release-decision-summary article.pwa-release-ok-check.pending {
+  border-color: rgba(194, 57, 52, 0.3);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.58), transparent),
+    rgba(255, 247, 230, 0.84);
+}
+
+.pwa-release-ok-check ul {
+  display: grid;
+  gap: 6px;
+  margin: 4px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.pwa-release-ok-check li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+  padding: 8px 10px;
+  border: 1px solid rgba(226, 162, 72, 0.24);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.62);
+}
+
+.pwa-release-ok-check li strong,
+.pwa-release-ok-check li span {
+  overflow-wrap: anywhere;
+}
+
+.pwa-release-ok-check li span {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 850;
+  text-align: right;
+}
+
 .pwa-release-decision-summary article.hold {
   border-color: rgba(211, 93, 93, 0.38);
 }
