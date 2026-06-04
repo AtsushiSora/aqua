@@ -6293,6 +6293,58 @@ textarea {
   min-width: 136px;
 }
 
+.monitor-instruction-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.monitor-instruction-grid article {
+  min-width: 0;
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid rgba(20, 122, 118, 0.18);
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.58), transparent),
+    rgba(248, 252, 251, 0.78);
+}
+
+.monitor-instruction-grid span {
+  color: var(--aqua-dark);
+  font-size: 0.82rem;
+  font-weight: 900;
+}
+
+.monitor-guide .monitor-instruction-grid ol {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 6px;
+  margin: 0;
+  padding-left: 20px;
+  list-style: decimal;
+  counter-reset: none;
+}
+
+.monitor-guide .monitor-instruction-grid li {
+  counter-increment: none;
+  position: static;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--ink);
+  font-size: 0.84rem;
+  font-weight: 800;
+  line-height: 1.55;
+}
+
+.monitor-guide .monitor-instruction-grid li::before {
+  content: none;
+}
+
 .monitor-guide h3 {
   margin: 0;
   font-size: 1rem;
@@ -7774,6 +7826,7 @@ textarea {
   .schema-grid,
   .monitor-launch-review > div,
   .monitor-launch-flow,
+  .monitor-instruction-grid,
   .monitor-readiness-summary,
   .monitor-participant-form,
   .monitor-participant-summary,
@@ -8051,6 +8104,7 @@ textarea {
   .schema-grid,
   .monitor-launch-review > div,
   .monitor-launch-flow,
+  .monitor-instruction-grid,
   .monitor-readiness-summary,
   .monitor-participant-form,
   .monitor-participant-summary,
