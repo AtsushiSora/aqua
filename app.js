@@ -128,6 +128,7 @@ const monitorFeedbackNext = document.querySelector("#monitor-feedback-next");
 const monitorFeedbackList = document.querySelector("#monitor-feedback-list");
 const monitorFeedbackTemplateButton = document.querySelector("#monitor-feedback-template-button");
 const monitorFeedbackParseButton = document.querySelector("#monitor-feedback-parse-button");
+const monitorFeedbackFormCheck = document.querySelector("#monitor-feedback-form-check");
 const monitorFeedbackActionCopyButton = document.querySelector("#monitor-feedback-action-copy-button");
 const monitorFeedbackExportCsvButton = document.querySelector("#monitor-feedback-export-csv-button");
 const monitorFeedbackExportButton = document.querySelector("#monitor-feedback-export-button");
@@ -721,6 +722,8 @@ monitorGuideCopyButton.addEventListener("click", copyMonitorGuideText);
 monitorKitExportButton.addEventListener("click", exportMonitorLaunchKit);
 monitorFeedbackTemplateButton.addEventListener("click", applyMonitorFeedbackReplyTemplate);
 monitorFeedbackParseButton.addEventListener("click", applyMonitorFeedbackReplyFields);
+monitorFeedbackForm.addEventListener("input", renderMonitorFeedbackFormCheck);
+monitorFeedbackForm.addEventListener("change", renderMonitorFeedbackFormCheck);
 monitorFeedbackStatusFilter.addEventListener("change", () => {
   activeMonitorFeedbackStatusFilter = monitorFeedbackStatusFilter.value;
   renderMonitorFeedback();
@@ -1918,8 +1921,9 @@ function getMonitorFeedbackReplyTemplate() {
 function handleMonitorFeedbackSubmit(event) {
   event.preventDefault();
   const note = document.querySelector("#monitor-feedback-note-input").value.trim();
-  if (!note) {
+  if (!getMonitorFeedbackMeaningfulNoteText(note, parseMonitorFeedbackReply(note))) {
     showToast("内容を入力してください");
+    renderMonitorFeedbackFormCheck();
     return;
   }
   const status = document.querySelector("#monitor-feedback-status-input").value;
@@ -1942,6 +1946,7 @@ function handleMonitorFeedbackSubmit(event) {
   state.monitorFeedback = [entry, ...(state.monitorFeedback || [])].slice(0, 80);
   saveState();
   monitorFeedbackForm.reset();
+  renderMonitorFeedbackFormCheck();
   renderMonitorFeedback();
   showToast("フィードバックを保存しました");
 }
@@ -1955,6 +1960,7 @@ function applyMonitorFeedbackReplyTemplate() {
   const template = getMonitorFeedbackReplyTemplate();
   noteInput.value = noteInput.value ? `${noteInput.value}\n\n${template}` : template;
   noteInput.focus();
+  renderMonitorFeedbackFormCheck();
   showToast("返信テンプレートを内容欄に入れました");
 }
 
@@ -1990,7 +1996,89 @@ function applyMonitorFeedbackReplyFields() {
     kindInput.value = "request";
     priorityInput.value = "watch";
   }
+  renderMonitorFeedbackFormCheck();
   showToast("返信内容をフォームに反映しました");
+}
+
+function renderMonitorFeedbackFormCheck() {
+  if (!monitorFeedbackFormCheck) {
+    return;
+  }
+
+  const draftState = getMonitorFeedbackDraftState();
+  monitorFeedbackFormCheck.className = `monitor-feedback-form-check full-field ${draftState.ready ? "ready" : "pending"}`;
+  monitorFeedbackFormCheck.innerHTML = `
+    <strong>${escapeHtml(draftState.ready ? "保存前チェックOK" : "保存前チェック")}</strong>
+    <small>${escapeHtml(draftState.ready ? "参加者、端末、画面、内容が入っています。" : `不足: ${draftState.missingLabels.join("・")}`)}</small>
+    <div>
+      ${draftState.items
+        .map(
+          (item) => `
+            <span class="${item.ready ? "ready" : "pending"}">${escapeHtml(item.label)}</span>
+          `,
+        )
+        .join("")}
+    </div>
+    <p>${escapeHtml(draftState.hint)}</p>
+  `;
+}
+
+function getMonitorFeedbackDraftState() {
+  const note = document.querySelector("#monitor-feedback-note-input")?.value.trim() || "";
+  const participant = document.querySelector("#monitor-feedback-name-input")?.value.trim() || "";
+  const device = document.querySelector("#monitor-feedback-device-input")?.value.trim() || "";
+  const screen = document.querySelector("#monitor-feedback-screen-input")?.value.trim() || "";
+  const kind = document.querySelector("#monitor-feedback-kind-input")?.value || "impression";
+  const priority = document.querySelector("#monitor-feedback-priority-input")?.value || "watch";
+  const fields = parseMonitorFeedbackReply(note);
+  const hasTypedTemplate = Boolean(Object.keys(fields).length);
+  const hasIssueSignal = Boolean(fields["気になった不具合"] || fields["迷ったところ"] || fields["もう一度使うなら直してほしいところ"]);
+  const hasMeaningfulNote = getMonitorFeedbackMeaningfulNoteText(note, fields).length > 0;
+  const items = [
+    { label: "参加者", ready: Boolean(participant) },
+    { label: "端末", ready: Boolean(device || fields["端末"]) },
+    { label: "画面", ready: Boolean(screen || fields["見た画面"]) },
+    { label: "内容", ready: hasMeaningfulNote },
+    { label: "分類", ready: kind !== "impression" || priority !== "watch" || hasIssueSignal || hasTypedTemplate },
+  ];
+  const missingLabels = items.filter((item) => !item.ready).map((item) => item.label);
+
+  return {
+    ready: missingLabels.length === 0,
+    items,
+    missingLabels,
+    hint: getMonitorFeedbackDraftHint({ fields, kind, priority, missingLabels }),
+  };
+}
+
+function getMonitorFeedbackMeaningfulNoteText(note, fields) {
+  const fieldText = Object.values(fields).join("\n").trim();
+  if (fieldText) {
+    return fieldText;
+  }
+
+  return String(note || "")
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line && !line.endsWith(":") && !line.endsWith("：") && line !== "返信テンプレート:")
+    .join("\n")
+    .trim();
+}
+
+function getMonitorFeedbackDraftHint({ fields, kind, priority, missingLabels }) {
+  if (missingLabels.includes("端末") || missingLabels.includes("画面")) {
+    return "返信テンプレートの端末・見た画面を入れると、あとで端末別に直す場所を探しやすくなります。";
+  }
+  if (fields["気になった不具合"] && (kind !== "bug" || priority !== "high")) {
+    return "不具合が書かれている場合は「返信内容を反映」で分類を不具合/高にできます。";
+  }
+  if (fields["迷ったところ"] && kind !== "ui") {
+    return "迷ったところがある場合は、UI/デザインとして残すと見直しやすいです。";
+  }
+  if (missingLabels.length) {
+    return "空欄のままでも保存できますが、足りない項目を入れるとモニター後の整理が楽になります。";
+  }
+  return "この内容で保存できます。対応済みにする場合は対応メモも残すと後で見返しやすいです。";
 }
 
 function parseMonitorFeedbackReply(text) {
@@ -2032,6 +2120,7 @@ function renderMonitorFeedback() {
     return;
   }
 
+  renderMonitorFeedbackFormCheck();
   const entries = Array.isArray(state.monitorFeedback) ? state.monitorFeedback.map(normalizeMonitorFeedback) : [];
   const filteredEntries = getFilteredMonitorFeedback(entries).sort(compareMonitorFeedbackForTriage);
   const bugCount = entries.filter((entry) => entry.kind === "bug").length;

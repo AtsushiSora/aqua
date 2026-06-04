@@ -6449,6 +6449,59 @@ textarea {
   gap: 10px;
 }
 
+.monitor-feedback-form-check {
+  display: grid;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid rgba(207, 132, 38, 0.22);
+  border-radius: 8px;
+  background: rgba(255, 250, 241, 0.82);
+}
+
+.monitor-feedback-form-check.ready {
+  border-color: rgba(40, 117, 74, 0.22);
+  background: rgba(236, 247, 240, 0.82);
+}
+
+.monitor-feedback-form-check strong,
+.monitor-feedback-form-check small,
+.monitor-feedback-form-check p {
+  margin: 0;
+}
+
+.monitor-feedback-form-check strong {
+  color: var(--ink);
+  font-size: 0.88rem;
+}
+
+.monitor-feedback-form-check small,
+.monitor-feedback-form-check p {
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 800;
+  line-height: 1.45;
+}
+
+.monitor-feedback-form-check div {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.monitor-feedback-form-check span {
+  padding: 5px 8px;
+  border-radius: 999px;
+  background: rgba(194, 57, 52, 0.1);
+  color: #9a3934;
+  font-size: 0.7rem;
+  font-weight: 900;
+}
+
+.monitor-feedback-form-check span.ready {
+  background: rgba(40, 117, 74, 0.12);
+  color: #28754a;
+}
+
 .monitor-feedback-summary {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
