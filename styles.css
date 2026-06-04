@@ -4120,6 +4120,93 @@ textarea {
   gap: 14px;
 }
 
+.account-layout > .panel {
+  order: 20;
+}
+
+.account-overview-panel {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 14px;
+  order: 0;
+}
+
+#account-profile-panel {
+  order: 1;
+}
+
+#account-data-panel {
+  order: 2;
+}
+
+#account-auth-panel {
+  order: 3;
+}
+
+.account-overview-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.account-overview-grid article {
+  min-width: 0;
+  display: grid;
+  gap: 5px;
+  padding: 13px;
+  border: 1px solid var(--glass-border);
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.58), transparent),
+    rgba(248, 252, 251, 0.78);
+}
+
+.account-overview-grid article.ready {
+  border-color: rgba(20, 122, 118, 0.24);
+  background:
+    linear-gradient(180deg, rgba(231, 247, 243, 0.78), rgba(248, 252, 251, 0.78)),
+    var(--waterline);
+}
+
+.account-overview-grid article.watch {
+  border-color: rgba(190, 128, 34, 0.22);
+  background:
+    linear-gradient(180deg, rgba(255, 247, 232, 0.76), rgba(248, 252, 251, 0.78)),
+    var(--waterline);
+}
+
+.account-overview-grid span {
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-weight: 900;
+}
+
+.account-overview-grid strong {
+  color: var(--aqua-dark);
+  font-family: var(--font-jp);
+  font-size: 1rem;
+  overflow-wrap: anywhere;
+}
+
+.account-overview-grid small {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+
+.account-jump-grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.account-jump-grid button {
+  min-width: 0;
+  min-height: 40px;
+  padding-inline: 10px;
+}
+
 .account-form,
 .auth-form {
   display: grid;
@@ -7566,6 +7653,14 @@ textarea {
     display: none;
   }
 
+  .account-overview-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .account-jump-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
   .hero-band,
   .dashboard-layout,
   .tank-switcher,
@@ -7773,6 +7868,11 @@ textarea {
 
   .home-start-actions {
     display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .account-overview-grid,
+  .account-jump-grid {
     grid-template-columns: 1fr;
   }
 

@@ -869,7 +869,25 @@
           </div>
 
           <div class="account-layout">
-            <section class="panel account-sync-panel">
+            <section class="panel account-overview-panel" aria-label="アカウント画面の整理">
+              <div class="section-head">
+                <div>
+                  <p class="eyebrow">Account hub</p>
+                  <h2>いまの状態</h2>
+                </div>
+              </div>
+              <div class="account-overview-grid" id="account-overview-grid"></div>
+              <div class="account-jump-grid" aria-label="アカウント画面のショートカット">
+                <button class="ghost-button" type="button" data-account-jump="#account-profile-panel">基本情報</button>
+                <button class="ghost-button" type="button" data-account-jump="#account-appearance-panel">デザイン</button>
+                <button class="ghost-button" type="button" data-account-jump="#account-notification-panel">通知</button>
+                <button class="ghost-button" type="button" data-account-jump="#account-auth-panel">ログイン</button>
+                <button class="ghost-button" type="button" data-account-jump="#monitor-readiness-panel">モニター</button>
+                <button class="ghost-button" type="button" data-account-jump="#account-data-panel">データ移行</button>
+              </div>
+            </section>
+
+            <section class="panel account-sync-panel" id="account-profile-panel">
               <div class="section-head">
                 <div>
                   <p class="eyebrow">Profile</p>
@@ -915,7 +933,7 @@
                     <option value="live">投稿重視モード</option>
                   </select>
                 </label>
-                <div class="custom-appearance-panel full-field">
+                <div class="custom-appearance-panel full-field" id="account-appearance-panel">
                   <div class="settings-head">
                     <span>画像カスタム</span>
                     <small>好きな写真を背景やボタン背面に反映できます</small>
@@ -945,7 +963,7 @@
                     <input id="account-button-image-input" type="file" accept="image/*" hidden>
                   </article>
                 </div>
-                <div class="notification-settings full-field">
+                <div class="notification-settings full-field" id="account-notification-panel">
                   <div class="settings-head">
                     <span>通知設定</span>
                     <small>本番通知に向けた受け取り方を保存します</small>
@@ -1263,7 +1281,7 @@
               <div class="pwa-release-decision-summary" id="pwa-release-decision-summary"></div>
             </section>
 
-            <section class="panel monitor-readiness-panel">
+            <section class="panel monitor-readiness-panel" id="monitor-readiness-panel">
               <div class="section-head">
                 <div>
                   <p class="eyebrow">Monitor beta</p>
@@ -1444,7 +1462,7 @@
               <div class="monitor-feedback-list" id="monitor-feedback-list"></div>
             </section>
 
-            <section class="panel account-sync-panel">
+            <section class="panel account-sync-panel" id="account-data-panel">
               <div class="section-head">
                 <div>
                   <p class="eyebrow">Data portability</p>
@@ -1459,7 +1477,7 @@
               </div>
             </section>
 
-            <section class="panel auth-panel">
+            <section class="panel auth-panel" id="account-auth-panel">
               <div class="section-head">
                 <div>
                   <p class="eyebrow">Supabase Auth</p>

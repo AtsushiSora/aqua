@@ -85,6 +85,8 @@ const syncStatusLabel = document.querySelector("#sync-status-label");
 const accountForm = document.querySelector("#account-form");
 const mockSyncButton = document.querySelector("#mock-sync-button");
 const accountSyncChip = document.querySelector("#account-sync-chip");
+const accountOverviewGrid = document.querySelector("#account-overview-grid");
+const accountJumpButtons = document.querySelectorAll("[data-account-jump]");
 const syncSummary = document.querySelector("#sync-summary");
 const exportDataButton = document.querySelector("#export-data-button");
 const importDataButton = document.querySelector("#import-data-button");
@@ -463,6 +465,22 @@ function showView(id) {
   }
 }
 
+function focusAccountSection(selector) {
+  const section = document.querySelector(selector);
+  if (!section) {
+    return;
+  }
+
+  showView("account");
+  requestAnimationFrame(() => {
+    section.scrollIntoView({ behavior: "smooth", block: "start" });
+    const focusable = section.matches("input, select, textarea, button")
+      ? section
+      : section.querySelector("input, select, textarea, button");
+    focusable?.focus({ preventScroll: true });
+  });
+}
+
 viewLinks.forEach((link) => {
   link.addEventListener("click", (event) => {
     event.preventDefault();
@@ -472,6 +490,12 @@ viewLinks.forEach((link) => {
 
 directViewButtons.forEach((button) => {
   button.addEventListener("click", () => showView(button.dataset.viewTarget));
+});
+
+accountJumpButtons.forEach((button) => {
+  button.addEventListener("click", () => {
+    focusAccountSection(button.dataset.accountJump);
+  });
 });
 
 document.querySelectorAll(".is-actionable[role='button']").forEach((item) => {
@@ -1596,6 +1620,7 @@ function renderAccount() {
   document.querySelector("#account-email-notifications-input").checked = Boolean(account.emailNotifications);
   document.querySelector("#account-quiet-start-input").value = account.quietHoursStart;
   document.querySelector("#account-quiet-end-input").value = account.quietHoursEnd;
+  renderAccountOverview({ account, syncLabel, hasRemoteSession });
   renderCustomAppearance();
   notificationPreferenceSummary.textContent = getNotificationPreferenceSummary();
   renderNotificationDeliveryLog();
@@ -1633,6 +1658,55 @@ function renderAccount() {
   `;
 
   renderAuthPanel();
+}
+
+function renderAccountOverview({ account, syncLabel, hasRemoteSession }) {
+  if (!accountOverviewGrid) {
+    return;
+  }
+
+  const readiness = getMonitorReadinessState();
+  const setupLabel = getSupabaseSetupStatus().ready ? "接続準備OK" : "ローカル中心";
+  const lastSync = account.lastSyncedAt ? formatFullDate(account.lastSyncedAt) : "未同期";
+  const notificationLabel = getNotificationPreferenceSummary();
+  const items = [
+    {
+      label: "保存",
+      value: syncLabel,
+      note: hasRemoteSession ? lastSync : setupLabel,
+      status: account.syncStatus === "synced" ? "ready" : "watch",
+    },
+    {
+      label: "ログイン",
+      value: hasRemoteSession ? "ログイン中" : "未ログイン",
+      note: hasRemoteSession ? authSession.user.email || account.email : "モニター前に新規登録を確認",
+      status: hasRemoteSession ? "ready" : "watch",
+    },
+    {
+      label: "通知",
+      value: getNotificationChannelLabel(account.notificationChannel),
+      note: notificationLabel,
+      status: account.notificationChannel === "none" ? "watch" : "ready",
+    },
+    {
+      label: "モニター",
+      value: `${readiness.progressPercent}%`,
+      note: readiness.ready ? "案内文を共有できます" : readiness.nextAction,
+      status: readiness.ready ? "ready" : "watch",
+    },
+  ];
+
+  accountOverviewGrid.innerHTML = items
+    .map(
+      (item) => `
+        <article class="${escapeHtml(item.status)}">
+          <span>${escapeHtml(item.label)}</span>
+          <strong>${escapeHtml(item.value)}</strong>
+          <small>${escapeHtml(item.note)}</small>
+        </article>
+      `,
+    )
+    .join("");
 }
 
 function renderProductionSetupSummary() {
@@ -11878,13 +11952,7 @@ function urlBase64ToUint8Array(value) {
 }
 
 function getNotificationPreferenceSummary() {
-  const channelLabels = {
-    browser: "ブラウザ通知",
-    push: "PWA Push準備",
-    email: "メール通知準備",
-    none: "通知しない",
-  };
-  const channel = channelLabels[state.account.notificationChannel] || channelLabels.browser;
+  const channel = getNotificationChannelLabel(state.account.notificationChannel);
   const quiet = `${state.account.quietHoursStart}-${state.account.quietHoursEnd}`;
   const browserState = state.account.browserNotifications ? "ブラウザON" : "ブラウザOFF";
   const emailState = state.account.emailNotifications ? "メールON" : "メールOFF";
@@ -11895,6 +11963,16 @@ function getNotificationPreferenceSummary() {
     : "";
 
   return `${channel} / ${browserState} / ${emailState} / 静音 ${quiet}${delivery}`;
+}
+
+function getNotificationChannelLabel(channel) {
+  const labels = {
+    browser: "ブラウザ通知",
+    push: "PWA Push準備",
+    email: "メール通知準備",
+    none: "通知しない",
+  };
+  return labels[channel] || labels.browser;
 }
 
 function getDeliveryStatusLabel(status) {
