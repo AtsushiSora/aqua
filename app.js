@@ -128,6 +128,7 @@ const monitorParticipantSummary = document.querySelector("#monitor-participant-s
 const monitorParticipantList = document.querySelector("#monitor-participant-list");
 const monitorFeedbackForm = document.querySelector("#monitor-feedback-form");
 const monitorFeedbackSummary = document.querySelector("#monitor-feedback-summary");
+const monitorFeedbackReleaseJudgment = document.querySelector("#monitor-feedback-release-judgment");
 const monitorFeedbackNext = document.querySelector("#monitor-feedback-next");
 const monitorFeedbackPostSave = document.querySelector("#monitor-feedback-post-save");
 const monitorFeedbackList = document.querySelector("#monitor-feedback-list");
@@ -766,6 +767,12 @@ monitorFeedbackForm.addEventListener("submit", handleMonitorFeedbackSubmit);
 monitorFeedbackActionCopyButton.addEventListener("click", copyMonitorFeedbackActionList);
 monitorFeedbackExportCsvButton.addEventListener("click", exportMonitorFeedbackCsv);
 monitorFeedbackExportButton.addEventListener("click", exportMonitorFeedback);
+monitorFeedbackReleaseJudgment.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-monitor-release-judgment-copy]");
+  if (button) {
+    copyMonitorReleaseJudgmentMemo();
+  }
+});
 monitorGuideCopyButton.addEventListener("click", copyMonitorGuideText);
 monitorGuidePreviewToggle.addEventListener("click", () => {
   monitorGuidePreviewExpanded = !monitorGuidePreviewExpanded;
@@ -2540,6 +2547,7 @@ function renderMonitorFeedback() {
     </article>
   `;
   renderMonitorFeedbackPostSave(entries);
+  renderMonitorReleaseJudgment(entries);
   renderMonitorFeedbackNext(entries);
 
   if (!entries.length) {
@@ -2595,6 +2603,110 @@ function renderMonitorFeedback() {
       `,
     )
     .join("");
+}
+
+function renderMonitorReleaseJudgment(entries) {
+  if (!monitorFeedbackReleaseJudgment) {
+    return;
+  }
+
+  const judgment = getMonitorReleaseJudgment(entries);
+  monitorFeedbackReleaseJudgment.className = `monitor-feedback-release-judgment ${judgment.ready ? "ready" : "pending"}`;
+  monitorFeedbackReleaseJudgment.innerHTML = `
+    <div class="monitor-release-head">
+      <div>
+        <span>公開判断メモ</span>
+        <strong>${escapeHtml(judgment.ready ? "公開前に残す指摘はありません" : `公開前に直す ${judgment.beforeRelease.length}件`)}</strong>
+        <small>${escapeHtml(judgment.note)}</small>
+      </div>
+      <button class="ghost-button" type="button" data-monitor-release-judgment-copy>判断メモをコピー</button>
+    </div>
+    <div class="monitor-release-columns">
+      ${getMonitorReleaseJudgmentColumn("公開前に直す", judgment.beforeRelease, "before")}
+      ${getMonitorReleaseJudgmentColumn("あとで直す", judgment.later, "later")}
+      ${getMonitorReleaseJudgmentColumn("対応済み", judgment.resolved, "resolved")}
+    </div>
+  `;
+}
+
+function getMonitorReleaseJudgmentColumn(label, items, className) {
+  return `
+    <article class="${escapeHtml(className)}">
+      <span>${escapeHtml(label)}</span>
+      <strong>${items.length}件</strong>
+      ${
+        items.length
+          ? `<ul>${items.slice(0, 3).map((item) => `<li>${escapeHtml(item.title)}</li>`).join("")}</ul>`
+          : "<p>該当なし</p>"
+      }
+    </article>
+  `;
+}
+
+function getMonitorReleaseJudgment(entries = state.monitorFeedback || []) {
+  const normalizedEntries = entries.map(normalizeMonitorFeedback).sort(compareMonitorFeedbackForTriage);
+  const unresolved = normalizedEntries.filter((entry) => entry.status !== "done");
+  const beforeReleaseEntries = unresolved.filter((entry) => entry.priority === "high" || entry.kind === "bug" || entry.kind === "ui");
+  const laterEntries = unresolved.filter((entry) => !beforeReleaseEntries.some((before) => before.id === entry.id));
+  const resolvedEntries = normalizedEntries.filter((entry) => entry.status === "done").sort(compareMonitorFeedbackForTriage);
+  const toItem = (entry) => ({
+    id: entry.id,
+    title: `${getMonitorFeedbackPriorityLabel(entry.priority)} / ${getMonitorFeedbackKindLabel(entry.kind)} / ${entry.screen || "画面未設定"}`,
+    note: `${entry.participant || "参加者未設定"}: ${entry.note}`,
+    status: entry.status,
+  });
+
+  return {
+    ready: beforeReleaseEntries.length === 0,
+    note: beforeReleaseEntries.length
+      ? "公開前に直す候補を対応済みにしてから最終判断します。"
+      : laterEntries.length
+        ? "公開後に回せる候補だけが残っています。"
+        : "モニター指摘は整理済みです。",
+    beforeRelease: beforeReleaseEntries.map(toItem),
+    later: laterEntries.map(toItem),
+    resolved: resolvedEntries.map(toItem),
+  };
+}
+
+async function copyMonitorReleaseJudgmentMemo() {
+  const text = getMonitorReleaseJudgmentMemoText();
+  if (navigator.clipboard?.writeText) {
+    try {
+      await navigator.clipboard.writeText(text);
+      showToast("公開判断メモをコピーしました");
+      return;
+    } catch (error) {
+      console.warn("Clipboard copy failed", error);
+    }
+  }
+
+  downloadFile(
+    `aquanote-monitor-release-judgment-${getDateKey(new Date())}.txt`,
+    text,
+    "text/plain;charset=utf-8",
+  );
+  showToast("コピーできないため公開判断メモを書き出しました");
+}
+
+function getMonitorReleaseJudgmentMemoText() {
+  const judgment = getMonitorReleaseJudgment();
+  const formatItems = (items) => (items.length ? items.map((item, index) => `${index + 1}. ${item.title} - ${item.note}`).join("\n") : "なし");
+  return [
+    "AquaNote モニター公開判断メモ",
+    `作成日: ${formatFullDate(new Date().toISOString())}`,
+    "",
+    `公開前に直す: ${judgment.beforeRelease.length}件`,
+    formatItems(judgment.beforeRelease),
+    "",
+    `あとで直す: ${judgment.later.length}件`,
+    formatItems(judgment.later),
+    "",
+    `対応済み: ${judgment.resolved.length}件`,
+    formatItems(judgment.resolved),
+    "",
+    `判断: ${judgment.note}`,
+  ].join("\n");
 }
 
 function renderMonitorFeedbackPostSave(entries) {
@@ -2702,6 +2814,7 @@ function getMonitorFeedbackExportSummary(entries = state.monitorFeedback || []) 
     resolvedCount: normalizedEntries.filter((entry) => entry.status === "done").length,
     latestAt: normalizedEntries[0]?.createdAt || null,
     triage,
+    releaseJudgment: getMonitorReleaseJudgment(normalizedEntries),
     nextItems,
   };
 }

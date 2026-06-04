@@ -6838,6 +6838,95 @@ textarea {
   justify-content: flex-end;
 }
 
+.monitor-feedback-release-judgment {
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px solid rgba(207, 132, 38, 0.22);
+  border-radius: 8px;
+  background: rgba(255, 250, 241, 0.82);
+}
+
+.monitor-feedback-release-judgment.ready {
+  border-color: rgba(40, 117, 74, 0.22);
+  background: rgba(236, 247, 240, 0.82);
+}
+
+.monitor-release-head {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.monitor-release-head > div {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.monitor-release-head span,
+.monitor-release-head small {
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 900;
+}
+
+.monitor-release-head strong {
+  color: var(--ink);
+  font-size: 0.98rem;
+}
+
+.monitor-release-columns {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.monitor-release-columns article {
+  display: grid;
+  gap: 4px;
+  padding: 10px;
+  border: 1px solid rgba(18, 148, 142, 0.12);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.62);
+}
+
+.monitor-release-columns article.before {
+  border-color: rgba(194, 57, 52, 0.22);
+}
+
+.monitor-release-columns article.resolved {
+  border-color: rgba(40, 117, 74, 0.2);
+}
+
+.monitor-release-columns span,
+.monitor-release-columns p,
+.monitor-release-columns li {
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-weight: 800;
+  line-height: 1.35;
+}
+
+.monitor-release-columns strong {
+  color: var(--ink);
+  font-size: 0.9rem;
+}
+
+.monitor-release-columns ul {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.monitor-release-columns p {
+  margin: 0;
+}
+
 .monitor-feedback-summary article,
 .monitor-feedback-empty,
 .monitor-feedback-item {
@@ -7202,6 +7291,7 @@ textarea {
   .monitor-participant-summary,
   .monitor-feedback-form,
   .monitor-feedback-filter,
+  .monitor-release-columns,
   .monitor-feedback-summary,
   .monitor-guide ol,
   .production-setup-summary,
@@ -7469,6 +7559,7 @@ textarea {
   .monitor-participant-summary,
   .monitor-feedback-form,
   .monitor-feedback-filter,
+  .monitor-release-columns,
   .monitor-feedback-summary,
   .monitor-guide ol,
   .production-setup-summary,
@@ -7502,6 +7593,15 @@ textarea {
 
   .monitor-feedback-post-save-actions .ghost-button {
     flex: 1 1 150px;
+  }
+
+  .monitor-release-head {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .monitor-release-head .ghost-button {
+    width: 100%;
   }
 
   .monitor-participant-item {
