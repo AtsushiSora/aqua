@@ -118,6 +118,7 @@ const monitorReadinessChip = document.querySelector("#monitor-readiness-chip");
 const monitorReadinessNext = document.querySelector("#monitor-readiness-next");
 const monitorReadinessSummary = document.querySelector("#monitor-readiness-summary");
 const monitorGuideCopyButton = document.querySelector("#monitor-guide-copy-button");
+const monitorKitExportButton = document.querySelector("#monitor-kit-export-button");
 const monitorGuideCopyPreview = document.querySelector("#monitor-guide-copy-preview");
 const monitorFeedbackForm = document.querySelector("#monitor-feedback-form");
 const monitorFeedbackSummary = document.querySelector("#monitor-feedback-summary");
@@ -710,6 +711,7 @@ monitorFeedbackForm.addEventListener("submit", handleMonitorFeedbackSubmit);
 monitorFeedbackExportCsvButton.addEventListener("click", exportMonitorFeedbackCsv);
 monitorFeedbackExportButton.addEventListener("click", exportMonitorFeedback);
 monitorGuideCopyButton.addEventListener("click", copyMonitorGuideText);
+monitorKitExportButton.addEventListener("click", exportMonitorLaunchKit);
 monitorFeedbackStatusFilter.addEventListener("change", () => {
   activeMonitorFeedbackStatusFilter = monitorFeedbackStatusFilter.value;
   renderMonitorFeedback();
@@ -1764,6 +1766,36 @@ async function copyMonitorGuideText() {
     "text/plain;charset=utf-8",
   );
   showToast("コピーできないため案内文を書き出しました");
+}
+
+function exportMonitorLaunchKit() {
+  const readiness = getMonitorReadinessState();
+  const decision = normalizePwaReleaseDecision(state.pwaReleaseDecision || {});
+  const pwaResults = Array.isArray(state.pwaTestResults) ? state.pwaTestResults : [];
+  const coverage = getPwaReleaseCoverage(pwaResults);
+  const releasePriority = getPwaReleasePriorityState(decision, coverage, pwaResults);
+  const monitorFeedback = getMonitorFeedbackExportSummary();
+  const payload = {
+    app: "AquaNote",
+    type: "monitor-launch-kit",
+    exportedAt: new Date().toISOString(),
+    ready: readiness.ready,
+    nextAction: readiness.nextAction,
+    readiness,
+    monitorUrl: decision.productionUrl || "",
+    guideText: getMonitorGuideText(readiness),
+    replyTemplate: getMonitorFeedbackReplyTemplate(),
+    releasePriority,
+    pwaCoverage: coverage,
+    monitorFeedback,
+  };
+
+  downloadFile(
+    `aquanote-monitor-launch-kit-${getDateKey(new Date())}.json`,
+    JSON.stringify(payload, null, 2),
+    "application/json;charset=utf-8",
+  );
+  showToast("モニター配布セットを書き出しました");
 }
 
 function getMonitorGuideText(readiness = getMonitorReadinessState()) {

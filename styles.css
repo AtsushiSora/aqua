@@ -5831,6 +5831,17 @@ textarea {
   gap: 10px;
 }
 
+.monitor-guide-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.monitor-guide-actions .ghost-button {
+  min-width: 136px;
+}
+
 .monitor-guide h3 {
   margin: 0;
   font-size: 1rem;
