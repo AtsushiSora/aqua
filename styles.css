@@ -4739,15 +4739,15 @@ textarea {
     rgba(232, 248, 241, 0.86);
 }
 
-.pwa-release-priority-list > span,
-.pwa-release-priority-list > strong,
-.pwa-release-priority-list > small {
+.pwa-release-decision-summary .pwa-release-priority-list > span,
+.pwa-release-decision-summary .pwa-release-priority-list > strong,
+.pwa-release-decision-summary .pwa-release-priority-list > small {
   color: var(--aqua-dark);
   font-size: 0.9rem;
   font-weight: 900;
 }
 
-.pwa-release-priority-list > small {
+.pwa-release-decision-summary .pwa-release-priority-list > small {
   color: var(--muted);
   font-size: 0.78rem;
   line-height: 1.45;
@@ -4777,7 +4777,7 @@ textarea {
   background: rgba(255, 255, 255, 0.52);
 }
 
-.pwa-release-priority-list li > span {
+.pwa-release-decision-summary .pwa-release-priority-list li > span {
   display: inline-grid;
   place-items: center;
   width: 28px;
@@ -4789,7 +4789,7 @@ textarea {
   font-weight: 950;
 }
 
-.pwa-release-priority-list li.ready > span {
+.pwa-release-decision-summary .pwa-release-priority-list li.ready > span {
   background: rgba(61, 173, 120, 0.16);
   color: #247a57;
 }
@@ -4806,19 +4806,19 @@ textarea {
   overflow-wrap: anywhere;
 }
 
-.pwa-release-priority-list li strong {
+.pwa-release-decision-summary .pwa-release-priority-list li strong {
   color: var(--aqua-dark);
   font-size: 0.86rem;
 }
 
-.pwa-release-priority-list li small {
+.pwa-release-decision-summary .pwa-release-priority-list li small {
   margin-top: 3px;
   color: var(--muted);
   font-size: 0.74rem;
   font-weight: 900;
 }
 
-.pwa-release-priority-list li p {
+.pwa-release-decision-summary .pwa-release-priority-list li p {
   margin-top: 5px;
   color: var(--ink);
   font-size: 0.78rem;
