@@ -2706,8 +2706,6 @@ function renderPwaReleaseDecision() {
   const decision = normalizePwaReleaseDecision(state.pwaReleaseDecision || {});
   const coverage = getPwaReleaseCoverage();
   const evidenceItems = getPwaReleaseEvidenceItems(decision, coverage);
-  const handoff = getPwaReleaseHandoffState(evidenceItems);
-  const qaState = getPwaReleaseQaState(evidenceItems);
   const appearanceQa = getPwaModeQaSummary(state.pwaTestResults || []);
   const deviceQaActions = getPwaDeviceQaActionItems(state.pwaTestResults || []);
   const resolvedDeviceQaActionCount = getPwaDeviceQaActionItems(state.pwaTestResults || [], { includeResolved: true }).filter(
@@ -2737,14 +2735,9 @@ function renderPwaReleaseDecision() {
     decision,
     results: state.pwaTestResults || [],
   });
-  const releasePriority = getPwaReleasePriorityItems({
-    decision,
-    coverage,
-    deviceQaActions,
-    gatewayDecision,
-    monitorFeedback,
-    cloudReview,
-  });
+  const releasePriority = getPwaReleasePriorityState(decision, coverage, state.pwaTestResults || []);
+  const handoff = getPwaReleaseHandoffState(releasePriority);
+  const qaState = getPwaReleaseQaState(releasePriority);
   document.querySelector("#pwa-release-decision-status-input").value = decision.status;
   document.querySelector("#pwa-release-review-status-input").value = decision.reviewStatus;
   document.querySelector("#pwa-release-result-status-input").value = decision.resultStatus;
@@ -3230,25 +3223,25 @@ function getPwaGatewayDecisionIncompleteActions(gatewayDecision) {
   return [...new Set(actions)];
 }
 
-function getPwaReleaseQaState(evidenceItems) {
-  const pendingItems = evidenceItems.filter((item) => !item.ready);
+function getPwaReleaseQaState(releasePriority) {
+  const pendingItems = releasePriority.items.filter((item) => !item.ready);
   if (!pendingItems.length) {
     return {
       ready: true,
       title: "全チェック完了",
-      note: "本番URL、実機結果、モニター指摘、最終判定、クラウド保存、レビューJSONが揃っています。",
+      note: "本番環境設定、本番URL、実機結果、モニター指摘、最終判定、クラウド保存、レビューJSONが揃っています。",
     };
   }
 
   return {
     ready: false,
     title: `${pendingItems.length}件の未完了`,
-    note: pendingItems.map((item) => item.label).join(" / "),
+    note: pendingItems.map((item) => `${item.displayRank}. ${item.label}`).join(" / "),
   };
 }
 
-function getPwaReleaseHandoffState(evidenceItems) {
-  const missingItems = evidenceItems.filter((item) => !item.ready);
+function getPwaReleaseHandoffState(releasePriority) {
+  const missingItems = releasePriority.items.filter((item) => !item.ready);
   if (!missingItems.length) {
     return {
       ready: true,
@@ -3257,20 +3250,7 @@ function getPwaReleaseHandoffState(evidenceItems) {
     };
   }
 
-  const actionLabels = {
-    実機レビュー: "実機レビューを完了に更新",
-    結果確認: "実機結果、最終判定、レビューJSONを確認済みに更新",
-    実機記録: "本番URLを実機で確認し、PWA実機テスト結果を保存",
-    必須項目: "ログイン、水槽変更、ホーム追加とショートカット、通知受信、オフライン復帰、4モード表示、画像カスタムをOKにする",
-    NGなし: "NG記録の原因を解消し、再テスト結果を保存",
-    本番URL: "本番URLを入力して判定メモを保存",
-    公開判断: "判定を公開OKに更新",
-    モニター指摘: "未対応のモニター指摘を対応済みにする、または保留理由を判定メモに残す",
-    確認者: "確認者名を入力して判定メモを保存",
-    クラウド保存: "Supabaseログイン中に判定メモを保存して同期",
-    レビューJSON: "JSONボタンで本番URLレビュー結果を書き出す",
-  };
-  const nextActions = missingItems.map((item) => actionLabels[item.label] || `${item.label}を確認`);
+  const nextActions = missingItems.map((item) => `${item.displayRank}. ${item.label}: ${item.note}`);
 
   return {
     ready: false,
