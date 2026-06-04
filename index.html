@@ -58,6 +58,10 @@
             <span aria-hidden="true">◇</span>
             <span>アカウント</span>
           </a>
+          <a class="nav-link" href="#admin" data-view-link>
+            <span aria-hidden="true">▣</span>
+            <span>管理者</span>
+          </a>
         </nav>
 
         <div class="sidebar-panel">
@@ -862,8 +866,8 @@
         <section class="view" id="account" aria-labelledby="account-title">
           <div class="section-head page-head">
             <div>
-              <p class="eyebrow">Account and sync</p>
-              <h1 id="account-title">アカウントと保存</h1>
+              <p class="eyebrow">Account</p>
+              <h1 id="account-title">アカウント</h1>
             </div>
             <button class="primary-button" id="mock-sync-button" type="button">同期を記録</button>
           </div>
@@ -883,7 +887,6 @@
                 <button class="ghost-button" type="button" data-account-jump="#account-notification-panel">通知</button>
                 <button class="ghost-button" type="button" data-account-jump="#account-auth-panel">ログイン</button>
                 <button class="ghost-button" type="button" data-account-jump="#monitor-readiness-panel">モニター</button>
-                <button class="ghost-button" type="button" data-account-jump="#account-data-panel">データ移行</button>
               </div>
             </section>
 
@@ -1003,7 +1006,7 @@
               </form>
             </section>
 
-            <section class="panel notification-history-panel">
+            <section class="panel notification-history-panel" data-admin-panel>
               <div class="section-head">
                 <div>
                   <p class="eyebrow">Delivery log</p>
@@ -1023,7 +1026,7 @@
               <div class="notification-delivery-log" id="notification-delivery-log"></div>
             </section>
 
-            <section class="panel notification-verification-panel">
+            <section class="panel notification-verification-panel" data-admin-panel>
               <div class="section-head">
                 <div>
                   <p class="eyebrow">Release check</p>
@@ -1070,7 +1073,7 @@
               <div class="notification-production-summary" id="notification-production-summary"></div>
             </section>
 
-            <section class="panel notification-rehearsal-panel">
+            <section class="panel notification-rehearsal-panel" data-admin-panel>
               <div class="section-head">
                 <div>
                   <p class="eyebrow">Rehearsal</p>
@@ -1097,7 +1100,7 @@
               </ol>
             </section>
 
-            <section class="panel pwa-release-panel">
+            <section class="panel pwa-release-panel" data-admin-panel>
               <div class="section-head">
                 <div>
                   <p class="eyebrow">PWA release</p>
@@ -1133,7 +1136,7 @@
               </div>
             </section>
 
-            <section class="panel pwa-rehearsal-panel">
+            <section class="panel pwa-rehearsal-panel" data-admin-panel>
               <div class="section-head">
                 <div>
                   <p class="eyebrow">PWA rehearsal</p>
@@ -1172,7 +1175,7 @@
               </ol>
             </section>
 
-            <section class="panel pwa-test-log-panel">
+            <section class="panel pwa-test-log-panel" data-admin-panel>
               <div class="section-head">
                 <div>
                   <p class="eyebrow">Device log</p>
@@ -1229,7 +1232,7 @@
               <div class="pwa-test-log" id="pwa-test-log"></div>
             </section>
 
-            <section class="panel pwa-release-decision-panel">
+            <section class="panel pwa-release-decision-panel" data-admin-panel>
               <div class="section-head">
                 <div>
                   <p class="eyebrow">Release decision</p>
@@ -1462,7 +1465,7 @@
               <div class="monitor-feedback-list" id="monitor-feedback-list"></div>
             </section>
 
-            <section class="panel account-sync-panel" id="account-data-panel">
+            <section class="panel account-sync-panel" id="account-data-panel" data-admin-panel>
               <div class="section-head">
                 <div>
                   <p class="eyebrow">Data portability</p>
@@ -1503,7 +1506,7 @@
               <p class="auth-note" id="auth-note">Supabase設定を追加すると、ここからログインを試せます。</p>
             </section>
 
-            <section class="panel cloud-plan-panel">
+            <section class="panel cloud-plan-panel" data-admin-panel>
               <div class="section-head">
                 <div>
                   <p class="eyebrow">Cloud schema</p>
@@ -1542,7 +1545,7 @@
               </div>
             </section>
 
-            <section class="panel production-setup-panel">
+            <section class="panel production-setup-panel" data-admin-panel>
               <div class="section-head">
                 <div>
                   <p class="eyebrow">Before launch</p>
@@ -1686,15 +1689,44 @@
                 <li>
                   <strong>通知</strong>
                   <span>Pushを使う場合はVAPID公開鍵/秘密鍵、<code>SUPABASE_SERVICE_ROLE_KEY</code>、dry-run解除を確認。</span>
-                  <span class="production-setup-target">確認場所: アカウント / 通知本番チェック</span>
+                  <span class="production-setup-target">確認場所: 管理者 / 通知本番チェック</span>
                 </li>
                 <li>
                   <strong>PWA実機QA</strong>
                   <span>本番URLでログイン、水槽変更、ホーム追加とショートカット、通知、オフライン、4モード、画像カスタムを記録し、JSONを書き出す。</span>
-                  <span class="production-setup-target">確認場所: アカウント / PWA実機テスト結果</span>
+                  <span class="production-setup-target">確認場所: 管理者 / PWA実機テスト結果</span>
                 </li>
               </ol>
             </section>
+          </div>
+        </section>
+
+        <section class="view" id="admin" aria-labelledby="admin-title">
+          <div class="section-head page-head">
+            <div>
+              <p class="eyebrow">Admin tools</p>
+              <h1 id="admin-title">管理者</h1>
+            </div>
+          </div>
+
+          <div class="admin-layout">
+            <section class="panel admin-overview-panel" aria-label="管理者メニュー">
+              <div class="section-head">
+                <div>
+                  <p class="eyebrow">Management hub</p>
+                  <h2>本番前の管理</h2>
+                </div>
+              </div>
+              <div class="admin-jump-grid" aria-label="管理者ショートカット">
+                <button class="ghost-button" type="button" data-admin-jump=".notification-history-panel">通知ログ</button>
+                <button class="ghost-button" type="button" data-admin-jump=".notification-verification-panel">通知本番</button>
+                <button class="ghost-button" type="button" data-admin-jump=".pwa-test-log-panel">PWA実機</button>
+                <button class="ghost-button" type="button" data-admin-jump=".pwa-release-decision-panel">リリース判定</button>
+                <button class="ghost-button" type="button" data-admin-jump="#account-data-panel">データ移行</button>
+                <button class="ghost-button" type="button" data-admin-jump=".production-setup-panel">本番セットアップ</button>
+              </div>
+            </section>
+            <div class="admin-panel-host" id="admin-panel-host"></div>
           </div>
         </section>
       </main>

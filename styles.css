@@ -4120,6 +4120,19 @@ textarea {
   gap: 14px;
 }
 
+.admin-layout {
+  display: grid;
+  grid-template-columns: minmax(280px, 0.85fr) minmax(280px, 1fr);
+  gap: 14px;
+}
+
+.admin-panel-host {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: minmax(280px, 0.85fr) minmax(280px, 1fr);
+  gap: 14px;
+}
+
 .account-layout > .panel {
   order: 20;
 }
@@ -4131,15 +4144,17 @@ textarea {
   order: 0;
 }
 
-#account-profile-panel {
+.admin-overview-panel {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 14px;
+}
+
+.account-layout #account-profile-panel {
   order: 1;
 }
 
-#account-data-panel {
-  order: 2;
-}
-
-#account-auth-panel {
+.account-layout #account-auth-panel {
   order: 3;
 }
 
@@ -4197,11 +4212,18 @@ textarea {
 
 .account-jump-grid {
   display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.admin-jump-grid {
+  display: grid;
   grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 8px;
 }
 
-.account-jump-grid button {
+.account-jump-grid button,
+.admin-jump-grid button {
   min-width: 0;
   min-height: 40px;
   padding-inline: 10px;
@@ -7661,11 +7683,17 @@ textarea {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
+  .admin-jump-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
   .hero-band,
   .dashboard-layout,
   .tank-switcher,
   .manager-layout,
   .account-layout,
+  .admin-layout,
+  .admin-panel-host,
   .media-detail-grid,
   .ai-layout {
     grid-template-columns: 1fr;
@@ -7872,7 +7900,8 @@ textarea {
   }
 
   .account-overview-grid,
-  .account-jump-grid {
+  .account-jump-grid,
+  .admin-jump-grid {
     grid-template-columns: 1fr;
   }
 

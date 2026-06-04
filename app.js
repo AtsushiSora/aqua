@@ -87,6 +87,9 @@ const mockSyncButton = document.querySelector("#mock-sync-button");
 const accountSyncChip = document.querySelector("#account-sync-chip");
 const accountOverviewGrid = document.querySelector("#account-overview-grid");
 const accountJumpButtons = document.querySelectorAll("[data-account-jump]");
+const adminPanelHost = document.querySelector("#admin-panel-host");
+const adminPanels = document.querySelectorAll("[data-admin-panel]");
+const adminJumpButtons = document.querySelectorAll("[data-admin-jump]");
 const syncSummary = document.querySelector("#sync-summary");
 const exportDataButton = document.querySelector("#export-data-button");
 const importDataButton = document.querySelector("#import-data-button");
@@ -466,12 +469,20 @@ function showView(id) {
 }
 
 function focusAccountSection(selector) {
+  focusSectionInView(selector, "account");
+}
+
+function focusAdminSection(selector) {
+  focusSectionInView(selector, "admin");
+}
+
+function focusSectionInView(selector, viewId) {
   const section = document.querySelector(selector);
   if (!section) {
     return;
   }
 
-  showView("account");
+  showView(viewId);
   requestAnimationFrame(() => {
     section.scrollIntoView({ behavior: "smooth", block: "start" });
     const focusable = section.matches("input, select, textarea, button")
@@ -480,6 +491,18 @@ function focusAccountSection(selector) {
     focusable?.focus({ preventScroll: true });
   });
 }
+
+function moveAdminPanels() {
+  if (!adminPanelHost) {
+    return;
+  }
+
+  adminPanels.forEach((panel) => {
+    adminPanelHost.append(panel);
+  });
+}
+
+moveAdminPanels();
 
 viewLinks.forEach((link) => {
   link.addEventListener("click", (event) => {
@@ -495,6 +518,12 @@ directViewButtons.forEach((button) => {
 accountJumpButtons.forEach((button) => {
   button.addEventListener("click", () => {
     focusAccountSection(button.dataset.accountJump);
+  });
+});
+
+adminJumpButtons.forEach((button) => {
+  button.addEventListener("click", () => {
+    focusAdminSection(button.dataset.adminJump);
   });
 });
 
@@ -2027,9 +2056,9 @@ function getMonitorReadinessActionConfig(label) {
     初回導線: { view: "tanks", focusSelector: "#tank-name-input", label: "水槽登録" },
     フィルター管理: { view: "tanks", focusSelector: "#tank-filter-type-input", label: "フィルター管理" },
     "写真/メディア": { view: "dashboard", focusSelector: "#hero-photo-button", label: "TOP写真" },
-    本番前設定: { view: "account", focusSelector: "#production-setup-export-button", label: "本番前セットアップ" },
-    実機UI: { view: "account", focusSelector: "#pwa-test-device-input", label: "PWA実機テスト" },
-    判定メモ: { view: "account", focusSelector: "#pwa-release-decision-url-input", label: "PWA最終リリース判定" },
+    本番前設定: { view: "admin", focusSelector: "#production-setup-export-button", label: "本番前セットアップ" },
+    実機UI: { view: "admin", focusSelector: "#pwa-test-device-input", label: "PWA実機テスト" },
+    判定メモ: { view: "admin", focusSelector: "#pwa-release-decision-url-input", label: "PWA最終リリース判定" },
     配布準備: { view: "account", focusSelector: "#monitor-kit-export-button", label: "配布セット" },
     参加者: { view: "account", focusSelector: "#monitor-participant-name-input", label: "モニター参加者" },
   };
