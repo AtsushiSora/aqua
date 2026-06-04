@@ -2619,21 +2619,32 @@ function showPwaReleaseDecisionSavedToast() {
   }
 
   const coverage = getPwaReleaseCoverage();
-  const blockers = getPwaReleaseEvidenceItems(decision, coverage)
-    .filter((item) => !item.ready)
-    .map((item) => item.label);
-  if (!blockers.length) {
+  const warnings = getPwaReleaseWarnings(decision, coverage);
+  if (!warnings.blockerLabels.length) {
     showToast("公開OKとして保存しました");
     return;
   }
 
+  showToast(`公開OKを保存しました。未完了: ${warnings.toast}`);
+}
+
+function getPwaReleaseWarnings(decision, coverage = getPwaReleaseCoverage()) {
+  const blockers = getPwaReleaseEvidenceItems(decision, coverage).filter((item) => !item.ready);
+  const blockerLabels = blockers.map((item) => item.label);
   const monitorFeedback = getMonitorFeedbackExportSummary();
+  const visibleBlockers = blockerLabels.slice(0, 3).join(" / ");
+  const suffix = blockerLabels.length > 3 ? ` ほか${blockerLabels.length - 3}件` : "";
   const monitorWarning = !monitorFeedback.ready && monitorFeedback.triage.next
     ? ` / 次候補: ${monitorFeedback.triage.next.title}`
     : "";
-  const visibleBlockers = blockers.slice(0, 3).join(" / ");
-  const suffix = blockers.length > 3 ? ` ほか${blockers.length - 3}件` : "";
-  showToast(`公開OKを保存しました。未完了: ${visibleBlockers}${suffix}${monitorWarning}`);
+
+  return {
+    ready: blockerLabels.length === 0,
+    blockerLabels,
+    blockers,
+    monitorNext: monitorFeedback.triage.next || null,
+    toast: `${visibleBlockers}${suffix}${monitorWarning}`,
+  };
 }
 
 function applyPwaReleasePendingNoteTemplate() {
@@ -6131,12 +6142,14 @@ async function exportPwaTestResults() {
     results,
   });
   const readyForRelease = coverage.ready && releaseDecision.status === "ready" && evidence.every((item) => item.ready);
+  const releaseWarnings = getPwaReleaseWarnings(releaseDecision, coverage);
 
   const payload = {
     app: "AquaNote",
     type: "pwa-production-review",
     exportedAt: new Date().toISOString(),
     readyForRelease,
+    releaseWarnings,
     coverage: {
       passedCount: coverage.passedCount,
       requiredCount: coverage.scopes.length,
