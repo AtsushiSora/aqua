@@ -2628,8 +2628,8 @@ function showPwaReleaseDecisionSavedToast() {
   showToast(`公開OKを保存しました。未完了: ${warnings.toast}`);
 }
 
-function getPwaReleaseWarnings(decision, coverage = getPwaReleaseCoverage()) {
-  const releasePriority = getPwaReleasePriorityState(decision, coverage);
+function getPwaReleaseWarnings(decision, coverage = getPwaReleaseCoverage(), results = state.pwaTestResults || []) {
+  const releasePriority = getPwaReleasePriorityState(decision, coverage, results);
   const blockers = releasePriority.items.filter((item) => !item.ready);
   const blockerLabels = blockers.map((item) => item.label);
   const visibleBlockers = blockers
@@ -6290,8 +6290,8 @@ async function exportPwaTestResults() {
     results,
   });
   const releasePriority = getPwaReleasePriorityState(releaseDecision, coverage, results);
-  const readyForRelease = coverage.ready && releaseDecision.status === "ready" && evidence.every((item) => item.ready);
-  const releaseWarnings = getPwaReleaseWarnings(releaseDecision, coverage);
+  const readyForRelease = releasePriority.ready;
+  const releaseWarnings = getPwaReleaseWarnings(releaseDecision, coverage, results);
 
   const payload = {
     app: "AquaNote",
