@@ -745,6 +745,12 @@ monitorParticipantList.addEventListener("click", (event) => {
     return;
   }
 
+  const reminderButton = event.target.closest("[data-monitor-participant-reminder]");
+  if (reminderButton) {
+    copyMonitorParticipantReminder(reminderButton.dataset.monitorParticipantReminder);
+    return;
+  }
+
   const deleteButton = event.target.closest("[data-monitor-participant-delete]");
   if (!deleteButton) {
     return;
@@ -2110,6 +2116,7 @@ function renderMonitorParticipants() {
   const participants = Array.isArray(state.monitorParticipants) ? state.monitorParticipants.map(normalizeMonitorParticipant) : [];
   const feedbackNames = getMonitorFeedbackParticipantNames();
   const summary = getMonitorParticipantSummary(participants, feedbackNames);
+  const waitingNames = getMonitorWaitingParticipantNames(participants, feedbackNames);
   monitorParticipantSummary.innerHTML = `
     <article>
       <span>登録</span>
@@ -2124,7 +2131,7 @@ function renderMonitorParticipants() {
     <article>
       <span>返信あり</span>
       <strong>${summary.repliedCount}人</strong>
-      <small>${summary.repliedReady ? "返信目標に到達" : `あと${summary.missingReplies}人`}</small>
+      <small>${summary.repliedReady ? "返信目標に到達" : waitingNames.length ? `返信待ち: ${waitingNames.slice(0, 3).join("、")}` : `あと${summary.missingReplies}人`}</small>
     </article>
   `;
 
@@ -2154,6 +2161,7 @@ function renderMonitorParticipants() {
             ${hasFeedback ? `<small class="monitor-participant-feedback">フィードバック保存済み</small>` : ""}
           </div>
           <div class="monitor-participant-actions">
+            ${displayStatus !== "replied" ? `<button class="text-button" type="button" data-monitor-participant-reminder="${escapeHtml(participant.id)}">再送文</button>` : ""}
             ${getMonitorParticipantStatusActions(participant, displayStatus)}
             <button class="text-button" type="button" data-monitor-participant-delete="${escapeHtml(participant.id)}">削除</button>
           </div>
@@ -2193,6 +2201,14 @@ function getMonitorParticipantSummary(participants = state.monitorParticipants |
   };
 }
 
+function getMonitorWaitingParticipantNames(participants = state.monitorParticipants || [], feedbackNames = getMonitorFeedbackParticipantNames()) {
+  return participants
+    .map(normalizeMonitorParticipant)
+    .filter((participant) => (participant.status === "sent" || participant.status === "planned") && !feedbackNames.has(normalizeMonitorParticipantName(participant.name)))
+    .map((participant) => participant.name)
+    .filter(Boolean);
+}
+
 function getMonitorFeedbackParticipantNames() {
   return new Set(
     (state.monitorFeedback || [])
@@ -2228,6 +2244,51 @@ function getMonitorParticipantStatusActions(participant, displayStatus = partici
       `,
     )
     .join("");
+}
+
+async function copyMonitorParticipantReminder(participantId) {
+  const participant = (state.monitorParticipants || []).map(normalizeMonitorParticipant).find((item) => item.id === participantId);
+  if (!participant) {
+    showToast("参加者が見つかりません");
+    return;
+  }
+
+  const text = getMonitorParticipantReminderText(participant);
+  if (navigator.clipboard?.writeText) {
+    try {
+      await navigator.clipboard.writeText(text);
+      showToast("未返信者への再送文をコピーしました");
+      return;
+    } catch (error) {
+      console.warn("Clipboard copy failed", error);
+    }
+  }
+
+  downloadFile(
+    `aquanote-monitor-reminder-${getDateKey(new Date())}.txt`,
+    text,
+    "text/plain;charset=utf-8",
+  );
+  showToast("コピーできないため再送文を書き出しました");
+}
+
+function getMonitorParticipantReminderText(participant) {
+  const decision = normalizePwaReleaseDecision(state.pwaReleaseDecision || {});
+  const urlLine = decision.productionUrl ? `URL: ${decision.productionUrl}` : "URL: 共有済みのリンクから開いてください";
+  return [
+    `${participant.name}さん、AquaNoteのモニター確認のお願いです。`,
+    "",
+    "時間があるときで大丈夫なので、5〜10分くらい触って感想をもらえると助かります。",
+    urlLine,
+    "",
+    "見てほしいところ:",
+    "- 最初に何を押せばいいか分かるか",
+    "- 文字が切れていないか、押しにくいところがないか",
+    "- 水槽登録、写真、記録、表示モードが分かりやすいか",
+    "",
+    "返信は短くて大丈夫です。",
+    getMonitorFeedbackReplyTemplate(),
+  ].join("\n");
 }
 
 function handleMonitorFeedbackSubmit(event) {
