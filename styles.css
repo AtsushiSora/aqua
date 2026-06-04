@@ -6318,6 +6318,50 @@ textarea {
   min-width: 136px;
 }
 
+.monitor-share-url {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  padding: 12px;
+  border: 1px solid rgba(20, 122, 118, 0.18);
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, rgba(231, 247, 243, 0.78), rgba(248, 252, 251, 0.82)),
+    var(--waterline);
+}
+
+.monitor-share-url.pending {
+  border-color: rgba(190, 128, 34, 0.22);
+  background:
+    linear-gradient(180deg, rgba(255, 247, 232, 0.82), rgba(248, 252, 251, 0.82)),
+    var(--waterline);
+}
+
+.monitor-share-url div {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.monitor-share-url span,
+.monitor-share-url small {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
+.monitor-share-url strong {
+  color: var(--aqua-dark);
+  font-family: var(--font-jp);
+  font-size: 1rem;
+  overflow-wrap: anywhere;
+}
+
+.monitor-share-url button {
+  min-width: 112px;
+}
+
 .monitor-instruction-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -8054,6 +8098,10 @@ textarea {
   }
 
   .signup-prompt-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .monitor-share-url {
     grid-template-columns: 1fr;
   }
 

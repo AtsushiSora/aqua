@@ -135,6 +135,7 @@ const monitorGuideCopyButton = document.querySelector("#monitor-guide-copy-butto
 const monitorGuidePreviewToggle = document.querySelector("#monitor-guide-preview-toggle");
 const monitorKitExportButton = document.querySelector("#monitor-kit-export-button");
 const monitorGuideCopyPreview = document.querySelector("#monitor-guide-copy-preview");
+const monitorShareUrl = document.querySelector("#monitor-share-url");
 const monitorWorkplaceAddButton = document.querySelector("#monitor-workplace-add-button");
 const monitorWorkplaceSentButton = document.querySelector("#monitor-workplace-sent-button");
 const monitorParticipantForm = document.querySelector("#monitor-participant-form");
@@ -875,6 +876,18 @@ monitorGuideCopyButton.addEventListener("click", copyMonitorGuideText);
 monitorGuidePreviewToggle.addEventListener("click", () => {
   monitorGuidePreviewExpanded = !monitorGuidePreviewExpanded;
   renderMonitorGuideCopyPreview();
+});
+monitorShareUrl?.addEventListener("click", (event) => {
+  const copyButton = event.target.closest("[data-monitor-share-url-copy]");
+  if (copyButton) {
+    copyMonitorShareUrl(copyButton.dataset.monitorShareUrlCopy);
+    return;
+  }
+
+  const setupButton = event.target.closest("[data-monitor-share-url-setup]");
+  if (setupButton) {
+    focusAdminSection("#pwa-release-decision-url-input");
+  }
 });
 monitorKitExportButton.addEventListener("click", exportMonitorLaunchKit);
 pwaReleaseDecisionSummary.addEventListener("click", (event) => {
@@ -2113,6 +2126,7 @@ function renderMonitorGuideCopyPreview(readiness = getMonitorReadinessState()) {
   if (monitorGuidePreviewToggle) {
     monitorGuidePreviewToggle.textContent = monitorGuidePreviewExpanded ? "送付文を閉じる" : "送付文を確認";
   }
+  renderMonitorShareUrl(decision);
   monitorGuideCopyPreview.innerHTML = `
     <strong>送付文の内容</strong>
     <small>${escapeHtml(hasProductionUrl ? `モニターURL: ${decision.productionUrl}` : "モニターURL未入力。PWA最終リリース判定で本番URLを保存してから共有します。")}</small>
@@ -2163,6 +2177,53 @@ function renderMonitorGuideCopyPreview(readiness = getMonitorReadinessState()) {
       </article>
     </div>
   `;
+}
+
+function renderMonitorShareUrl(decision = normalizePwaReleaseDecision(state.pwaReleaseDecision || {})) {
+  if (!monitorShareUrl) {
+    return;
+  }
+
+  const url = String(decision.productionUrl || "").trim();
+  monitorShareUrl.className = `monitor-share-url ${url ? "ready" : "pending"}`;
+  monitorShareUrl.innerHTML = url
+    ? `
+      <div>
+        <span>送るURL</span>
+        <strong>${escapeHtml(url)}</strong>
+        <small>このURLをモニター参加者へ送ります。</small>
+      </div>
+      <button class="ghost-button" type="button" data-monitor-share-url-copy="${escapeAttribute(url)}">URLをコピー</button>
+    `
+    : `
+      <div>
+        <span>送るURL</span>
+        <strong>未設定</strong>
+        <small>管理者のPWA最終リリース判定で本番URLを保存すると表示されます。</small>
+      </div>
+      <button class="ghost-button" type="button" data-monitor-share-url-setup>URLを設定</button>
+    `;
+}
+
+async function copyMonitorShareUrl(url) {
+  const value = String(url || "").trim();
+  if (!value) {
+    showToast("送るURLが未設定です");
+    return;
+  }
+
+  if (navigator.clipboard?.writeText) {
+    try {
+      await navigator.clipboard.writeText(value);
+      showToast("送るURLをコピーしました");
+      return;
+    } catch (error) {
+      console.warn("URL copy failed", error);
+    }
+  }
+
+  downloadFile(`aquanote-monitor-url-${getDateKey(new Date())}.txt`, value, "text/plain;charset=utf-8");
+  showToast("コピーできないためURLを書き出しました");
 }
 
 async function copyMonitorGuideText() {
