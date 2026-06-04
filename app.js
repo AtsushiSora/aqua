@@ -806,6 +806,19 @@ monitorFeedbackPostSave.addEventListener("click", (event) => {
     copyMonitorFeedbackActionList();
   }
 });
+monitorFeedbackNext.addEventListener("click", (event) => {
+  const actionButton = event.target.closest("[data-monitor-feedback-next-action]");
+  if (!actionButton) {
+    return;
+  }
+
+  if (actionButton.dataset.monitorFeedbackNextAction === "copy-actions") {
+    copyMonitorFeedbackActionList();
+  }
+  if (actionButton.dataset.monitorFeedbackNextAction === "copy-judgment") {
+    copyMonitorReleaseJudgmentMemo();
+  }
+});
 monitorFeedbackStatusFilter.addEventListener("change", () => {
   activeMonitorFeedbackStatusFilter = monitorFeedbackStatusFilter.value;
   renderMonitorFeedback();
@@ -2809,15 +2822,44 @@ function renderMonitorFeedbackNext(entries) {
   }
 
   const triage = getMonitorFeedbackTriage(entries);
-  monitorFeedbackNext.className = `monitor-feedback-next ${triage.next ? "active" : "clear"}`;
-  monitorFeedbackNext.innerHTML = triage.next
+  monitorFeedbackNext.className = `monitor-feedback-next ${triage.todayItems.length ? "active" : "clear"}`;
+  monitorFeedbackNext.innerHTML = triage.todayItems.length
     ? `
-      <span>次に直す候補</span>
-      <strong>${escapeHtml(triage.next.title)}</strong>
-      <small>${escapeHtml(triage.next.note)}</small>
+      <span>今日直す候補</span>
+      <strong>${escapeHtml(`公開前候補 ${triage.todayItems.length}件 / 未対応 ${triage.unresolvedCount}件`)}</strong>
+      <small>${escapeHtml(triage.note)}</small>
+      <ol class="monitor-feedback-today-list">
+        ${triage.todayItems
+          .map(
+            (item) => `
+              <li>
+                <span>${escapeHtml(`#${item.rank}`)}</span>
+                <div>
+                  <strong>${escapeHtml(item.title)}</strong>
+                  <small>${escapeHtml(item.note)}</small>
+                </div>
+              </li>
+            `,
+          )
+          .join("")}
+      </ol>
+      <div class="monitor-feedback-next-actions">
+        <button class="ghost-button" type="button" data-monitor-feedback-next-action="copy-actions">修正リストをコピー</button>
+        <button class="ghost-button" type="button" data-monitor-feedback-next-action="copy-judgment">判断メモをコピー</button>
+      </div>
     `
+    : triage.unresolvedCount
+      ? `
+        <span>今日直す候補</span>
+        <strong>公開前に急ぐ候補はありません</strong>
+        <small>${escapeHtml(triage.note)}</small>
+        <div class="monitor-feedback-next-actions">
+          <button class="ghost-button" type="button" data-monitor-feedback-next-action="copy-actions">修正リストをコピー</button>
+          <button class="ghost-button" type="button" data-monitor-feedback-next-action="copy-judgment">判断メモをコピー</button>
+        </div>
+      `
     : `
-      <span>次に直す候補</span>
+      <span>今日直す候補</span>
       <strong>未対応の高優先度はありません</strong>
       <small>新しい不具合やUI指摘が入ったらここに表示します。</small>
     `;
@@ -2829,11 +2871,22 @@ function getMonitorFeedbackTriage(entries) {
     .filter((entry) => entry.status !== "done")
     .sort(compareMonitorFeedbackForTriage);
   const highUnresolved = unresolved.filter((entry) => entry.priority === "high");
+  const todayEntries = unresolved.filter((entry) => entry.priority === "high" || entry.kind === "bug" || entry.kind === "ui");
   const next = highUnresolved[0] || unresolved.find((entry) => entry.kind === "bug" || entry.kind === "ui") || unresolved[0] || null;
+  const todayItems = todayEntries.slice(0, 3).map((entry, index) => getMonitorFeedbackTriageItem(entry, index + 1));
+  const laterCount = Math.max(0, unresolved.length - todayEntries.length);
 
   return {
     unresolvedCount: unresolved.length,
     highUnresolvedCount: highUnresolved.length,
+    todayCount: todayEntries.length,
+    laterCount,
+    todayItems,
+    note: todayEntries.length
+      ? "高優先度、不具合、UI/デザイン指摘を公開前候補として上から確認します。"
+      : unresolved.length
+        ? "公開前に急ぐ候補はありません。残りはあとで直す候補として判断できます。"
+        : "未対応のフィードバックはありません。",
     next: next
       ? {
           id: next.id,
@@ -2945,6 +2998,7 @@ async function copyMonitorFeedbackActionList() {
 
 function getMonitorFeedbackActionListText(entries = state.monitorFeedback || []) {
   const normalizedEntries = entries.map(normalizeMonitorFeedback);
+  const triage = getMonitorFeedbackTriage(normalizedEntries);
   const unresolved = normalizedEntries
     .filter((entry) => entry.status !== "done")
     .sort(compareMonitorFeedbackForTriage)
@@ -2958,6 +3012,7 @@ function getMonitorFeedbackActionListText(entries = state.monitorFeedback || [])
     "AquaNote モニター修正リスト",
     `作成日: ${formatFullDate(new Date().toISOString())}`,
     `未対応: ${normalizedEntries.filter((entry) => entry.status !== "done").length}件`,
+    `今日直す候補: ${triage.todayCount}件 / あとで確認: ${triage.laterCount}件`,
     "",
   ];
 

@@ -7109,6 +7109,55 @@ textarea {
   font-size: 0.95rem;
 }
 
+.monitor-feedback-today-list {
+  display: grid;
+  gap: 8px;
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.monitor-feedback-today-list li {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+  padding: 9px 10px;
+  border: 1px solid rgba(207, 132, 38, 0.2);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.62);
+}
+
+.monitor-feedback-today-list li > span {
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  background: rgba(194, 57, 52, 0.1);
+  color: #9a3934;
+  font-size: 0.72rem;
+  font-weight: 900;
+}
+
+.monitor-feedback-today-list div {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+
+.monitor-feedback-today-list strong,
+.monitor-feedback-today-list small {
+  overflow-wrap: anywhere;
+}
+
+.monitor-feedback-next-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
 .monitor-feedback-next.pulse {
   animation: monitor-pulse 0.9s ease;
 }
