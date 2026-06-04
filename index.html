@@ -58,6 +58,10 @@
             <span aria-hidden="true">◇</span>
             <span>アカウント</span>
           </a>
+          <a class="nav-link" href="#monitor" data-view-link>
+            <span aria-hidden="true">◉</span>
+            <span>モニター</span>
+          </a>
           <a class="nav-link" href="#admin" data-view-link>
             <span aria-hidden="true">▣</span>
             <span>管理者</span>
@@ -886,7 +890,6 @@
                 <button class="ghost-button" type="button" data-account-jump="#account-appearance-panel">デザイン</button>
                 <button class="ghost-button" type="button" data-account-jump="#account-notification-panel">通知</button>
                 <button class="ghost-button" type="button" data-account-jump="#account-auth-panel">ログイン</button>
-                <button class="ghost-button" type="button" data-account-jump="#monitor-readiness-panel">モニター</button>
               </div>
             </section>
 
@@ -1284,7 +1287,7 @@
               <div class="pwa-release-decision-summary" id="pwa-release-decision-summary"></div>
             </section>
 
-            <section class="panel monitor-readiness-panel" id="monitor-readiness-panel">
+            <section class="panel monitor-readiness-panel" id="monitor-readiness-panel" data-monitor-panel>
               <div class="section-head">
                 <div>
                   <p class="eyebrow">Monitor beta</p>
@@ -1319,7 +1322,7 @@
               </div>
             </section>
 
-            <section class="panel monitor-participants-panel">
+            <section class="panel monitor-participants-panel" data-monitor-panel>
               <div class="section-head">
                 <div>
                   <p class="eyebrow">Monitor participants</p>
@@ -1357,7 +1360,7 @@
               <div class="monitor-participant-list" id="monitor-participant-list"></div>
             </section>
 
-            <section class="panel monitor-feedback-panel">
+            <section class="panel monitor-feedback-panel" data-monitor-panel>
               <div class="section-head">
                 <div>
                   <p class="eyebrow">Monitor feedback</p>
@@ -1698,6 +1701,32 @@
                 </li>
               </ol>
             </section>
+          </div>
+        </section>
+
+        <section class="view" id="monitor" aria-labelledby="monitor-title">
+          <div class="section-head page-head">
+            <div>
+              <p class="eyebrow">Monitor beta</p>
+              <h1 id="monitor-title">モニター</h1>
+            </div>
+          </div>
+
+          <div class="monitor-layout">
+            <section class="panel monitor-overview-panel" aria-label="モニターメニュー">
+              <div class="section-head">
+                <div>
+                  <p class="eyebrow">Monitor hub</p>
+                  <h2>配布と感想の管理</h2>
+                </div>
+              </div>
+              <div class="monitor-jump-grid" aria-label="モニターショートカット">
+                <button class="ghost-button" type="button" data-monitor-jump="#monitor-readiness-panel">準備チェック</button>
+                <button class="ghost-button" type="button" data-monitor-jump=".monitor-participants-panel">参加者</button>
+                <button class="ghost-button" type="button" data-monitor-jump=".monitor-feedback-panel">感想・不具合</button>
+              </div>
+            </section>
+            <div class="monitor-panel-host" id="monitor-panel-host"></div>
           </div>
         </section>
 

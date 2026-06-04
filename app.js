@@ -87,6 +87,9 @@ const mockSyncButton = document.querySelector("#mock-sync-button");
 const accountSyncChip = document.querySelector("#account-sync-chip");
 const accountOverviewGrid = document.querySelector("#account-overview-grid");
 const accountJumpButtons = document.querySelectorAll("[data-account-jump]");
+const monitorPanelHost = document.querySelector("#monitor-panel-host");
+const monitorPanels = document.querySelectorAll("[data-monitor-panel]");
+const monitorJumpButtons = document.querySelectorAll("[data-monitor-jump]");
 const adminPanelHost = document.querySelector("#admin-panel-host");
 const adminPanels = document.querySelectorAll("[data-admin-panel]");
 const adminJumpButtons = document.querySelectorAll("[data-admin-jump]");
@@ -472,6 +475,10 @@ function focusAccountSection(selector) {
   focusSectionInView(selector, "account");
 }
 
+function focusMonitorSection(selector) {
+  focusSectionInView(selector, "monitor");
+}
+
 function focusAdminSection(selector) {
   focusSectionInView(selector, "admin");
 }
@@ -502,6 +509,17 @@ function moveAdminPanels() {
   });
 }
 
+function moveMonitorPanels() {
+  if (!monitorPanelHost) {
+    return;
+  }
+
+  monitorPanels.forEach((panel) => {
+    monitorPanelHost.append(panel);
+  });
+}
+
+moveMonitorPanels();
 moveAdminPanels();
 
 viewLinks.forEach((link) => {
@@ -518,6 +536,12 @@ directViewButtons.forEach((button) => {
 accountJumpButtons.forEach((button) => {
   button.addEventListener("click", () => {
     focusAccountSection(button.dataset.accountJump);
+  });
+});
+
+monitorJumpButtons.forEach((button) => {
+  button.addEventListener("click", () => {
+    focusMonitorSection(button.dataset.monitorJump);
   });
 });
 
@@ -1694,7 +1718,6 @@ function renderAccountOverview({ account, syncLabel, hasRemoteSession }) {
     return;
   }
 
-  const readiness = getMonitorReadinessState();
   const setupLabel = getSupabaseSetupStatus().ready ? "接続準備OK" : "ローカル中心";
   const lastSync = account.lastSyncedAt ? formatFullDate(account.lastSyncedAt) : "未同期";
   const notificationLabel = getNotificationPreferenceSummary();
@@ -1716,12 +1739,6 @@ function renderAccountOverview({ account, syncLabel, hasRemoteSession }) {
       value: getNotificationChannelLabel(account.notificationChannel),
       note: notificationLabel,
       status: account.notificationChannel === "none" ? "watch" : "ready",
-    },
-    {
-      label: "モニター",
-      value: `${readiness.progressPercent}%`,
-      note: readiness.ready ? "案内文を共有できます" : readiness.nextAction,
-      status: readiness.ready ? "ready" : "watch",
     },
   ];
 
@@ -2059,11 +2076,11 @@ function getMonitorReadinessActionConfig(label) {
     本番前設定: { view: "admin", focusSelector: "#production-setup-export-button", label: "本番前セットアップ" },
     実機UI: { view: "admin", focusSelector: "#pwa-test-device-input", label: "PWA実機テスト" },
     判定メモ: { view: "admin", focusSelector: "#pwa-release-decision-url-input", label: "PWA最終リリース判定" },
-    配布準備: { view: "account", focusSelector: "#monitor-kit-export-button", label: "配布セット" },
-    参加者: { view: "account", focusSelector: "#monitor-participant-name-input", label: "モニター参加者" },
+    配布準備: { view: "monitor", focusSelector: "#monitor-kit-export-button", label: "配布セット" },
+    参加者: { view: "monitor", focusSelector: "#monitor-participant-name-input", label: "モニター参加者" },
   };
 
-  return actions[label] || { view: "account", focusSelector: "#monitor-readiness-chip", label: "モニター版チェック" };
+  return actions[label] || { view: "monitor", focusSelector: "#monitor-readiness-chip", label: "モニター版チェック" };
 }
 
 function renderMonitorGuideCopyPreview(readiness = getMonitorReadinessState()) {
@@ -4114,6 +4131,7 @@ function openMonitorLaunchFromReleaseDecision() {
   }
 
   renderMonitorReadiness();
+  showView("monitor");
   const target = state.monitorLaunchKitExportedAt ? monitorGuideCopyButton : monitorKitExportButton;
   target?.scrollIntoView({ behavior: "smooth", block: "center" });
   target?.focus({ preventScroll: true });

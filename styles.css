@@ -4126,7 +4126,20 @@ textarea {
   gap: 14px;
 }
 
+.monitor-layout {
+  display: grid;
+  grid-template-columns: minmax(280px, 0.85fr) minmax(280px, 1fr);
+  gap: 14px;
+}
+
 .admin-panel-host {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: minmax(280px, 0.85fr) minmax(280px, 1fr);
+  gap: 14px;
+}
+
+.monitor-panel-host {
   grid-column: 1 / -1;
   display: grid;
   grid-template-columns: minmax(280px, 0.85fr) minmax(280px, 1fr);
@@ -4150,6 +4163,12 @@ textarea {
   gap: 14px;
 }
 
+.monitor-overview-panel {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 14px;
+}
+
 .account-layout #account-profile-panel {
   order: 1;
 }
@@ -4160,7 +4179,7 @@ textarea {
 
 .account-overview-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px;
 }
 
@@ -4212,7 +4231,13 @@ textarea {
 
 .account-jump-grid {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.monitor-jump-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
 }
 
@@ -4223,6 +4248,7 @@ textarea {
 }
 
 .account-jump-grid button,
+.monitor-jump-grid button,
 .admin-jump-grid button {
   min-width: 0;
   min-height: 40px;
@@ -7683,6 +7709,10 @@ textarea {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
+  .monitor-jump-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
   .admin-jump-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
@@ -7692,6 +7722,8 @@ textarea {
   .tank-switcher,
   .manager-layout,
   .account-layout,
+  .monitor-layout,
+  .monitor-panel-host,
   .admin-layout,
   .admin-panel-host,
   .media-detail-grid,
@@ -7901,6 +7933,7 @@ textarea {
 
   .account-overview-grid,
   .account-jump-grid,
+  .monitor-jump-grid,
   .admin-jump-grid {
     grid-template-columns: 1fr;
   }
