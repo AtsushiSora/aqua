@@ -2714,12 +2714,18 @@ function renderPwaReleaseDecision() {
   const gatewayDecision = getAiGatewayProductionDecisionEvidence();
   const gatewayExportEvidence = getPwaGatewayDecisionExportEvidence(gatewayDecision);
   const monitorFeedback = getMonitorFeedbackExportSummary();
+  const cloudReview = getPwaReleaseCloudReview({
+    decision,
+    results: state.pwaTestResults || [],
+  });
+  const releasePriority = getPwaReleasePriorityState(decision, coverage, state.pwaTestResults || []);
   const handoffChecklist = getPwaReleaseHandoffChecklist({
     decision,
     coverage,
     deviceQaActions,
     gatewayDecision,
     monitorFeedback,
+    releasePriority,
   });
   const handoffMemo = getPwaReleaseHandoffMemo({
     decision,
@@ -2731,11 +2737,6 @@ function renderPwaReleaseDecision() {
     monitorFeedback,
   });
   const testerScript = getPwaReleaseTesterScript({ decision, coverage });
-  const cloudReview = getPwaReleaseCloudReview({
-    decision,
-    results: state.pwaTestResults || [],
-  });
-  const releasePriority = getPwaReleasePriorityState(decision, coverage, state.pwaTestResults || []);
   const handoff = getPwaReleaseHandoffState(releasePriority);
   const qaState = getPwaReleaseQaState(releasePriority);
   document.querySelector("#pwa-release-decision-status-input").value = decision.status;
@@ -3259,60 +3260,19 @@ function getPwaReleaseHandoffState(releasePriority) {
   };
 }
 
-function getPwaReleaseHandoffChecklist({ decision, coverage, deviceQaActions, gatewayDecision, monitorFeedback }) {
-  const feedbackSummary = monitorFeedback || getMonitorFeedbackExportSummary();
-  const items = [
-    {
-      label: "本番URLを固定",
-      ready: Boolean(decision.productionUrl),
-      note: decision.productionUrl || "最終確認する公開URLを入力",
-    },
-    {
-      label: "実機QAを完了",
-      ready: coverage.ready && deviceQaActions.length === 0,
-      note: coverage.ready
-        ? deviceQaActions.length
-          ? `${deviceQaActions.length}件の要確認/NGを後続OKで解消`
-          : "必須項目はすべてOK"
-        : `${coverage.passedCount}/${coverage.scopes.length}項目OK`,
-    },
-    {
-      label: "Gateway判定を確認",
-      ready: gatewayDecision.ready,
-      note: gatewayDecision.ready ? "AI Gateway本番判定OK" : gatewayDecision.nextAction || gatewayDecision.summary,
-    },
-    {
-      label: "モニター指摘を確認",
-      ready: feedbackSummary.ready,
-      note: feedbackSummary.ready
-        ? "未対応のモニター指摘はありません"
-        : `${feedbackSummary.unresolvedCount}件の未対応 / 高優先度 ${feedbackSummary.highUnresolvedCount}件`,
-    },
-    {
-      label: "公開判断を保存",
-      ready: decision.status === "ready" && Boolean(decision.reviewer) && Boolean(decision.note),
-      note:
-        decision.status === "ready" && decision.reviewer
-          ? decision.note || "判断理由をメモに残す"
-          : "公開OK、確認者、判断理由を保存",
-    },
-    {
-      label: "証跡JSONを書き出し",
-      ready: Boolean(decision.reviewExportedAt),
-      note: decision.reviewExportedAt ? `${formatFullDate(decision.reviewExportedAt)} に書き出し済み` : "JSONボタンでレビュー結果を書き出す",
-    },
-    {
-      label: "クラウド同期を確認",
-      ready: Boolean(decision.cloudId),
-      note: decision.cloudId ? "Supabase同期済み" : "ログイン中に判定メモを保存して同期",
-    },
-  ];
+function getPwaReleaseHandoffChecklist({ decision, coverage, releasePriority }) {
+  const priority = releasePriority || getPwaReleasePriorityState(decision, coverage);
+  const items = priority.items.map((item) => ({
+    label: item.label,
+    ready: item.ready,
+    note: item.ready ? `${item.status}: ${item.note}` : `${item.displayRank}. ${item.status}: ${item.note}`,
+  }));
   const pending = items.filter((item) => !item.ready);
 
   return {
     ready: pending.length === 0,
     title: pending.length ? `残り${pending.length}件で引き渡し完了` : "公開引き渡し準備OK",
-    note: pending.length ? pending.map((item) => item.label).join(" / ") : "本番URL、QA、判定、証跡、同期が揃っています。",
+    note: pending.length ? pending.map((item) => item.label).join(" / ") : "リリース優先順位の全項目が揃っています。",
     items,
   };
 }
@@ -6248,12 +6208,18 @@ async function exportPwaTestResults() {
   const allDeviceQaActions = getPwaDeviceQaActionItems(results, { includeResolved: true });
   const evidence = getPwaReleaseEvidenceItems(releaseDecision, coverage);
   const monitorFeedback = getMonitorFeedbackExportSummary();
+  const cloudReview = getPwaReleaseCloudReview({
+    decision: releaseDecision,
+    results,
+  });
+  const releasePriority = getPwaReleasePriorityState(releaseDecision, coverage, results);
   const handoffChecklist = getPwaReleaseHandoffChecklist({
     decision: releaseDecision,
     coverage,
     deviceQaActions,
     gatewayDecision: gatewayDecisionEvidence,
     monitorFeedback,
+    releasePriority,
   });
   const handoffMemo = getPwaReleaseHandoffMemo({
     decision: releaseDecision,
@@ -6265,11 +6231,6 @@ async function exportPwaTestResults() {
     monitorFeedback,
   });
   const testerScript = getPwaReleaseTesterScript({ decision: releaseDecision, coverage });
-  const cloudReview = getPwaReleaseCloudReview({
-    decision: releaseDecision,
-    results,
-  });
-  const releasePriority = getPwaReleasePriorityState(releaseDecision, coverage, results);
   const readyForRelease = releasePriority.ready;
   const releaseWarnings = getPwaReleaseWarnings(releaseDecision, coverage, results);
 
