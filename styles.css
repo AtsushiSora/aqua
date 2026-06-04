@@ -5746,6 +5746,16 @@ textarea {
   color: #28754a;
 }
 
+.monitor-readiness-chip.stop {
+  background: #fff0ee;
+  color: #a43c36;
+}
+
+.monitor-readiness-chip.caution {
+  background: #fff3d8;
+  color: #93621b;
+}
+
 .monitor-readiness-next {
   display: grid;
   gap: 4px;
@@ -5761,6 +5771,16 @@ textarea {
   background: rgba(236, 247, 240, 0.82);
 }
 
+.monitor-readiness-next.stop {
+  border-color: rgba(194, 57, 52, 0.22);
+  background: rgba(255, 244, 242, 0.86);
+}
+
+.monitor-readiness-next.caution {
+  border-color: rgba(207, 132, 38, 0.24);
+  background: rgba(255, 250, 241, 0.84);
+}
+
 .monitor-readiness-next span,
 .monitor-readiness-summary span,
 .monitor-guide .eyebrow {
@@ -5772,6 +5792,48 @@ textarea {
 .monitor-readiness-next strong {
   color: var(--ink);
   font-size: 0.95rem;
+}
+
+.monitor-readiness-next > small {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+  line-height: 1.45;
+}
+
+.monitor-preflight-counts {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 4px;
+}
+
+.monitor-preflight-counts span {
+  padding: 5px 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.62);
+  color: var(--aqua-dark);
+  font-size: 0.7rem;
+  font-weight: 900;
+}
+
+.monitor-preflight-list {
+  display: grid;
+  gap: 4px;
+  margin: 6px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.monitor-preflight-list li {
+  padding: 7px 8px;
+  border: 1px solid rgba(18, 148, 142, 0.1);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.58);
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 800;
+  line-height: 1.4;
 }
 
 .monitor-readiness-summary {

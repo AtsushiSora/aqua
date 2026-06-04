@@ -1744,12 +1744,28 @@ function renderMonitorReadiness() {
   }
 
   const readiness = getMonitorReadinessState();
-  monitorReadinessChip.textContent = readiness.ready ? "モニター開始OK" : `${readiness.readyCount}/${readiness.totalCount}`;
-  monitorReadinessChip.className = `monitor-readiness-chip ${readiness.ready ? "ready" : "pending"}`;
-  monitorReadinessNext.className = `monitor-readiness-next ${readiness.ready ? "ready" : "pending"}`;
+  const preflight = getMonitorPreflightState(readiness);
+  monitorReadinessChip.textContent = preflight.chipLabel;
+  monitorReadinessChip.className = `monitor-readiness-chip ${preflight.status}`;
+  monitorReadinessNext.className = `monitor-readiness-next ${preflight.status}`;
   monitorReadinessNext.innerHTML = `
-    <span>${escapeHtml(readiness.ready ? "次の作業" : "優先タスク")}</span>
-    <strong>${escapeHtml(readiness.nextAction)}</strong>
+    <span>${escapeHtml(preflight.eyebrow)}</span>
+    <strong>${escapeHtml(preflight.title)}</strong>
+    <small>${escapeHtml(preflight.note)}</small>
+    <div class="monitor-preflight-counts">
+      <span>${escapeHtml(`OK ${readiness.readyCount}/${readiness.totalCount}`)}</span>
+      <span>${escapeHtml(`停止 ${preflight.blockers.length}`)}</span>
+      <span>${escapeHtml(`目視 ${preflight.manualItems.length}`)}</span>
+    </div>
+    ${
+      preflight.nextItems.length
+        ? `
+          <ol class="monitor-preflight-list">
+            ${preflight.nextItems.map((item) => `<li>${escapeHtml(item.label)}: ${escapeHtml(item.action || item.note)}</li>`).join("")}
+          </ol>
+        `
+        : ""
+    }
   `;
   monitorReadinessSummary.innerHTML = readiness.items
     .map(
@@ -1840,6 +1856,7 @@ async function copyMonitorGuideText() {
 
 function exportMonitorLaunchKit() {
   const readiness = getMonitorReadinessState();
+  const preflight = getMonitorPreflightState(readiness);
   const decision = normalizePwaReleaseDecision(state.pwaReleaseDecision || {});
   if (!decision.productionUrl) {
     showToast("本番URLを保存してから配布セットを書き出してください");
@@ -1859,6 +1876,7 @@ function exportMonitorLaunchKit() {
     exportedAt: new Date().toISOString(),
     ready: readiness.ready,
     nextAction: readiness.nextAction,
+    preflight,
     launchKitExportedAt: state.monitorLaunchKitExportedAt,
     readiness,
     urlReady: Boolean(decision.productionUrl),
@@ -2595,6 +2613,49 @@ function getMonitorReadinessState() {
   };
 }
 
+function getMonitorPreflightState(readiness = getMonitorReadinessState()) {
+  const blockers = readiness.items.filter((item) => item.status === "missing");
+  const manualItems = readiness.items.filter((item) => item.status === "manual");
+  const nextItems = blockers.length ? blockers.slice(0, 3) : manualItems.slice(0, 3);
+
+  if (blockers.length) {
+    return {
+      status: "stop",
+      chipLabel: "開始前確認",
+      eyebrow: "開始前に止める項目",
+      title: `${blockers.length}件を先に確認`,
+      note: readiness.nextAction,
+      blockers,
+      manualItems,
+      nextItems,
+    };
+  }
+
+  if (manualItems.length) {
+    return {
+      status: "caution",
+      chipLabel: "目視確認",
+      eyebrow: "条件付きで開始可",
+      title: `${manualItems.length}件を目視確認`,
+      note: "本番URL、配布セット、初回導線を確認してから参加者へ共有します。",
+      blockers,
+      manualItems,
+      nextItems,
+    };
+  }
+
+  return {
+    status: "ready",
+    chipLabel: "開始OK",
+    eyebrow: "開始判定",
+    title: "モニター開始OK",
+    note: "本番URLと配布セットを確認し、案内文を参加者へ共有できます。",
+    blockers,
+    manualItems,
+    nextItems,
+  };
+}
+
 function getMonitorReadinessItems() {
   const setup = getProductionSetupSummaryState();
   const pwaCoverage = getPwaReleaseCoverage(state.pwaTestResults || []);
@@ -2603,7 +2664,7 @@ function getMonitorReadinessItems() {
   const coreFlowReadiness = getMonitorCoreFlowReadiness();
   const mediaReadiness = getMonitorMediaReadiness();
   const decisionReadiness = getMonitorDecisionReadiness(decision);
-  const launchKitReady = Boolean(state.monitorLaunchKitExportedAt);
+  const launchKitReady = Boolean(decision.productionUrl && state.monitorLaunchKitExportedAt);
   const filterReady = state.tanks.some((tank) => {
     const filter = normalizeTankFilter(tank.filter);
     return Boolean(filter.type || filter.lastCleanedAt || filter.note);
