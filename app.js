@@ -729,6 +729,14 @@ pwaTestForm.addEventListener("submit", handlePwaTestSubmit);
 pwaTestDevicePresetButtons.forEach((button) => {
   button.addEventListener("click", () => applyPwaDevicePreset(button.dataset.pwaDevicePreset));
 });
+pwaTestReview.addEventListener("click", (event) => {
+  const actionButton = event.target.closest("[data-pwa-next-scope]");
+  if (!actionButton) {
+    return;
+  }
+
+  applyPwaNextScope(actionButton.dataset.pwaNextScope);
+});
 pwaTestExportButton.addEventListener("click", exportPwaTestResults);
 monitorParticipantForm.addEventListener("submit", handleMonitorParticipantSubmit);
 monitorParticipantList.addEventListener("click", (event) => {
@@ -3653,6 +3661,18 @@ function renderPwaTestReview(results) {
       <strong>${passedCount}/${scopes.length}</strong>
       <small>${escapeHtml(reviewNote)}</small>
     </div>
+    ${
+      nextScope
+        ? `
+          <div class="pwa-test-next-card">
+            <span>次に確認</span>
+            <strong>${escapeHtml(getPwaTestScopeLabel(nextScope))}</strong>
+            <small>${escapeHtml(nextScopeStatus === "missing" ? "実機で確認してOK/要確認/NGを保存します。" : "再確認してOKで保存すると未解消から外れます。")}</small>
+            <button class="ghost-button" type="button" data-pwa-next-scope="${escapeHtml(nextScope)}">この項目を入力</button>
+          </div>
+        `
+        : ""
+    }
     <div class="pwa-test-scope-grid">
       ${scopes
         .map((scope) => {
@@ -3701,6 +3721,17 @@ function renderPwaTestReview(results) {
       }
     </div>
   `;
+}
+
+function applyPwaNextScope(scope) {
+  const allowedScope = getAllowedValue(scope, PWA_REQUIRED_SCOPES, "install");
+  pwaTestScopeInput.value = allowedScope;
+  renderPwaTestScopeHint();
+  if (!pwaTestNoteInput.value.trim()) {
+    pwaTestNoteInput.value = PWA_SCOPE_NOTE_TEMPLATES[allowedScope] || "";
+  }
+  pwaTestNoteInput.focus();
+  showToast(`${getPwaTestScopeLabel(allowedScope)}を入力できる状態にしました`);
 }
 
 function getPwaModeQaSummary(results) {

@@ -5462,6 +5462,31 @@ textarea {
   font-weight: 800;
 }
 
+.pwa-test-next-card {
+  display: grid;
+  gap: 6px;
+  padding: 12px;
+  border: 1px solid rgba(226, 162, 72, 0.28);
+  border-radius: 8px;
+  background: rgba(255, 250, 241, 0.84);
+}
+
+.pwa-test-next-card span,
+.pwa-test-next-card small {
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 900;
+}
+
+.pwa-test-next-card strong {
+  color: var(--ink);
+  font-size: 1rem;
+}
+
+.pwa-test-next-card .ghost-button {
+  justify-self: start;
+}
+
 .pwa-test-scope-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(108px, 1fr));
