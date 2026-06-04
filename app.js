@@ -1831,10 +1831,17 @@ function renderMonitorReadiness() {
     <span>${escapeHtml(preflight.eyebrow)}</span>
     <strong>${escapeHtml(preflight.title)}</strong>
     <small>${escapeHtml(preflight.note)}</small>
+    <div class="monitor-progress-meter" aria-label="モニター開始進捗">
+      <div>
+        <strong>${escapeHtml(`${readiness.progressPercent}%`)}</strong>
+        <small>${escapeHtml(readiness.ready ? "開始できます" : `残り${readiness.remainingCount}件`)}</small>
+      </div>
+      <span><i style="width: ${Math.min(100, Math.max(0, readiness.progressPercent))}%"></i></span>
+    </div>
     <div class="monitor-preflight-counts">
       <span>${escapeHtml(`OK ${readiness.readyCount}/${readiness.totalCount}`)}</span>
-      <span>${escapeHtml(`停止 ${preflight.blockers.length}`)}</span>
-      <span>${escapeHtml(`目視 ${preflight.manualItems.length}`)}</span>
+      <span>${escapeHtml(`停止 ${readiness.missingCount}`)}</span>
+      <span>${escapeHtml(`目視 ${readiness.manualCount}`)}</span>
     </div>
     ${
       preflight.nextItems.length
@@ -2030,6 +2037,8 @@ function exportMonitorLaunchKit() {
     type: "monitor-launch-kit",
     exportedAt: new Date().toISOString(),
     ready: readiness.ready,
+    progressPercent: readiness.progressPercent,
+    remainingCount: readiness.remainingCount,
     nextAction: readiness.nextAction,
     preflight,
     launchReview,
@@ -3158,11 +3167,18 @@ function getMonitorFeedbackStatusActions(entry) {
 function getMonitorReadinessState() {
   const items = getMonitorReadinessItems();
   const readyCount = items.filter((item) => item.status === "ready").length;
+  const manualCount = items.filter((item) => item.status === "manual").length;
+  const missingCount = items.filter((item) => item.status === "missing").length;
+  const progressPercent = items.length ? Math.round((readyCount / items.length) * 100) : 0;
   const nextItem = items.find((item) => item.status === "missing") || items.find((item) => item.status === "manual");
   return {
     ready: readyCount === items.length,
     readyCount,
+    manualCount,
+    missingCount,
     totalCount: items.length,
+    progressPercent,
+    remainingCount: items.length - readyCount,
     nextAction: nextItem ? `${nextItem.label}: ${nextItem.action || nextItem.note}` : "モニター参加者へURLと案内文を渡して、実機フィードバックを集めます。",
     items,
   };
