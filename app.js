@@ -2088,9 +2088,9 @@ function getMonitorLaunchKitReview(readiness = getMonitorReadinessState(), decis
     },
     {
       label: "返信テンプレート",
-      ready: replyTemplate.includes("端末:") && replyTemplate.includes("迷ったところ:") && replyTemplate.includes("直してほしいところ:"),
+      ready: replyTemplate.includes("名前:") && replyTemplate.includes("端末:") && replyTemplate.includes("迷ったところ:") && replyTemplate.includes("直してほしいところ:"),
       status: `${replyTemplate.split(/\r?\n/).length}項目`,
-      note: "端末、良かったところ、迷ったところ、直してほしいところを回収します",
+      note: "名前、端末、良かったところ、迷ったところ、直してほしいところを回収します",
     },
     {
       label: "直前判定",
@@ -2143,6 +2143,7 @@ function getMonitorGuideText(readiness = getMonitorReadinessState()) {
 function getMonitorFeedbackReplyTemplate() {
   return [
     "返信テンプレート:",
+    "名前:",
     "端末:",
     "使いやすかったモード:",
     "良かったところ:",
@@ -2150,6 +2151,10 @@ function getMonitorFeedbackReplyTemplate() {
     "直してほしいところ:",
     "その他:",
   ].join("\n");
+}
+
+function getMonitorFeedbackParticipantFromFields(fields) {
+  return String(fields["名前"] || fields["参加者"] || "").trim();
 }
 
 function handleMonitorParticipantSubmit(event) {
@@ -2439,20 +2444,22 @@ function getMonitorParticipantReminderText(participant) {
 function handleMonitorFeedbackSubmit(event) {
   event.preventDefault();
   const note = document.querySelector("#monitor-feedback-note-input").value.trim();
-  if (!getMonitorFeedbackMeaningfulNoteText(note, parseMonitorFeedbackReply(note))) {
+  const fields = parseMonitorFeedbackReply(note);
+  if (!getMonitorFeedbackMeaningfulNoteText(note, fields)) {
     showToast("内容を入力してください");
     renderMonitorFeedbackFormCheck();
     return;
   }
   const status = document.querySelector("#monitor-feedback-status-input").value;
   const resolutionNote = document.querySelector("#monitor-feedback-resolution-input").value.trim();
+  const participantFromReply = getMonitorFeedbackParticipantFromFields(fields);
 
   const entry = normalizeMonitorFeedback({
     id: createId("monitor-feedback"),
     createdAt: new Date().toISOString(),
-    participant: document.querySelector("#monitor-feedback-name-input").value,
-    device: document.querySelector("#monitor-feedback-device-input").value,
-    screen: document.querySelector("#monitor-feedback-screen-input").value,
+    participant: document.querySelector("#monitor-feedback-name-input").value || participantFromReply,
+    device: document.querySelector("#monitor-feedback-device-input").value || fields["端末"] || "",
+    screen: document.querySelector("#monitor-feedback-screen-input").value || fields["見た画面"] || "",
     kind: document.querySelector("#monitor-feedback-kind-input").value,
     priority: document.querySelector("#monitor-feedback-priority-input").value,
     status,
@@ -2497,9 +2504,14 @@ function applyMonitorFeedbackReplyFields() {
   }
 
   const deviceInput = document.querySelector("#monitor-feedback-device-input");
+  const participantInput = document.querySelector("#monitor-feedback-name-input");
   const screenInput = document.querySelector("#monitor-feedback-screen-input");
   const kindInput = document.querySelector("#monitor-feedback-kind-input");
   const priorityInput = document.querySelector("#monitor-feedback-priority-input");
+  const participantFromReply = getMonitorFeedbackParticipantFromFields(fields);
+  if (participantFromReply && !participantInput.value.trim()) {
+    participantInput.value = participantFromReply;
+  }
   if (fields["端末"] && !deviceInput.value.trim()) {
     deviceInput.value = fields["端末"];
   }
@@ -2551,11 +2563,12 @@ function getMonitorFeedbackDraftState() {
   const kind = document.querySelector("#monitor-feedback-kind-input")?.value || "impression";
   const priority = document.querySelector("#monitor-feedback-priority-input")?.value || "watch";
   const fields = parseMonitorFeedbackReply(note);
+  const participantFromReply = getMonitorFeedbackParticipantFromFields(fields);
   const hasTypedTemplate = Boolean(Object.keys(fields).length);
   const hasIssueSignal = Boolean(fields["気になった不具合"] || fields["迷ったところ"] || fields["直してほしいところ"] || fields["もう一度使うなら直してほしいところ"]);
   const hasMeaningfulNote = getMonitorFeedbackMeaningfulNoteText(note, fields).length > 0;
   const requiredItems = [
-    { label: "参加者", ready: Boolean(participant) },
+    { label: "参加者", ready: Boolean(participant || participantFromReply) },
     { label: "端末", ready: Boolean(device || fields["端末"]) },
     { label: "内容", ready: hasMeaningfulNote },
   ];
@@ -2609,6 +2622,8 @@ function getMonitorFeedbackDraftHint({ fields, kind, priority, missingLabels, sc
 
 function parseMonitorFeedbackReply(text) {
   const labels = [
+    "名前",
+    "参加者",
     "端末",
     "見た画面",
     "使いやすかったモード",
