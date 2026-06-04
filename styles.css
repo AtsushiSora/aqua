@@ -5907,6 +5907,16 @@ textarea {
   line-height: 1.5;
 }
 
+.monitor-feedback-template-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.monitor-feedback-template-actions .ghost-button {
+  flex: 1 1 160px;
+}
+
 .production-setup-list {
   counter-reset: setup-step;
   display: grid;

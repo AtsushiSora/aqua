@@ -125,6 +125,7 @@ const monitorFeedbackSummary = document.querySelector("#monitor-feedback-summary
 const monitorFeedbackNext = document.querySelector("#monitor-feedback-next");
 const monitorFeedbackList = document.querySelector("#monitor-feedback-list");
 const monitorFeedbackTemplateButton = document.querySelector("#monitor-feedback-template-button");
+const monitorFeedbackParseButton = document.querySelector("#monitor-feedback-parse-button");
 const monitorFeedbackExportCsvButton = document.querySelector("#monitor-feedback-export-csv-button");
 const monitorFeedbackExportButton = document.querySelector("#monitor-feedback-export-button");
 const monitorFeedbackStatusFilter = document.querySelector("#monitor-feedback-status-filter");
@@ -715,6 +716,7 @@ monitorFeedbackExportButton.addEventListener("click", exportMonitorFeedback);
 monitorGuideCopyButton.addEventListener("click", copyMonitorGuideText);
 monitorKitExportButton.addEventListener("click", exportMonitorLaunchKit);
 monitorFeedbackTemplateButton.addEventListener("click", applyMonitorFeedbackReplyTemplate);
+monitorFeedbackParseButton.addEventListener("click", applyMonitorFeedbackReplyFields);
 monitorFeedbackStatusFilter.addEventListener("change", () => {
   activeMonitorFeedbackStatusFilter = monitorFeedbackStatusFilter.value;
   renderMonitorFeedback();
@@ -1895,6 +1897,66 @@ function applyMonitorFeedbackReplyTemplate() {
   noteInput.value = noteInput.value ? `${noteInput.value}\n\n${template}` : template;
   noteInput.focus();
   showToast("返信テンプレートを内容欄に入れました");
+}
+
+function applyMonitorFeedbackReplyFields() {
+  const noteInput = document.querySelector("#monitor-feedback-note-input");
+  if (!noteInput) {
+    return;
+  }
+
+  const fields = parseMonitorFeedbackReply(noteInput.value);
+  if (!Object.keys(fields).length) {
+    showToast("返信テンプレート形式の内容が見つかりません");
+    return;
+  }
+
+  const deviceInput = document.querySelector("#monitor-feedback-device-input");
+  const screenInput = document.querySelector("#monitor-feedback-screen-input");
+  const kindInput = document.querySelector("#monitor-feedback-kind-input");
+  const priorityInput = document.querySelector("#monitor-feedback-priority-input");
+  if (fields["端末"] && !deviceInput.value.trim()) {
+    deviceInput.value = fields["端末"];
+  }
+  if (fields["見た画面"] && !screenInput.value.trim()) {
+    screenInput.value = fields["見た画面"];
+  }
+  if (fields["気になった不具合"]) {
+    kindInput.value = "bug";
+    priorityInput.value = "high";
+  } else if (fields["迷ったところ"]) {
+    kindInput.value = "ui";
+    priorityInput.value = "watch";
+  } else if (fields["もう一度使うなら直してほしいところ"]) {
+    kindInput.value = "request";
+    priorityInput.value = "watch";
+  }
+  showToast("返信内容をフォームに反映しました");
+}
+
+function parseMonitorFeedbackReply(text) {
+  const labels = ["端末", "見た画面", "良かったところ", "迷ったところ", "気になった不具合", "もう一度使うなら直してほしいところ"];
+  const fields = {};
+  const current = { label: "" };
+  String(text || "")
+    .split(/\r?\n/)
+    .forEach((line) => {
+      const trimmed = line.trim();
+      const matchedLabel = labels.find((label) => trimmed.startsWith(`${label}:`) || trimmed.startsWith(`${label}：`));
+      if (matchedLabel) {
+        current.label = matchedLabel;
+        const value = trimmed.replace(new RegExp(`^${matchedLabel}[：:]\\s*`), "").trim();
+        if (value) {
+          fields[matchedLabel] = value;
+        }
+        return;
+      }
+
+      if (current.label && trimmed) {
+        fields[current.label] = fields[current.label] ? `${fields[current.label]}\n${trimmed}` : trimmed;
+      }
+    });
+  return fields;
 }
 
 function renderMonitorFeedback() {
