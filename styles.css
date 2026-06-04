@@ -6822,6 +6822,27 @@ textarea {
   gap: 10px;
 }
 
+.monitor-feedback-details {
+  padding: 10px 12px;
+  border: 1px solid rgba(18, 148, 142, 0.14);
+  border-radius: 8px;
+  background: rgba(248, 252, 251, 0.76);
+}
+
+.monitor-feedback-details summary {
+  cursor: pointer;
+  color: var(--aqua-dark);
+  font-size: 0.82rem;
+  font-weight: 900;
+}
+
+.monitor-feedback-details > div {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 10px;
+}
+
 .monitor-feedback-form-check {
   display: grid;
   gap: 8px;
@@ -6873,6 +6894,11 @@ textarea {
 .monitor-feedback-form-check span.ready {
   background: rgba(40, 117, 74, 0.12);
   color: #28754a;
+}
+
+.monitor-feedback-form-check span.optional {
+  background: rgba(18, 148, 142, 0.1);
+  color: var(--aqua-dark);
 }
 
 .monitor-feedback-summary {
@@ -7380,6 +7406,7 @@ textarea {
   .monitor-participant-form,
   .monitor-participant-summary,
   .monitor-feedback-form,
+  .monitor-feedback-details > div,
   .monitor-feedback-filter,
   .monitor-release-columns,
   .monitor-feedback-summary,
@@ -7649,6 +7676,7 @@ textarea {
   .monitor-participant-form,
   .monitor-participant-summary,
   .monitor-feedback-form,
+  .monitor-feedback-details > div,
   .monitor-feedback-filter,
   .monitor-release-columns,
   .monitor-feedback-summary,

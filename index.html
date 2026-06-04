@@ -1349,35 +1349,6 @@
                   <span>端末</span>
                   <input id="monitor-feedback-device-input" type="text" placeholder="例: iPhone Safari">
                 </label>
-                <label>
-                  <span>画面</span>
-                  <input id="monitor-feedback-screen-input" type="text" placeholder="例: ホーム">
-                </label>
-                <label>
-                  <span>分類</span>
-                  <select id="monitor-feedback-kind-input">
-                    <option value="impression">感想</option>
-                    <option value="bug">不具合</option>
-                    <option value="ui">UI/デザイン</option>
-                    <option value="request">要望</option>
-                  </select>
-                </label>
-                <label>
-                  <span>優先度</span>
-                  <select id="monitor-feedback-priority-input">
-                    <option value="watch">確認</option>
-                    <option value="high">高</option>
-                    <option value="low">低</option>
-                  </select>
-                </label>
-                <label>
-                  <span>対応状況</span>
-                  <select id="monitor-feedback-status-input">
-                    <option value="open">未対応</option>
-                    <option value="doing">対応中</option>
-                    <option value="done">対応済み</option>
-                  </select>
-                </label>
                 <label class="full-field">
                   <span>内容</span>
                   <textarea id="monitor-feedback-note-input" rows="3" placeholder="何が分かりにくかったか、どの操作で困ったか"></textarea>
@@ -1387,10 +1358,44 @@
                   <button class="ghost-button" id="monitor-feedback-parse-button" type="button">返信内容を反映</button>
                 </div>
                 <div class="monitor-feedback-form-check full-field" id="monitor-feedback-form-check"></div>
-                <label class="full-field">
-                  <span>対応メモ</span>
-                  <textarea id="monitor-feedback-resolution-input" rows="2" placeholder="修正した内容、確認したこと、保留理由"></textarea>
-                </label>
+                <details class="monitor-feedback-details full-field">
+                  <summary>画面・分類・対応メモを追加</summary>
+                  <div>
+                    <label>
+                      <span>画面</span>
+                      <input id="monitor-feedback-screen-input" type="text" placeholder="例: ホーム">
+                    </label>
+                    <label>
+                      <span>分類</span>
+                      <select id="monitor-feedback-kind-input">
+                        <option value="impression">感想</option>
+                        <option value="bug">不具合</option>
+                        <option value="ui">UI/デザイン</option>
+                        <option value="request">要望</option>
+                      </select>
+                    </label>
+                    <label>
+                      <span>優先度</span>
+                      <select id="monitor-feedback-priority-input">
+                        <option value="watch">確認</option>
+                        <option value="high">高</option>
+                        <option value="low">低</option>
+                      </select>
+                    </label>
+                    <label>
+                      <span>対応状況</span>
+                      <select id="monitor-feedback-status-input">
+                        <option value="open">未対応</option>
+                        <option value="doing">対応中</option>
+                        <option value="done">対応済み</option>
+                      </select>
+                    </label>
+                    <label class="full-field">
+                      <span>対応メモ</span>
+                      <textarea id="monitor-feedback-resolution-input" rows="2" placeholder="修正した内容、確認したこと、保留理由"></textarea>
+                    </label>
+                  </div>
+                </details>
                 <button class="primary-button full-field" type="submit">フィードバックを保存</button>
               </form>
               <div class="monitor-feedback-post-save" id="monitor-feedback-post-save" hidden></div>

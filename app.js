@@ -2440,12 +2440,12 @@ function renderMonitorFeedbackFormCheck() {
   monitorFeedbackFormCheck.className = `monitor-feedback-form-check full-field ${draftState.ready ? "ready" : "pending"}`;
   monitorFeedbackFormCheck.innerHTML = `
     <strong>${escapeHtml(draftState.ready ? "保存前チェックOK" : "保存前チェック")}</strong>
-    <small>${escapeHtml(draftState.ready ? "参加者、端末、画面、内容が入っています。" : `不足: ${draftState.missingLabels.join("・")}`)}</small>
+    <small>${escapeHtml(draftState.ready ? "参加者、端末、内容が入っています。画面や分類は必要な時だけ追加できます。" : `不足: ${draftState.missingLabels.join("・")}`)}</small>
     <div>
       ${draftState.items
         .map(
           (item) => `
-            <span class="${item.ready ? "ready" : "pending"}">${escapeHtml(item.label)}</span>
+            <span class="${item.ready ? "ready" : item.optional ? "optional" : "pending"}">${escapeHtml(item.label)}</span>
           `,
         )
         .join("")}
@@ -2465,20 +2465,23 @@ function getMonitorFeedbackDraftState() {
   const hasTypedTemplate = Boolean(Object.keys(fields).length);
   const hasIssueSignal = Boolean(fields["気になった不具合"] || fields["迷ったところ"] || fields["もう一度使うなら直してほしいところ"]);
   const hasMeaningfulNote = getMonitorFeedbackMeaningfulNoteText(note, fields).length > 0;
-  const items = [
+  const requiredItems = [
     { label: "参加者", ready: Boolean(participant) },
     { label: "端末", ready: Boolean(device || fields["端末"]) },
-    { label: "画面", ready: Boolean(screen || fields["見た画面"]) },
     { label: "内容", ready: hasMeaningfulNote },
-    { label: "分類", ready: kind !== "impression" || priority !== "watch" || hasIssueSignal || hasTypedTemplate },
   ];
-  const missingLabels = items.filter((item) => !item.ready).map((item) => item.label);
+  const optionalItems = [
+    { label: "画面任意", ready: Boolean(screen || fields["見た画面"]), optional: true },
+    { label: "分類任意", ready: kind !== "impression" || priority !== "watch" || hasIssueSignal || hasTypedTemplate, optional: true },
+  ];
+  const items = [...requiredItems, ...optionalItems];
+  const missingLabels = requiredItems.filter((item) => !item.ready).map((item) => item.label);
 
   return {
     ready: missingLabels.length === 0,
     items,
     missingLabels,
-    hint: getMonitorFeedbackDraftHint({ fields, kind, priority, missingLabels }),
+    hint: getMonitorFeedbackDraftHint({ fields, kind, priority, missingLabels, screen }),
   };
 }
 
@@ -2496,9 +2499,9 @@ function getMonitorFeedbackMeaningfulNoteText(note, fields) {
     .trim();
 }
 
-function getMonitorFeedbackDraftHint({ fields, kind, priority, missingLabels }) {
-  if (missingLabels.includes("端末") || missingLabels.includes("画面")) {
-    return "返信テンプレートの端末・見た画面を入れると、あとで端末別に直す場所を探しやすくなります。";
+function getMonitorFeedbackDraftHint({ fields, kind, priority, missingLabels, screen }) {
+  if (missingLabels.includes("端末")) {
+    return "端末を入れると、あとでiPhoneやAndroidごとの見え方を探しやすくなります。";
   }
   if (fields["気になった不具合"] && (kind !== "bug" || priority !== "high")) {
     return "不具合が書かれている場合は「返信内容を反映」で分類を不具合/高にできます。";
@@ -2507,7 +2510,10 @@ function getMonitorFeedbackDraftHint({ fields, kind, priority, missingLabels }) 
     return "迷ったところがある場合は、UI/デザインとして残すと見直しやすいです。";
   }
   if (missingLabels.length) {
-    return "空欄のままでも保存できますが、足りない項目を入れるとモニター後の整理が楽になります。";
+    return "まずは参加者、端末、内容だけ入れれば保存できます。";
+  }
+  if (!screen && !fields["見た画面"]) {
+    return "画面名や分類は必要な時だけ追加できます。迷った内容はこのまま保存して大丈夫です。";
   }
   return "この内容で保存できます。対応済みにする場合は対応メモも残すと後で見返しやすいです。";
 }
