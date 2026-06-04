@@ -1972,6 +1972,8 @@ function renderMonitorFeedback() {
   const openCount = entries.filter((entry) => entry.status === "open").length;
   const doingCount = entries.filter((entry) => entry.status === "doing").length;
   const doneCount = entries.filter((entry) => entry.status === "done").length;
+  const participantCount = new Set(entries.map((entry) => entry.participant.trim()).filter(Boolean)).size;
+  const deviceCount = new Set(entries.map((entry) => entry.device.trim()).filter(Boolean)).size;
   const latest = entries[0]?.createdAt ? formatFullDate(entries[0].createdAt) : "まだ記録なし";
   monitorFeedbackStatusFilter.value = activeMonitorFeedbackStatusFilter;
   monitorFeedbackKindFilter.value = activeMonitorFeedbackKindFilter;
@@ -1989,6 +1991,11 @@ function renderMonitorFeedback() {
       <small>不具合 ${bugCount}件 / UI ${uiCount}件</small>
     </article>
     <article>
+      <span>回収状況</span>
+      <strong>${participantCount}人</strong>
+      <small>端末 ${deviceCount}種類 / 最新 ${escapeHtml(latest)}</small>
+    </article>
+    <article>
       <span>優先度高</span>
       <strong>${highCount}件</strong>
       <small>モニター中に先に直す候補</small>
@@ -1996,7 +2003,7 @@ function renderMonitorFeedback() {
     <article>
       <span>表示中</span>
       <strong>${filteredEntries.length}件</strong>
-      <small>対応済み ${doneCount}件 / 最新 ${escapeHtml(latest)}</small>
+      <small>対応済み ${doneCount}件</small>
     </article>
   `;
   renderMonitorFeedbackNext(entries);
@@ -2110,6 +2117,8 @@ function getMonitorFeedbackExportSummary(entries = state.monitorFeedback || []) 
   return {
     ready: unresolved.length === 0,
     totalCount: normalizedEntries.length,
+    participantCount: new Set(normalizedEntries.map((entry) => entry.participant.trim()).filter(Boolean)).size,
+    deviceCount: new Set(normalizedEntries.map((entry) => entry.device.trim()).filter(Boolean)).size,
     unresolvedCount: unresolved.length,
     highUnresolvedCount: highUnresolved.length,
     resolvedCount: normalizedEntries.filter((entry) => entry.status === "done").length,
