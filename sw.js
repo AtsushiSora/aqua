@@ -1,10 +1,11 @@
-const CACHE_NAME = "aquanote-production-v111";
+const CACHE_NAME = "aquanote-production-v112";
 const ASSETS = [
   "./",
   "./index.html",
   "./offline.html",
   "./styles.css",
   "./app.js",
+  "./supabase-config.js",
   "./manifest.webmanifest",
   "./assets/site-concept.png",
   "./assets/icon-192.png",

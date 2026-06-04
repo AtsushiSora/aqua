@@ -1,6 +1,5 @@
 .tools/
 .DS_Store
-supabase-config.js
 .env
 .env.*
 !.env.example

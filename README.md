@@ -11,7 +11,7 @@
 - [docs/cloud-storage-plan.md](docs/cloud-storage-plan.md) にクラウド保存の方針と移行順をまとめています。
 - [supabase/schema.sql](supabase/schema.sql) に Supabase / Postgres 用のテーブルとRLSポリシー草案を置いています。
 - `.env.example` にNetlify本番環境変数のサンプルを置いています。秘密キーはブラウザに置かず、Netlify側に設定します。
-- `supabase-config.example.js` を `supabase-config.js` にコピーして、ブラウザで使う公開Supabase設定とVAPID公開鍵を入れます。
+- `supabase-config.js` に、ブラウザで使う公開Supabase設定を置いています。秘密キーは入れず、VAPID公開鍵だけ必要になったタイミングで追加します。
 - `supabase/schema.sql` は途中で失敗しても再実行しやすいように、型、テーブル、インデックス、ポリシーを冪等化しています。
 - アカウント画面の「本番前セットアップ」で、Supabase SQL、Storage、AI Gateway、通知、PWA実機QAの残タスク、確認場所、現在の確認状態、次の作業を確認できます。
 
