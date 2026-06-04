@@ -5889,6 +5889,7 @@ textarea {
 }
 
 .monitor-guide-copy strong,
+.monitor-guide-copy small,
 .monitor-guide-copy p {
   display: block;
   margin: 0;
@@ -5897,6 +5898,14 @@ textarea {
 .monitor-guide-copy strong {
   color: var(--ink);
   font-size: 0.86rem;
+}
+
+.monitor-guide-copy small {
+  margin-top: 4px;
+  color: var(--aqua-dark);
+  font-size: 0.74rem;
+  font-weight: 900;
+  overflow-wrap: anywhere;
 }
 
 .monitor-guide-copy p {

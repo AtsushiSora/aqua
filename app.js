@@ -1747,8 +1747,10 @@ function renderMonitorGuideCopyPreview(readiness = getMonitorReadinessState()) {
   }
 
   const guideText = getMonitorGuideText(readiness);
+  const decision = normalizePwaReleaseDecision(state.pwaReleaseDecision || {});
   monitorGuideCopyPreview.innerHTML = `
     <strong>送付文の内容</strong>
+    <small>${escapeHtml(decision.productionUrl ? `モニターURL: ${decision.productionUrl}` : "モニターURL未入力。PWA最終リリース判定で本番URLを入れてから共有します。")}</small>
     <p>${escapeHtml(guideText.split("\n").slice(0, 3).join(" "))}</p>
   `;
 }
@@ -1790,6 +1792,7 @@ function exportMonitorLaunchKit() {
     nextAction: readiness.nextAction,
     launchKitExportedAt: state.monitorLaunchKitExportedAt,
     readiness,
+    urlReady: Boolean(decision.productionUrl),
     monitorUrl: decision.productionUrl || "",
     guideText: getMonitorGuideText(readiness),
     replyTemplate: getMonitorFeedbackReplyTemplate(),
