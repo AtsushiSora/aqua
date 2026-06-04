@@ -5988,6 +5988,77 @@ textarea {
   line-height: 1.5;
 }
 
+.monitor-launch-review {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+  padding: 10px;
+  border: 1px solid rgba(207, 132, 38, 0.22);
+  border-radius: 8px;
+  background: rgba(255, 250, 241, 0.84);
+}
+
+.monitor-launch-review.ready {
+  border-color: rgba(40, 117, 74, 0.22);
+  background: rgba(236, 247, 240, 0.84);
+}
+
+.monitor-launch-review > span,
+.monitor-launch-review > strong,
+.monitor-launch-review > small {
+  margin: 0;
+}
+
+.monitor-launch-review > span {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 900;
+}
+
+.monitor-launch-review > strong {
+  color: var(--ink);
+  font-size: 0.9rem;
+}
+
+.monitor-launch-review > small {
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 800;
+  line-height: 1.45;
+}
+
+.monitor-launch-review > div {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.monitor-launch-review article {
+  display: grid;
+  gap: 4px;
+  padding: 8px;
+  border: 1px solid rgba(207, 132, 38, 0.18);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.58);
+}
+
+.monitor-launch-review article.ready {
+  border-color: rgba(40, 117, 74, 0.18);
+}
+
+.monitor-launch-review article span,
+.monitor-launch-review article small {
+  color: var(--muted);
+  font-size: 0.7rem;
+  font-weight: 800;
+  line-height: 1.35;
+}
+
+.monitor-launch-review article strong {
+  color: var(--aqua-dark);
+  font-size: 0.78rem;
+}
+
 .monitor-launch-flow {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -6974,6 +7045,7 @@ textarea {
   .production-setup-check-grid,
   .production-netlify-guide,
   .schema-grid,
+  .monitor-launch-review > div,
   .monitor-launch-flow,
   .monitor-readiness-summary,
   .monitor-feedback-form,
@@ -7238,6 +7310,7 @@ textarea {
   .production-netlify-guide,
   .production-netlify-guide ol,
   .schema-grid,
+  .monitor-launch-review > div,
   .monitor-launch-flow,
   .monitor-readiness-summary,
   .monitor-feedback-form,

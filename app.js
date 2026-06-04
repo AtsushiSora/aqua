@@ -1791,6 +1791,8 @@ function renderMonitorGuideCopyPreview(readiness = getMonitorReadinessState()) {
   const hasProductionUrl = Boolean(decision.productionUrl);
   const launchKitReady = hasProductionUrl && Boolean(state.monitorLaunchKitExportedAt);
   const canShareGuide = hasProductionUrl && launchKitReady;
+  const preflight = getMonitorPreflightState(readiness);
+  const launchReview = getMonitorLaunchKitReview(readiness, decision, preflight);
   if (monitorKitExportButton) {
     monitorKitExportButton.disabled = !hasProductionUrl;
     monitorKitExportButton.title = hasProductionUrl ? "モニター配布セットを書き出します" : "PWA最終リリース判定で本番URLを保存すると使えます";
@@ -1803,6 +1805,24 @@ function renderMonitorGuideCopyPreview(readiness = getMonitorReadinessState()) {
     <strong>送付文の内容</strong>
     <small>${escapeHtml(hasProductionUrl ? `モニターURL: ${decision.productionUrl}` : "モニターURL未入力。PWA最終リリース判定で本番URLを保存してから共有します。")}</small>
     <p>${escapeHtml(guideText.split("\n").slice(0, 3).join(" "))}</p>
+    <div class="monitor-launch-review ${escapeHtml(launchReview.ready ? "ready" : "pending")}">
+      <span>${escapeHtml(launchReview.ready ? "配布前レビューOK" : "配布前レビュー")}</span>
+      <strong>${escapeHtml(launchReview.title)}</strong>
+      <small>${escapeHtml(launchReview.note)}</small>
+      <div>
+        ${launchReview.items
+          .map(
+            (item) => `
+              <article class="${item.ready ? "ready" : "pending"}">
+                <span>${escapeHtml(item.label)}</span>
+                <strong>${escapeHtml(item.status)}</strong>
+                <small>${escapeHtml(item.note)}</small>
+              </article>
+            `,
+          )
+          .join("")}
+      </div>
+    </div>
     <div class="monitor-launch-flow">
       <article class="${hasProductionUrl ? "ready" : "pending"}">
         <span>1</span>
@@ -1870,6 +1890,7 @@ function exportMonitorLaunchKit() {
   const coverage = getPwaReleaseCoverage(pwaResults);
   const releasePriority = getPwaReleasePriorityState(decision, coverage, pwaResults);
   const monitorFeedback = getMonitorFeedbackExportSummary();
+  const launchReview = getMonitorLaunchKitReview(readiness, decision, preflight);
   const payload = {
     app: "AquaNote",
     type: "monitor-launch-kit",
@@ -1877,6 +1898,7 @@ function exportMonitorLaunchKit() {
     ready: readiness.ready,
     nextAction: readiness.nextAction,
     preflight,
+    launchReview,
     launchKitExportedAt: state.monitorLaunchKitExportedAt,
     readiness,
     urlReady: Boolean(decision.productionUrl),
@@ -1895,6 +1917,45 @@ function exportMonitorLaunchKit() {
   );
   renderMonitorReadiness();
   showToast("モニター配布セットを書き出しました");
+}
+
+function getMonitorLaunchKitReview(readiness = getMonitorReadinessState(), decision = normalizePwaReleaseDecision(state.pwaReleaseDecision || {}), preflight = getMonitorPreflightState(readiness)) {
+  const guideText = getMonitorGuideText(readiness);
+  const replyTemplate = getMonitorFeedbackReplyTemplate();
+  const items = [
+    {
+      label: "モニターURL",
+      ready: Boolean(decision.productionUrl),
+      status: decision.productionUrl ? "OK" : "未入力",
+      note: decision.productionUrl || "PWA最終リリース判定で本番URLを保存",
+    },
+    {
+      label: "送付文",
+      ready: guideText.includes("所要時間の目安") && guideText.includes("空欄があっても大丈夫"),
+      status: `${guideText.split(/\r?\n/).filter(Boolean).length}行`,
+      note: "所要時間、試してほしい操作、回答観点を含みます",
+    },
+    {
+      label: "返信テンプレート",
+      ready: replyTemplate.includes("端末:") && replyTemplate.includes("見た画面:") && replyTemplate.includes("その他:"),
+      status: `${replyTemplate.split(/\r?\n/).length}項目`,
+      note: "端末、画面、使いやすいモード、不具合、その他を回収します",
+    },
+    {
+      label: "直前判定",
+      ready: preflight.status !== "stop",
+      status: preflight.chipLabel,
+      note: preflight.status === "stop" ? preflight.note : "停止項目はありません",
+    },
+  ];
+  const pending = items.filter((item) => !item.ready);
+
+  return {
+    ready: pending.length === 0,
+    title: pending.length ? `${pending.length}件を確認してから配布` : "この内容で配布できます",
+    note: pending.length ? pending.map((item) => item.label).join(" / ") : "URL、送付文、返信テンプレート、直前判定が揃っています。",
+    items,
+  };
 }
 
 function getMonitorGuideText(readiness = getMonitorReadinessState()) {
