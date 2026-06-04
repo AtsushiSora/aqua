@@ -1,5 +1,6 @@
 const STORAGE_KEY = "aquanote-state-v3";
 const LEGACY_STORAGE_KEY = "aquanote-state-v2";
+const SIGNUP_PROMPT_DISMISSED_KEY = "aquanote-signup-prompt-dismissed";
 const VIDEO_UPLOAD_LIMIT_BYTES = 4 * 1024 * 1024;
 const EXPORT_VERSION = 1;
 const MEDIA_BUCKET = "aquanote-media";
@@ -103,6 +104,8 @@ const authEmailInput = document.querySelector("#auth-email-input");
 const authPasswordInput = document.querySelector("#auth-password-input");
 const authSignOutButton = document.querySelector("#auth-sign-out-button");
 const authNote = document.querySelector("#auth-note");
+const signupPromptModal = document.querySelector("#signup-prompt-modal");
+const signupPromptStartButton = document.querySelector("#signup-prompt-start-button");
 const notificationPreferenceSummary = document.querySelector("#notification-preference-summary");
 const notificationDeliveryFilter = document.querySelector("#notification-delivery-filter");
 const notificationDeliveryRefreshButton = document.querySelector("#notification-delivery-refresh-button");
@@ -1010,6 +1013,10 @@ authForm.addEventListener("submit", async (event) => {
 });
 
 authSignOutButton.addEventListener("click", signOutSupabase);
+signupPromptStartButton?.addEventListener("click", openSignupFlowFromPrompt);
+document.querySelectorAll("[data-close-signup-prompt]").forEach((button) => {
+  button.addEventListener("click", dismissSignupPrompt);
+});
 aiApiCheckButton.addEventListener("click", () => checkAiAnalysisApi());
 aiEvaluationSourceFilter.addEventListener("change", () => {
   activeAiEvaluationSourceFilter = aiEvaluationSourceFilter.value;
@@ -5020,6 +5027,47 @@ function renderAuthPanel() {
     : "Supabase Authへメールとパスワードで接続します。";
 }
 
+function maybeShowSignupPrompt() {
+  if (!signupPromptModal || authSession?.user || state.account?.signedIn) {
+    return;
+  }
+
+  if (localStorage.getItem(SIGNUP_PROMPT_DISMISSED_KEY) === "true") {
+    return;
+  }
+
+  window.setTimeout(() => {
+    if (authSession?.user || state.account?.signedIn || localStorage.getItem(SIGNUP_PROMPT_DISMISSED_KEY) === "true") {
+      return;
+    }
+    signupPromptModal.classList.add("is-open");
+    signupPromptModal.setAttribute("aria-hidden", "false");
+    signupPromptStartButton?.focus({ preventScroll: true });
+  }, 1200);
+}
+
+function closeSignupPrompt() {
+  signupPromptModal?.classList.remove("is-open");
+  signupPromptModal?.setAttribute("aria-hidden", "true");
+}
+
+function dismissSignupPrompt() {
+  localStorage.setItem(SIGNUP_PROMPT_DISMISSED_KEY, "true");
+  closeSignupPrompt();
+}
+
+function openSignupFlowFromPrompt() {
+  localStorage.setItem(SIGNUP_PROMPT_DISMISSED_KEY, "true");
+  closeSignupPrompt();
+  focusAccountSection("#account-auth-panel");
+  window.requestAnimationFrame(() => {
+    authEmailInput?.focus({ preventScroll: true });
+    authForm?.classList.add("is-guided");
+    window.setTimeout(() => authForm?.classList.remove("is-guided"), 1800);
+  });
+  showToast("メールと8文字以上のパスワードを入れて新規登録を押します");
+}
+
 function renderNotificationDeliveryLog() {
   if (!notificationDeliveryLog) {
     return;
@@ -5378,6 +5426,8 @@ async function handleAuthSubmit(action) {
   saveState({ keepSyncStatus: true });
 
   if (authSession?.user) {
+    localStorage.setItem(SIGNUP_PROMPT_DISMISSED_KEY, "true");
+    closeSignupPrompt();
     await loadCloudStateFromSupabase({ silent: true });
     await syncProfileToSupabase({ silent: true });
   }
@@ -7637,6 +7687,8 @@ async function applyAuthSession(session) {
   authSession = session;
 
   if (authSession?.user) {
+    localStorage.setItem(SIGNUP_PROMPT_DISMISSED_KEY, "true");
+    closeSignupPrompt();
     state.account.signedIn = true;
     state.account.email = authSession.user.email || state.account.email;
     saveState({ keepSyncStatus: true });
@@ -13275,6 +13327,8 @@ const firstView = window.location.hash.replace("#", "") || "dashboard";
 if (document.getElementById(firstView)) {
   showView(firstView);
 }
+
+maybeShowSignupPrompt();
 
 if ("serviceWorker" in navigator && location.protocol !== "file:") {
   navigator.serviceWorker.register("sw.js");

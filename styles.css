@@ -6007,6 +6007,22 @@ textarea {
   align-items: center;
 }
 
+.auth-form.is-guided {
+  animation: auth-guide-pulse 1.8s ease;
+}
+
+@keyframes auth-guide-pulse {
+  0%,
+  100% {
+    box-shadow: none;
+  }
+
+  28%,
+  72% {
+    box-shadow: 0 0 0 4px rgba(15, 143, 143, 0.18);
+  }
+}
+
 .auth-note {
   margin: 14px 0 0;
   color: var(--muted);
@@ -6987,6 +7003,50 @@ textarea {
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior: contain;
+}
+
+.signup-prompt-panel {
+  width: min(520px, 100%);
+  align-self: center;
+}
+
+.signup-prompt-body {
+  display: grid;
+  gap: 14px;
+}
+
+.signup-prompt-body p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.92rem;
+  font-weight: 800;
+  line-height: 1.6;
+}
+
+.signup-prompt-body ol {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 12px 12px 12px 32px;
+  border: 1px solid rgba(15, 143, 143, 0.16);
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.64), transparent),
+    rgba(248, 252, 251, 0.78);
+}
+
+.signup-prompt-body li {
+  color: var(--ink);
+  font-size: 0.88rem;
+  font-weight: 800;
+  line-height: 1.5;
+}
+
+.signup-prompt-actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
 }
 
 .media-detail-panel {
@@ -7990,6 +8050,10 @@ textarea {
 
   .home-start-actions {
     display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .signup-prompt-actions {
     grid-template-columns: 1fr;
   }
 

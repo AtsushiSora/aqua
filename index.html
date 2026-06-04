@@ -1782,6 +1782,31 @@
       </main>
     </div>
 
+    <div class="modal signup-prompt-modal" id="signup-prompt-modal" aria-hidden="true">
+      <div class="modal-backdrop" data-close-signup-prompt></div>
+      <section class="modal-panel signup-prompt-panel" role="dialog" aria-modal="true" aria-labelledby="signup-prompt-title">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Account setup</p>
+            <h2 id="signup-prompt-title">登録して、水槽データを保存</h2>
+          </div>
+          <button class="icon-button" type="button" title="閉じる" aria-label="閉じる" data-close-signup-prompt>×</button>
+        </div>
+        <div class="signup-prompt-body">
+          <p>登録すると、プロフィール、水槽、記録、モニター回答をあとから確認しやすくなります。</p>
+          <ol>
+            <li>メールと8文字以上のパスワードを入れる</li>
+            <li>新規登録を押す</li>
+            <li>確認メールが届いたら開いてログインする</li>
+          </ol>
+          <div class="signup-prompt-actions">
+            <button class="primary-button" id="signup-prompt-start-button" type="button">新規登録へ進む</button>
+            <button class="ghost-button" type="button" data-close-signup-prompt>あとで</button>
+          </div>
+        </div>
+      </section>
+    </div>
+
     <div class="modal" id="post-modal" aria-hidden="true">
       <div class="modal-backdrop" data-close-modal></div>
       <section class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="post-modal-title">
