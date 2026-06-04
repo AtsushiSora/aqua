@@ -1797,7 +1797,21 @@ function getMonitorGuideText(readiness = getMonitorReadinessState()) {
     "2. 一番迷ったところ",
     "3. もう一度使うなら直してほしいところ",
     "",
+    getMonitorFeedbackReplyTemplate(),
+    "",
     "気づいたことは、端末名と画面名も一緒に教えてください。",
+  ].join("\n");
+}
+
+function getMonitorFeedbackReplyTemplate() {
+  return [
+    "返信テンプレート:",
+    "端末:",
+    "見た画面:",
+    "良かったところ:",
+    "迷ったところ:",
+    "気になった不具合:",
+    "もう一度使うなら直してほしいところ:",
   ].join("\n");
 }
 
@@ -6168,6 +6182,7 @@ function exportProductionSetupStatus() {
     items: setupSummary.items,
     monitorReadiness,
     monitorGuideText: getMonitorGuideText(monitorReadiness),
+    monitorFeedbackReplyTemplate: getMonitorFeedbackReplyTemplate(),
     releasePriority,
     releaseDecision,
   };
