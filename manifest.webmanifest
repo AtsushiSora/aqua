@@ -55,6 +55,12 @@
       "short_name": "AI",
       "description": "水槽状態のAI分析を開きます",
       "url": "./index.html#ai"
+    },
+    {
+      "name": "本番前チェック",
+      "short_name": "確認",
+      "description": "PWA実機テストやモニター版チェックを開きます",
+      "url": "./index.html#account"
     }
   ]
 }
