@@ -120,6 +120,7 @@ const monitorReadinessChip = document.querySelector("#monitor-readiness-chip");
 const monitorReadinessNext = document.querySelector("#monitor-readiness-next");
 const monitorReadinessSummary = document.querySelector("#monitor-readiness-summary");
 const monitorGuideCopyButton = document.querySelector("#monitor-guide-copy-button");
+const monitorGuidePreviewToggle = document.querySelector("#monitor-guide-preview-toggle");
 const monitorKitExportButton = document.querySelector("#monitor-kit-export-button");
 const monitorGuideCopyPreview = document.querySelector("#monitor-guide-copy-preview");
 const monitorFeedbackForm = document.querySelector("#monitor-feedback-form");
@@ -426,6 +427,7 @@ let activeMonitorFeedbackStatusFilter = "all";
 let activeMonitorFeedbackKindFilter = "all";
 let activeMonitorFeedbackPriorityFilter = "all";
 let lastSavedMonitorFeedbackId = null;
+let monitorGuidePreviewExpanded = false;
 let aiApiStatus = {
   checkedAt: null,
   configured: null,
@@ -721,6 +723,10 @@ monitorFeedbackActionCopyButton.addEventListener("click", copyMonitorFeedbackAct
 monitorFeedbackExportCsvButton.addEventListener("click", exportMonitorFeedbackCsv);
 monitorFeedbackExportButton.addEventListener("click", exportMonitorFeedback);
 monitorGuideCopyButton.addEventListener("click", copyMonitorGuideText);
+monitorGuidePreviewToggle.addEventListener("click", () => {
+  monitorGuidePreviewExpanded = !monitorGuidePreviewExpanded;
+  renderMonitorGuideCopyPreview();
+});
 monitorKitExportButton.addEventListener("click", exportMonitorLaunchKit);
 monitorFeedbackTemplateButton.addEventListener("click", applyMonitorFeedbackReplyTemplate);
 monitorFeedbackParseButton.addEventListener("click", applyMonitorFeedbackReplyFields);
@@ -1801,10 +1807,23 @@ function renderMonitorGuideCopyPreview(readiness = getMonitorReadinessState()) {
     monitorGuideCopyButton.disabled = !canShareGuide;
     monitorGuideCopyButton.title = canShareGuide ? "参加者へ送る案内文をコピーします" : "本番URLを保存し、配布セットJSONを書き出すと使えます";
   }
+  if (monitorGuidePreviewToggle) {
+    monitorGuidePreviewToggle.textContent = monitorGuidePreviewExpanded ? "送付文を閉じる" : "送付文を確認";
+  }
   monitorGuideCopyPreview.innerHTML = `
     <strong>送付文の内容</strong>
     <small>${escapeHtml(hasProductionUrl ? `モニターURL: ${decision.productionUrl}` : "モニターURL未入力。PWA最終リリース判定で本番URLを保存してから共有します。")}</small>
     <p>${escapeHtml(guideText.split("\n").slice(0, 3).join(" "))}</p>
+    ${
+      monitorGuidePreviewExpanded
+        ? `
+          <div class="monitor-guide-full-preview">
+            <span>実際に送る文章</span>
+            <pre>${escapeHtml(guideText)}</pre>
+          </div>
+        `
+        : ""
+    }
     <div class="monitor-launch-review ${escapeHtml(launchReview.ready ? "ready" : "pending")}">
       <span>${escapeHtml(launchReview.ready ? "配布前レビューOK" : "配布前レビュー")}</span>
       <strong>${escapeHtml(launchReview.title)}</strong>

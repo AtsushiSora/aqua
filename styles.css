@@ -5988,6 +5988,38 @@ textarea {
   line-height: 1.5;
 }
 
+.monitor-guide-full-preview {
+  display: grid;
+  gap: 6px;
+  margin-top: 10px;
+  padding: 10px;
+  border: 1px solid rgba(15, 143, 143, 0.14);
+  border-radius: 8px;
+  background: rgba(248, 252, 251, 0.82);
+}
+
+.monitor-guide-full-preview span {
+  color: var(--aqua-dark);
+  font-size: 0.76rem;
+  font-weight: 900;
+}
+
+.monitor-guide-full-preview pre {
+  max-height: 340px;
+  margin: 0;
+  padding: 10px;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.74);
+  color: var(--ink);
+  font-family: var(--font-jp);
+  font-size: 0.78rem;
+  font-weight: 800;
+  line-height: 1.58;
+}
+
 .monitor-launch-review {
   display: grid;
   gap: 8px;
