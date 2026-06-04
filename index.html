@@ -1294,6 +1294,40 @@
               </div>
             </section>
 
+            <section class="panel monitor-participants-panel">
+              <div class="section-head">
+                <div>
+                  <p class="eyebrow">Monitor participants</p>
+                  <h2>モニター参加者</h2>
+                </div>
+              </div>
+              <form class="monitor-participant-form" id="monitor-participant-form">
+                <label>
+                  <span>名前</span>
+                  <input id="monitor-participant-name-input" type="text" placeholder="例: 田中さん">
+                </label>
+                <label>
+                  <span>連絡先メモ</span>
+                  <input id="monitor-participant-contact-input" type="text" placeholder="例: LINE / Gmail">
+                </label>
+                <label>
+                  <span>状況</span>
+                  <select id="monitor-participant-status-input">
+                    <option value="planned">送る予定</option>
+                    <option value="sent">送付済み</option>
+                    <option value="replied">返信あり</option>
+                  </select>
+                </label>
+                <label class="full-field">
+                  <span>メモ</span>
+                  <textarea id="monitor-participant-note-input" rows="2" placeholder="依頼日、端末、お願いした内容など"></textarea>
+                </label>
+                <button class="primary-button full-field" type="submit">参加者を追加</button>
+              </form>
+              <div class="monitor-participant-summary" id="monitor-participant-summary"></div>
+              <div class="monitor-participant-list" id="monitor-participant-list"></div>
+            </section>
+
             <section class="panel monitor-feedback-panel">
               <div class="section-head">
                 <div>

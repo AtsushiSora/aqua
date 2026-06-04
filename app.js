@@ -123,6 +123,9 @@ const monitorGuideCopyButton = document.querySelector("#monitor-guide-copy-butto
 const monitorGuidePreviewToggle = document.querySelector("#monitor-guide-preview-toggle");
 const monitorKitExportButton = document.querySelector("#monitor-kit-export-button");
 const monitorGuideCopyPreview = document.querySelector("#monitor-guide-copy-preview");
+const monitorParticipantForm = document.querySelector("#monitor-participant-form");
+const monitorParticipantSummary = document.querySelector("#monitor-participant-summary");
+const monitorParticipantList = document.querySelector("#monitor-participant-list");
 const monitorFeedbackForm = document.querySelector("#monitor-feedback-form");
 const monitorFeedbackSummary = document.querySelector("#monitor-feedback-summary");
 const monitorFeedbackNext = document.querySelector("#monitor-feedback-next");
@@ -168,6 +171,7 @@ const UI_MODES = ["standard", "simple", "adult", "live"];
 const MONITOR_FEEDBACK_KINDS = ["impression", "bug", "ui", "request"];
 const MONITOR_FEEDBACK_PRIORITIES = ["watch", "high", "low"];
 const MONITOR_FEEDBACK_STATUSES = ["open", "doing", "done"];
+const MONITOR_PARTICIPANT_STATUSES = ["planned", "sent", "replied"];
 const PWA_REQUIRED_SCOPES = ["login", "tank_switch", "install", "notification", "offline", "ui_modes", "custom_images"];
 const PWA_SCOPE_QA_HINTS = {
   login: ["ログイン状態", "プロフィール同期", "再読み込み後の維持"],
@@ -311,6 +315,7 @@ const defaultState = {
     lastSyncedAt: null,
   },
   pwaTestResults: [],
+  monitorParticipants: [],
   monitorFeedback: [],
   productionSetupCheck: {
     supabaseStatus: "unchecked",
@@ -718,6 +723,39 @@ importDataButton.addEventListener("click", () => importDataInput.click());
 importDataInput.addEventListener("change", importAppData);
 pwaTestForm.addEventListener("submit", handlePwaTestSubmit);
 pwaTestExportButton.addEventListener("click", exportPwaTestResults);
+monitorParticipantForm.addEventListener("submit", handleMonitorParticipantSubmit);
+monitorParticipantList.addEventListener("click", (event) => {
+  const statusButton = event.target.closest("[data-monitor-participant-status]");
+  if (statusButton) {
+    const nextStatus = statusButton.dataset.monitorParticipantNextStatus;
+    state.monitorParticipants = (state.monitorParticipants || []).map((participant) =>
+      participant.id === statusButton.dataset.monitorParticipantStatus
+        ? normalizeMonitorParticipant({
+            ...participant,
+            status: nextStatus,
+            sentAt: nextStatus === "sent" && !participant.sentAt ? new Date().toISOString() : participant.sentAt,
+            repliedAt: nextStatus === "replied" ? new Date().toISOString() : participant.repliedAt,
+          })
+        : participant,
+    );
+    saveState();
+    renderMonitorParticipants();
+    renderMonitorReadiness();
+    showToast("参加者の状況を更新しました");
+    return;
+  }
+
+  const deleteButton = event.target.closest("[data-monitor-participant-delete]");
+  if (!deleteButton) {
+    return;
+  }
+
+  state.monitorParticipants = (state.monitorParticipants || []).filter((participant) => participant.id !== deleteButton.dataset.monitorParticipantDelete);
+  saveState();
+  renderMonitorParticipants();
+  renderMonitorReadiness();
+  showToast("参加者を削除しました");
+});
 monitorFeedbackForm.addEventListener("submit", handleMonitorFeedbackSubmit);
 monitorFeedbackActionCopyButton.addEventListener("click", copyMonitorFeedbackActionList);
 monitorFeedbackExportCsvButton.addEventListener("click", exportMonitorFeedbackCsv);
@@ -1497,6 +1535,7 @@ function renderAccount() {
   renderPwaTestResults();
   renderPwaReleaseDecision();
   renderMonitorReadiness();
+  renderMonitorParticipants();
   renderMonitorFeedback();
   renderProductionSetupSummary();
 
@@ -1910,6 +1949,7 @@ function exportMonitorLaunchKit() {
   const releasePriority = getPwaReleasePriorityState(decision, coverage, pwaResults);
   const monitorFeedback = getMonitorFeedbackExportSummary();
   const launchReview = getMonitorLaunchKitReview(readiness, decision, preflight);
+  const monitorParticipants = Array.isArray(state.monitorParticipants) ? state.monitorParticipants.map(normalizeMonitorParticipant) : [];
   const payload = {
     app: "AquaNote",
     type: "monitor-launch-kit",
@@ -1926,6 +1966,10 @@ function exportMonitorLaunchKit() {
     replyTemplate: getMonitorFeedbackReplyTemplate(),
     releasePriority,
     pwaCoverage: coverage,
+    monitorParticipants: {
+      summary: getMonitorParticipantSummary(monitorParticipants),
+      items: monitorParticipants,
+    },
     monitorFeedback,
   };
 
@@ -2033,6 +2077,159 @@ function getMonitorFeedbackReplyTemplate() {
   ].join("\n");
 }
 
+function handleMonitorParticipantSubmit(event) {
+  event.preventDefault();
+  const name = document.querySelector("#monitor-participant-name-input").value.trim();
+  if (!name) {
+    showToast("参加者名を入力してください");
+    return;
+  }
+
+  const entry = normalizeMonitorParticipant({
+    id: createId("monitor-participant"),
+    name,
+    contact: document.querySelector("#monitor-participant-contact-input").value,
+    status: document.querySelector("#monitor-participant-status-input").value,
+    note: document.querySelector("#monitor-participant-note-input").value,
+    createdAt: new Date().toISOString(),
+  });
+
+  state.monitorParticipants = [entry, ...(state.monitorParticipants || [])].slice(0, 50);
+  saveState();
+  monitorParticipantForm.reset();
+  renderMonitorParticipants();
+  renderMonitorReadiness();
+  showToast("モニター参加者を追加しました");
+}
+
+function renderMonitorParticipants() {
+  if (!monitorParticipantSummary || !monitorParticipantList) {
+    return;
+  }
+
+  const participants = Array.isArray(state.monitorParticipants) ? state.monitorParticipants.map(normalizeMonitorParticipant) : [];
+  const feedbackNames = getMonitorFeedbackParticipantNames();
+  const summary = getMonitorParticipantSummary(participants, feedbackNames);
+  monitorParticipantSummary.innerHTML = `
+    <article>
+      <span>登録</span>
+      <strong>${participants.length}人</strong>
+      <small>目標 ${MONITOR_TARGET_PARTICIPANTS}人</small>
+    </article>
+    <article>
+      <span>送付済み</span>
+      <strong>${summary.sentCount}人</strong>
+      <small>${summary.sentReady ? "共有先は目標達成" : `あと${summary.missingSent}人へ送付`}</small>
+    </article>
+    <article>
+      <span>返信あり</span>
+      <strong>${summary.repliedCount}人</strong>
+      <small>${summary.repliedReady ? "返信目標に到達" : `あと${summary.missingReplies}人`}</small>
+    </article>
+  `;
+
+  if (!participants.length) {
+    monitorParticipantList.innerHTML = `
+      <article class="monitor-participant-empty">
+        <strong>まだ参加者はいません</strong>
+        <span>送る予定の人を登録すると、返信回収まで追いやすくなります。</span>
+      </article>
+    `;
+    return;
+  }
+
+  monitorParticipantList.innerHTML = participants
+    .map((participant) => {
+      const hasFeedback = feedbackNames.has(normalizeMonitorParticipantName(participant.name));
+      const displayStatus = hasFeedback ? "replied" : participant.status;
+      return `
+        <article class="monitor-participant-item ${escapeHtml(displayStatus)}">
+          <div>
+            <div class="monitor-participant-meta">
+              <span>${escapeHtml(getMonitorParticipantStatusLabel(displayStatus))}</span>
+              <small>${escapeHtml(participant.sentAt ? `送付 ${formatFullDate(participant.sentAt)}` : "送付日未記録")}</small>
+            </div>
+            <strong>${escapeHtml(participant.name)}</strong>
+            <p>${escapeHtml([participant.contact, participant.note].filter(Boolean).join(" / ") || "メモなし")}</p>
+            ${hasFeedback ? `<small class="monitor-participant-feedback">フィードバック保存済み</small>` : ""}
+          </div>
+          <div class="monitor-participant-actions">
+            ${getMonitorParticipantStatusActions(participant, displayStatus)}
+            <button class="text-button" type="button" data-monitor-participant-delete="${escapeHtml(participant.id)}">削除</button>
+          </div>
+        </article>
+      `;
+    })
+    .join("");
+}
+
+function normalizeMonitorParticipant(entry = {}) {
+  const status = getAllowedValue(entry.status, MONITOR_PARTICIPANT_STATUSES, "planned");
+  return {
+    id: entry.id || createId("monitor-participant"),
+    createdAt: entry.createdAt || new Date().toISOString(),
+    name: String(entry.name || "").trim(),
+    contact: String(entry.contact || "").trim(),
+    status,
+    note: String(entry.note || "").trim(),
+    sentAt: entry.sentAt || (status === "sent" || status === "replied" ? entry.createdAt || new Date().toISOString() : null),
+    repliedAt: entry.repliedAt || (status === "replied" ? entry.createdAt || new Date().toISOString() : null),
+  };
+}
+
+function getMonitorParticipantSummary(participants = state.monitorParticipants || [], feedbackNames = getMonitorFeedbackParticipantNames()) {
+  const normalized = participants.map(normalizeMonitorParticipant);
+  const sentCount = normalized.filter((participant) => participant.status === "sent" || participant.status === "replied" || feedbackNames.has(normalizeMonitorParticipantName(participant.name))).length;
+  const repliedCount = normalized.filter((participant) => participant.status === "replied" || feedbackNames.has(normalizeMonitorParticipantName(participant.name))).length;
+
+  return {
+    totalCount: normalized.length,
+    sentCount,
+    repliedCount,
+    sentReady: sentCount >= MONITOR_TARGET_PARTICIPANTS,
+    repliedReady: repliedCount >= MONITOR_TARGET_PARTICIPANTS,
+    missingSent: Math.max(0, MONITOR_TARGET_PARTICIPANTS - sentCount),
+    missingReplies: Math.max(0, MONITOR_TARGET_PARTICIPANTS - repliedCount),
+  };
+}
+
+function getMonitorFeedbackParticipantNames() {
+  return new Set(
+    (state.monitorFeedback || [])
+      .map(normalizeMonitorFeedback)
+      .map((entry) => normalizeMonitorParticipantName(entry.participant))
+      .filter(Boolean),
+  );
+}
+
+function normalizeMonitorParticipantName(name) {
+  return String(name || "").trim().toLowerCase();
+}
+
+function getMonitorParticipantStatusLabel(status) {
+  const labels = {
+    planned: "送る予定",
+    sent: "送付済み",
+    replied: "返信あり",
+  };
+  return labels[status] || labels.planned;
+}
+
+function getMonitorParticipantStatusActions(participant, displayStatus = participant.status) {
+  return MONITOR_PARTICIPANT_STATUSES.filter((status) => status !== displayStatus)
+    .map(
+      (status) => `
+        <button
+          class="text-button"
+          type="button"
+          data-monitor-participant-status="${escapeHtml(participant.id)}"
+          data-monitor-participant-next-status="${escapeHtml(status)}"
+        >${escapeHtml(getMonitorParticipantStatusLabel(status))}</button>
+      `,
+    )
+    .join("");
+}
+
 function handleMonitorFeedbackSubmit(event) {
   event.preventDefault();
   const note = document.querySelector("#monitor-feedback-note-input").value.trim();
@@ -2063,6 +2260,7 @@ function handleMonitorFeedbackSubmit(event) {
   saveState();
   monitorFeedbackForm.reset();
   renderMonitorFeedbackFormCheck();
+  renderMonitorParticipants();
   renderMonitorFeedback();
   showToast("フィードバックを保存しました");
 }
@@ -2745,6 +2943,7 @@ function getMonitorReadinessItems() {
   const mediaReadiness = getMonitorMediaReadiness();
   const decisionReadiness = getMonitorDecisionReadiness(decision);
   const launchKitReady = Boolean(decision.productionUrl && state.monitorLaunchKitExportedAt);
+  const participantSummary = getMonitorParticipantSummary();
   const filterReady = state.tanks.some((tank) => {
     const filter = normalizeTankFilter(tank.filter);
     return Boolean(filter.type || filter.lastCleanedAt || filter.note);
@@ -2799,6 +2998,13 @@ function getMonitorReadinessItems() {
       value: launchKitReady ? "書き出し済み" : "未書き出し",
       note: launchKitReady ? `${formatFullDate(state.monitorLaunchKitExportedAt)} に配布セットを作成` : "案内文、返信テンプレート、準備状況をJSONで書き出します",
       action: "配布セットJSONを書き出す",
+    },
+    {
+      label: "参加者",
+      status: participantSummary.sentReady ? "ready" : "manual",
+      value: `${participantSummary.sentCount}/${MONITOR_TARGET_PARTICIPANTS}人`,
+      note: participantSummary.sentReady ? "参加者への送付数は目標達成です" : "モニター参加者を登録し、送付済みにします",
+      action: "3人以上を参加者に登録して送付済みにする",
     },
   ];
 }
@@ -11607,6 +11813,7 @@ function normalizeState(saved) {
     taskDate: saved.taskDate || getDateKey(new Date()),
     reminders: savedReminders,
     pwaTestResults: Array.isArray(saved.pwaTestResults) ? saved.pwaTestResults.map(normalizePwaTestResult) : [],
+    monitorParticipants: Array.isArray(saved.monitorParticipants) ? saved.monitorParticipants.map(normalizeMonitorParticipant) : [],
     monitorFeedback: Array.isArray(saved.monitorFeedback) ? saved.monitorFeedback.map(normalizeMonitorFeedback) : [],
     monitorLaunchKitExportedAt: saved.monitorLaunchKitExportedAt || null,
     productionSetupCheck: normalizeProductionSetupCheck(saved.productionSetupCheck || {}),
