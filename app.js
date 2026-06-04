@@ -1752,14 +1752,53 @@ function renderMonitorGuideCopyPreview(readiness = getMonitorReadinessState()) {
 
   const guideText = getMonitorGuideText(readiness);
   const decision = normalizePwaReleaseDecision(state.pwaReleaseDecision || {});
+  const hasProductionUrl = Boolean(decision.productionUrl);
+  const launchKitReady = hasProductionUrl && Boolean(state.monitorLaunchKitExportedAt);
+  const canShareGuide = hasProductionUrl && launchKitReady;
+  if (monitorKitExportButton) {
+    monitorKitExportButton.disabled = !hasProductionUrl;
+    monitorKitExportButton.title = hasProductionUrl ? "モニター配布セットを書き出します" : "PWA最終リリース判定で本番URLを保存すると使えます";
+  }
+  if (monitorGuideCopyButton) {
+    monitorGuideCopyButton.disabled = !canShareGuide;
+    monitorGuideCopyButton.title = canShareGuide ? "参加者へ送る案内文をコピーします" : "本番URLを保存し、配布セットJSONを書き出すと使えます";
+  }
   monitorGuideCopyPreview.innerHTML = `
     <strong>送付文の内容</strong>
-    <small>${escapeHtml(decision.productionUrl ? `モニターURL: ${decision.productionUrl}` : "モニターURL未入力。PWA最終リリース判定で本番URLを入れてから共有します。")}</small>
+    <small>${escapeHtml(hasProductionUrl ? `モニターURL: ${decision.productionUrl}` : "モニターURL未入力。PWA最終リリース判定で本番URLを保存してから共有します。")}</small>
     <p>${escapeHtml(guideText.split("\n").slice(0, 3).join(" "))}</p>
+    <div class="monitor-launch-flow">
+      <article class="${hasProductionUrl ? "ready" : "pending"}">
+        <span>1</span>
+        <strong>本番URL保存</strong>
+        <small>${escapeHtml(hasProductionUrl ? "保存済み" : "上のPWA最終リリース判定でURLを保存")}</small>
+      </article>
+      <article class="${launchKitReady ? "ready" : "pending"}">
+        <span>2</span>
+        <strong>配布セット</strong>
+        <small>${escapeHtml(launchKitReady ? `${formatFullDate(state.monitorLaunchKitExportedAt)} 書き出し済み` : "本番URL保存後にJSONを書き出し")}</small>
+      </article>
+      <article class="${canShareGuide ? "ready" : "pending"}">
+        <span>3</span>
+        <strong>案内文コピー</strong>
+        <small>${escapeHtml(canShareGuide ? "参加者へ共有できます" : "配布セット確認後にコピー")}</small>
+      </article>
+    </div>
   `;
 }
 
 async function copyMonitorGuideText() {
+  const decision = normalizePwaReleaseDecision(state.pwaReleaseDecision || {});
+  if (!decision.productionUrl) {
+    showToast("本番URLを保存してから案内文をコピーしてください");
+    document.querySelector("#pwa-release-decision-url-input")?.focus();
+    return;
+  }
+  if (!state.monitorLaunchKitExportedAt) {
+    showToast("配布セットJSONを書き出してから案内文をコピーしてください");
+    return;
+  }
+
   const text = getMonitorGuideText();
   if (navigator.clipboard?.writeText) {
     try {
@@ -1780,10 +1819,16 @@ async function copyMonitorGuideText() {
 }
 
 function exportMonitorLaunchKit() {
-  state.monitorLaunchKitExportedAt = new Date().toISOString();
-  saveState();
   const readiness = getMonitorReadinessState();
   const decision = normalizePwaReleaseDecision(state.pwaReleaseDecision || {});
+  if (!decision.productionUrl) {
+    showToast("本番URLを保存してから配布セットを書き出してください");
+    document.querySelector("#pwa-release-decision-url-input")?.focus();
+    return;
+  }
+
+  state.monitorLaunchKitExportedAt = new Date().toISOString();
+  saveState();
   const pwaResults = Array.isArray(state.pwaTestResults) ? state.pwaTestResults : [];
   const coverage = getPwaReleaseCoverage(pwaResults);
   const releasePriority = getPwaReleasePriorityState(decision, coverage, pwaResults);
