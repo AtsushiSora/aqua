@@ -125,6 +125,7 @@ const monitorGuideCopyPreview = document.querySelector("#monitor-guide-copy-prev
 const monitorFeedbackForm = document.querySelector("#monitor-feedback-form");
 const monitorFeedbackSummary = document.querySelector("#monitor-feedback-summary");
 const monitorFeedbackNext = document.querySelector("#monitor-feedback-next");
+const monitorFeedbackPostSave = document.querySelector("#monitor-feedback-post-save");
 const monitorFeedbackList = document.querySelector("#monitor-feedback-list");
 const monitorFeedbackTemplateButton = document.querySelector("#monitor-feedback-template-button");
 const monitorFeedbackParseButton = document.querySelector("#monitor-feedback-parse-button");
@@ -424,6 +425,7 @@ let activeAiEvaluationToFilter = "";
 let activeMonitorFeedbackStatusFilter = "all";
 let activeMonitorFeedbackKindFilter = "all";
 let activeMonitorFeedbackPriorityFilter = "all";
+let lastSavedMonitorFeedbackId = null;
 let aiApiStatus = {
   checkedAt: null,
   configured: null,
@@ -724,6 +726,21 @@ monitorFeedbackTemplateButton.addEventListener("click", applyMonitorFeedbackRepl
 monitorFeedbackParseButton.addEventListener("click", applyMonitorFeedbackReplyFields);
 monitorFeedbackForm.addEventListener("input", renderMonitorFeedbackFormCheck);
 monitorFeedbackForm.addEventListener("change", renderMonitorFeedbackFormCheck);
+monitorFeedbackPostSave.addEventListener("click", (event) => {
+  const actionButton = event.target.closest("[data-monitor-feedback-post-save-action]");
+  if (!actionButton) {
+    return;
+  }
+
+  const action = actionButton.dataset.monitorFeedbackPostSaveAction;
+  if (action === "show-next") {
+    focusMonitorFeedbackNextCandidate();
+    return;
+  }
+  if (action === "copy-actions") {
+    copyMonitorFeedbackActionList();
+  }
+});
 monitorFeedbackStatusFilter.addEventListener("change", () => {
   activeMonitorFeedbackStatusFilter = monitorFeedbackStatusFilter.value;
   renderMonitorFeedback();
@@ -1944,6 +1961,7 @@ function handleMonitorFeedbackSubmit(event) {
   });
 
   state.monitorFeedback = [entry, ...(state.monitorFeedback || [])].slice(0, 80);
+  lastSavedMonitorFeedbackId = entry.id;
   saveState();
   monitorFeedbackForm.reset();
   renderMonitorFeedbackFormCheck();
@@ -2164,6 +2182,7 @@ function renderMonitorFeedback() {
       <small>対応済み ${doneCount}件</small>
     </article>
   `;
+  renderMonitorFeedbackPostSave(entries);
   renderMonitorFeedbackNext(entries);
 
   if (!entries.length) {
@@ -2219,6 +2238,45 @@ function renderMonitorFeedback() {
       `,
     )
     .join("");
+}
+
+function renderMonitorFeedbackPostSave(entries) {
+  if (!monitorFeedbackPostSave) {
+    return;
+  }
+
+  const savedEntry = entries.find((entry) => entry.id === lastSavedMonitorFeedbackId);
+  if (!savedEntry) {
+    monitorFeedbackPostSave.hidden = true;
+    monitorFeedbackPostSave.innerHTML = "";
+    return;
+  }
+
+  const triage = getMonitorFeedbackTriage(entries);
+  const isNext = triage.next?.id === savedEntry.id;
+  monitorFeedbackPostSave.hidden = false;
+  monitorFeedbackPostSave.className = `monitor-feedback-post-save ${isNext ? "next" : "saved"}`;
+  monitorFeedbackPostSave.innerHTML = `
+    <div>
+      <span>保存しました</span>
+      <strong>${escapeHtml(isNext ? "この内容が次に直す候補です" : "次に直す候補を確認できます")}</strong>
+      <small>${escapeHtml(`${getMonitorFeedbackPriorityLabel(savedEntry.priority)} / ${getMonitorFeedbackKindLabel(savedEntry.kind)} / ${savedEntry.screen || "画面未設定"}`)}</small>
+    </div>
+    <div class="monitor-feedback-post-save-actions">
+      <button class="ghost-button" type="button" data-monitor-feedback-post-save-action="show-next">次候補を見る</button>
+      <button class="ghost-button" type="button" data-monitor-feedback-post-save-action="copy-actions">修正リスト</button>
+    </div>
+  `;
+}
+
+function focusMonitorFeedbackNextCandidate() {
+  activeMonitorFeedbackStatusFilter = "all";
+  activeMonitorFeedbackKindFilter = "all";
+  activeMonitorFeedbackPriorityFilter = "all";
+  renderMonitorFeedback();
+  monitorFeedbackNext?.scrollIntoView({ behavior: "smooth", block: "center" });
+  monitorFeedbackNext?.classList.add("pulse");
+  window.setTimeout(() => monitorFeedbackNext?.classList.remove("pulse"), 900);
 }
 
 function renderMonitorFeedbackNext(entries) {
