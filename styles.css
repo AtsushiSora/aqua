@@ -6746,6 +6746,14 @@ textarea {
   gap: 10px;
 }
 
+.monitor-participants-panel .section-head {
+  gap: 12px;
+}
+
+.monitor-participants-panel .section-head .ghost-button {
+  white-space: nowrap;
+}
+
 .monitor-participant-summary {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));

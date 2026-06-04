@@ -123,6 +123,7 @@ const monitorGuideCopyButton = document.querySelector("#monitor-guide-copy-butto
 const monitorGuidePreviewToggle = document.querySelector("#monitor-guide-preview-toggle");
 const monitorKitExportButton = document.querySelector("#monitor-kit-export-button");
 const monitorGuideCopyPreview = document.querySelector("#monitor-guide-copy-preview");
+const monitorWorkplaceAddButton = document.querySelector("#monitor-workplace-add-button");
 const monitorParticipantForm = document.querySelector("#monitor-participant-form");
 const monitorParticipantSummary = document.querySelector("#monitor-participant-summary");
 const monitorParticipantList = document.querySelector("#monitor-participant-list");
@@ -787,6 +788,7 @@ monitorReadinessNext?.addEventListener("click", (event) => {
 
   openMonitorReadinessAction(actionButton.dataset.monitorReadinessAction);
 });
+monitorWorkplaceAddButton?.addEventListener("click", addWorkplaceMonitorParticipants);
 monitorFeedbackTemplateButton.addEventListener("click", applyMonitorFeedbackReplyTemplate);
 monitorFeedbackParseButton.addEventListener("click", applyMonitorFeedbackReplyFields);
 monitorFeedbackForm.addEventListener("input", renderMonitorFeedbackFormCheck);
@@ -2171,6 +2173,35 @@ function handleMonitorParticipantSubmit(event) {
   renderMonitorParticipants();
   renderMonitorReadiness();
   showToast("モニター参加者を追加しました");
+}
+
+function addWorkplaceMonitorParticipants() {
+  const existing = (state.monitorParticipants || []).map(normalizeMonitorParticipant);
+  const existingNames = new Set(existing.map((participant) => normalizeMonitorParticipantName(participant.name)));
+  const now = new Date().toISOString();
+  const workplaceParticipants = ["職場モニター1", "職場モニター2"]
+    .filter((name) => !existingNames.has(normalizeMonitorParticipantName(name)))
+    .map((name) =>
+      normalizeMonitorParticipant({
+        id: createId("monitor-participant"),
+        name,
+        contact: "職場で直接依頼",
+        status: "planned",
+        note: "名前と端末はあとで差し替え",
+        createdAt: now,
+      }),
+    );
+
+  if (!workplaceParticipants.length) {
+    showToast("職場モニター2人は登録済みです");
+    return;
+  }
+
+  state.monitorParticipants = [...workplaceParticipants, ...existing].slice(0, 50);
+  saveState();
+  renderMonitorParticipants();
+  renderMonitorReadiness();
+  showToast(`${workplaceParticipants.length}人を職場モニターとして追加しました`);
 }
 
 function renderMonitorParticipants() {
