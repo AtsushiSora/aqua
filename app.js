@@ -779,6 +779,14 @@ monitorGuidePreviewToggle.addEventListener("click", () => {
   renderMonitorGuideCopyPreview();
 });
 monitorKitExportButton.addEventListener("click", exportMonitorLaunchKit);
+monitorReadinessNext?.addEventListener("click", (event) => {
+  const actionButton = event.target.closest("[data-monitor-readiness-action]");
+  if (!actionButton) {
+    return;
+  }
+
+  openMonitorReadinessAction(actionButton.dataset.monitorReadinessAction);
+});
 monitorFeedbackTemplateButton.addEventListener("click", applyMonitorFeedbackReplyTemplate);
 monitorFeedbackParseButton.addEventListener("click", applyMonitorFeedbackReplyFields);
 monitorFeedbackForm.addEventListener("input", renderMonitorFeedbackFormCheck);
@@ -1819,7 +1827,16 @@ function renderMonitorReadiness() {
       preflight.nextItems.length
         ? `
           <ol class="monitor-preflight-list">
-            ${preflight.nextItems.map((item) => `<li>${escapeHtml(item.label)}: ${escapeHtml(item.action || item.note)}</li>`).join("")}
+            ${preflight.nextItems
+              .map(
+                (item) => `
+                  <li>
+                    <span>${escapeHtml(item.label)}: ${escapeHtml(item.action || item.note)}</span>
+                    <button class="text-button" type="button" data-monitor-readiness-action="${escapeHtml(item.label)}">開く</button>
+                  </li>
+                `,
+              )
+              .join("")}
           </ol>
         `
         : ""
@@ -1837,6 +1854,38 @@ function renderMonitorReadiness() {
     )
     .join("");
   renderMonitorGuideCopyPreview(readiness);
+}
+
+function openMonitorReadinessAction(label) {
+  const action = getMonitorReadinessActionConfig(label);
+  showView(action.view);
+  window.requestAnimationFrame(() => {
+    const target = document.querySelector(action.focusSelector);
+    if (!target) {
+      return;
+    }
+
+    target.scrollIntoView({ behavior: "smooth", block: "center" });
+    if (!target.disabled && typeof target.focus === "function") {
+      target.focus({ preventScroll: true });
+    }
+  });
+  showToast(`${action.label}を開きました`);
+}
+
+function getMonitorReadinessActionConfig(label) {
+  const actions = {
+    初回導線: { view: "tanks", focusSelector: "#tank-name-input", label: "水槽登録" },
+    フィルター管理: { view: "tanks", focusSelector: "#tank-filter-type-input", label: "フィルター管理" },
+    "写真/メディア": { view: "dashboard", focusSelector: "#hero-photo-button", label: "TOP写真" },
+    本番前設定: { view: "account", focusSelector: "#production-setup-export-button", label: "本番前セットアップ" },
+    実機UI: { view: "account", focusSelector: "#pwa-test-device-input", label: "PWA実機テスト" },
+    判定メモ: { view: "account", focusSelector: "#pwa-release-decision-url-input", label: "PWA最終リリース判定" },
+    配布準備: { view: "account", focusSelector: "#monitor-kit-export-button", label: "配布セット" },
+    参加者: { view: "account", focusSelector: "#monitor-participant-name-input", label: "モニター参加者" },
+  };
+
+  return actions[label] || { view: "account", focusSelector: "#monitor-readiness-chip", label: "モニター版チェック" };
 }
 
 function renderMonitorGuideCopyPreview(readiness = getMonitorReadinessState()) {

@@ -5904,6 +5904,10 @@ textarea {
 }
 
 .monitor-preflight-list li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
   padding: 7px 8px;
   border: 1px solid rgba(18, 148, 142, 0.1);
   border-radius: 8px;
@@ -5912,6 +5916,15 @@ textarea {
   font-size: 0.76rem;
   font-weight: 800;
   line-height: 1.4;
+}
+
+.monitor-preflight-list li span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.monitor-preflight-list .text-button {
+  white-space: nowrap;
 }
 
 .monitor-readiness-summary {
