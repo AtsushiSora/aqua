@@ -1,6 +1,7 @@
 const STORAGE_KEY = "aquanote-state-v3";
 const LEGACY_STORAGE_KEY = "aquanote-state-v2";
 const SIGNUP_PROMPT_DISMISSED_KEY = "aquanote-signup-prompt-dismissed";
+const DEFAULT_PRODUCTION_URL = "https://apuanote.netlify.app/#dashboard";
 const VIDEO_UPLOAD_LIMIT_BYTES = 4 * 1024 * 1024;
 const EXPORT_VERSION = 1;
 const MEDIA_BUCKET = "aquanote-media";
@@ -360,7 +361,7 @@ const defaultState = {
     reviewStatus: "not_started",
     resultStatus: "unchecked",
     reviewer: "",
-    productionUrl: "",
+    productionUrl: DEFAULT_PRODUCTION_URL,
     note: "",
     decidedAt: null,
     reviewExportedAt: null,
@@ -12846,7 +12847,7 @@ function normalizePwaReleaseDecision(decision) {
     reviewStatus: getAllowedValue(decision.reviewStatus, ["not_started", "running", "done"], "not_started"),
     resultStatus: getAllowedValue(decision.resultStatus, ["unchecked", "confirmed", "issues"], "unchecked"),
     reviewer: String(decision.reviewer || "").trim(),
-    productionUrl: String(decision.productionUrl || "").trim(),
+    productionUrl: String(decision.productionUrl || DEFAULT_PRODUCTION_URL).trim(),
     note: String(decision.note || "").trim(),
     decidedAt: decision.decidedAt || null,
     reviewExportedAt: decision.reviewExportedAt || null,
