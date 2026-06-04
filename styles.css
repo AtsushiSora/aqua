@@ -4632,6 +4632,16 @@ textarea {
   gap: 12px;
 }
 
+.pwa-test-device-presets {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.pwa-test-device-presets .ghost-button {
+  min-width: 138px;
+}
+
 .pwa-test-scope-hint {
   display: grid;
   gap: 8px;

@@ -111,6 +111,7 @@ const pwaTestScopeInput = document.querySelector("#pwa-test-scope-input");
 const pwaTestScopeHint = document.querySelector("#pwa-test-scope-hint");
 const pwaTestNoteInput = document.querySelector("#pwa-test-note-input");
 const pwaTestNoteTemplateButton = document.querySelector("#pwa-test-note-template-button");
+const pwaTestDevicePresetButtons = document.querySelectorAll("[data-pwa-device-preset]");
 const pwaReleaseDecisionForm = document.querySelector("#pwa-release-decision-form");
 const pwaReleaseDecisionChip = document.querySelector("#pwa-release-decision-chip");
 const pwaReleaseDecisionSummary = document.querySelector("#pwa-release-decision-summary");
@@ -725,6 +726,9 @@ exportDataButton.addEventListener("click", exportAppData);
 importDataButton.addEventListener("click", () => importDataInput.click());
 importDataInput.addEventListener("change", importAppData);
 pwaTestForm.addEventListener("submit", handlePwaTestSubmit);
+pwaTestDevicePresetButtons.forEach((button) => {
+  button.addEventListener("click", () => applyPwaDevicePreset(button.dataset.pwaDevicePreset));
+});
 pwaTestExportButton.addEventListener("click", exportPwaTestResults);
 monitorParticipantForm.addEventListener("submit", handleMonitorParticipantSubmit);
 monitorParticipantList.addEventListener("click", (event) => {
@@ -3517,11 +3521,13 @@ function renderCustomAppearance() {
 
 async function handlePwaTestSubmit(event) {
   event.preventDefault();
+  const deviceInput = document.querySelector("#pwa-test-device-input");
+  const browserInput = document.querySelector("#pwa-test-browser-input");
   const result = normalizePwaTestResult({
     id: createId("pwa-test"),
     createdAt: new Date().toISOString(),
-    device: document.querySelector("#pwa-test-device-input").value,
-    browser: document.querySelector("#pwa-test-browser-input").value,
+    device: deviceInput.value,
+    browser: browserInput.value,
     status: document.querySelector("#pwa-test-status-input").value,
     scope: document.querySelector("#pwa-test-scope-input").value,
     note: document.querySelector("#pwa-test-note-input").value,
@@ -3530,12 +3536,30 @@ async function handlePwaTestSubmit(event) {
   state.pwaTestResults = [result, ...state.pwaTestResults].slice(0, 20);
   saveState();
   pwaTestForm.reset();
+  deviceInput.value = result.device;
+  browserInput.value = result.browser;
   renderPwaTestScopeHint();
   renderPwaTestResults();
   if (authSession?.user) {
     await syncPwaDeviceTestsToSupabase({ silent: true });
   }
   showToast("PWA実機テスト結果を保存しました");
+}
+
+function applyPwaDevicePreset(preset) {
+  const presets = {
+    "iphone-safari": { device: "iPhone", browser: "Safari" },
+    "android-chrome": { device: "Android", browser: "Chrome" },
+  };
+  const selected = presets[preset];
+  if (!selected) {
+    return;
+  }
+
+  document.querySelector("#pwa-test-device-input").value = selected.device;
+  document.querySelector("#pwa-test-browser-input").value = selected.browser;
+  document.querySelector("#pwa-test-scope-input")?.focus();
+  showToast(`${selected.device} / ${selected.browser}を入れました`);
 }
 
 function renderPwaTestResults() {
