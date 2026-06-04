@@ -4262,6 +4262,15 @@ textarea {
   gap: 12px;
 }
 
+.account-form .field-help {
+  display: block;
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 800;
+  line-height: 1.45;
+}
+
 .notification-settings,
 .custom-appearance-panel {
   display: grid;
