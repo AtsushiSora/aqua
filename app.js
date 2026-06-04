@@ -1,7 +1,7 @@
 const STORAGE_KEY = "aquanote-state-v3";
 const LEGACY_STORAGE_KEY = "aquanote-state-v2";
 const SIGNUP_PROMPT_DISMISSED_KEY = "aquanote-signup-prompt-dismissed";
-const DEFAULT_PRODUCTION_URL = "https://apuanote.netlify.app/#dashboard";
+const DEFAULT_PRODUCTION_URL = "https://apuanote.netlify.app";
 const VIDEO_UPLOAD_LIMIT_BYTES = 4 * 1024 * 1024;
 const EXPORT_VERSION = 1;
 const MEDIA_BUCKET = "aquanote-media";
