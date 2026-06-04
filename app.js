@@ -124,6 +124,7 @@ const monitorFeedbackForm = document.querySelector("#monitor-feedback-form");
 const monitorFeedbackSummary = document.querySelector("#monitor-feedback-summary");
 const monitorFeedbackNext = document.querySelector("#monitor-feedback-next");
 const monitorFeedbackList = document.querySelector("#monitor-feedback-list");
+const monitorFeedbackTemplateButton = document.querySelector("#monitor-feedback-template-button");
 const monitorFeedbackExportCsvButton = document.querySelector("#monitor-feedback-export-csv-button");
 const monitorFeedbackExportButton = document.querySelector("#monitor-feedback-export-button");
 const monitorFeedbackStatusFilter = document.querySelector("#monitor-feedback-status-filter");
@@ -712,6 +713,7 @@ monitorFeedbackExportCsvButton.addEventListener("click", exportMonitorFeedbackCs
 monitorFeedbackExportButton.addEventListener("click", exportMonitorFeedback);
 monitorGuideCopyButton.addEventListener("click", copyMonitorGuideText);
 monitorKitExportButton.addEventListener("click", exportMonitorLaunchKit);
+monitorFeedbackTemplateButton.addEventListener("click", applyMonitorFeedbackReplyTemplate);
 monitorFeedbackStatusFilter.addEventListener("change", () => {
   activeMonitorFeedbackStatusFilter = monitorFeedbackStatusFilter.value;
   renderMonitorFeedback();
@@ -1876,6 +1878,18 @@ function handleMonitorFeedbackSubmit(event) {
   monitorFeedbackForm.reset();
   renderMonitorFeedback();
   showToast("フィードバックを保存しました");
+}
+
+function applyMonitorFeedbackReplyTemplate() {
+  const noteInput = document.querySelector("#monitor-feedback-note-input");
+  if (!noteInput) {
+    return;
+  }
+
+  const template = getMonitorFeedbackReplyTemplate();
+  noteInput.value = noteInput.value ? `${noteInput.value}\n\n${template}` : template;
+  noteInput.focus();
+  showToast("返信テンプレートを内容欄に入れました");
 }
 
 function renderMonitorFeedback() {
